@@ -103,10 +103,10 @@ export default function MainHero() {
                 <div className="mt-16 animate-fade-in-delay bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 lg:gap-12">
                         {[
-                            { label: "Properties", value: "13,500+" },
-                            { label: "Cities", value: "120+" },
-                            { label: "Happy Clients", value: "8,200+" },
-                            { label: "Agents", value: "350+" }
+                            { label: "Properties", value: "1,500+" },
+                            { label: "Cities", value: "40+" },
+                            { label: "Happy Clients", value: "2000+" },
+                            { label: "Agents", value: "100+" }
                         ].map((stat, index) => (
                             <div key={index} className="text-center p-2">
                                 <p className="text-2xl md:text-3xl font-bold text-white">{stat.value}</p>

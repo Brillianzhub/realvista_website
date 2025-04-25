@@ -23,12 +23,10 @@ export default function RealvistaAllInOneSection() {
               {/* Image Frame */}
               <div className="relative z-10 p-1">
                 <div className="overflow-hidden rounded-2xl border border-gray-100">
-                  <Image
-                    src="/advantage.webp"
+                  <img
+                    src="/design3.jpg"
                     alt="Realvista App Interface"
-                    width={500}
-                    height={1000}
-                    className="object-cover w-full"
+                    className="object-cover h-[32rem] w-full"
                   />
                 </div>
               </div>
@@ -48,7 +46,7 @@ export default function RealvistaAllInOneSection() {
                 <span className="text-sm font-semibold uppercase tracking-wider text-[#FB902D]">Powerful Solution</span>
               </div>
               
-              <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 leading-tight">
+              <h2 className="text-3xl lg:text-3xl my-2 font-bold text-gray-800 leading-tight">
                 ALL-IN-ONE <span className="text-[#FB902D]">APP</span>
               </h2>
               

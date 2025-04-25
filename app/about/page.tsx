@@ -61,7 +61,7 @@ export default function AboutUs() {
                             },
                             {
                                 icon: <BookOpen />,
-                                title: "Investment Advisory",
+                                title: "Mutual Investment",
                                 description: "Professional advice on high-yield property investments."
                             },
                             {
@@ -128,20 +128,6 @@ export default function AboutUs() {
                     </p>
                 </div>
             </div>
-
-            {/* Footer */}
-            <footer className="bg-[#348b8b] text-white py-10 mt-20">
-                <div className="container mx-auto px-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center">
-                        <div className="mb-6 md:mb-0">
-                            <h2 className="text-2xl font-bold">RealVista Properties</h2>
-                        </div>
-                        <div>
-                            <p>© 2025 RealVista Properties. All rights reserved.</p>
-                        </div>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 }

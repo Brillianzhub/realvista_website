@@ -177,7 +177,7 @@ const ContactPage = () => {
             </p>
             <div className="inline-flex items-center bg-white text-[#348b8b] rounded-full px-6 py-3 shadow-lg font-medium">
               <Phone className="mr-2 w-5 h-5" />
-              <span>07043065222
+              <span>+2347043065222
               </span>
             </div>
           </div>
@@ -230,14 +230,14 @@ const ContactPage = () => {
               </div>
 
               {/* Map Placeholder */}
-              <div className="rounded-xl overflow-hidden h-48 md:h-64 bg-gray-200 relative group">
+              {/* <div className="rounded-xl overflow-hidden h-48 md:h-64 bg-gray-200 relative group">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <MapPin className="w-8 h-8 text-[#348b8b]" />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 bg-[#348b8b] text-white p-3 text-center font-medium">
                   Our Location
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Form Column */}

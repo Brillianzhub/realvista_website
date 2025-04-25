@@ -27,7 +27,7 @@ export default function RealvistaAdvantages() {
                 </div>
 
                 {/* Main Content */}
-                <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
+                <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-start">
                     {/* Left Content */}
                     <div className="space-y-8">
                         {/* First Card */}
@@ -77,7 +77,7 @@ export default function RealvistaAdvantages() {
                     </div>
 
                     {/* Right Phone Mockup */}
-                    <div className="relative flex justify-center items-center">
+                    <div className="relative">
                         {/* Background Effects */}
                         <div className="absolute w-full h-full max-w-md max-h-md">
                             <div className="absolute top-1/4 -right-4 w-32 h-32 bg-[#FB902D]/20 rounded-full blur-2xl"></div>
@@ -85,14 +85,12 @@ export default function RealvistaAdvantages() {
                         </div>
 
                         {/* Phone Frame */}
-                        <div className="relative z-10 p-4 bg-white rounded-3xl shadow-2xl">
+                        <div className="relative z-10 p-4">
                             <div className="overflow-hidden rounded-2xl">
-                                <Image
-                                    src="/advantage.webp"
+                                <img
+                                    src="/design2.jpg"
                                     alt="Realvista App Interface"
-                                    width={400}
-                                    height={800}
-                                    className="object-cover"
+                                    className="h-full object-cover"
                                 />
                             </div>
                             {/* Decorative Elements */}

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import axios from 'axios';
 import api from '@/config/apiClient';
+import Link from 'next/link';
 
 // TypeScript interfaces
 interface Duration {
@@ -106,7 +107,7 @@ const PricingPage: React.FC = () => {
   // Format price for display
   const formatPrice = (price: string): React.ReactNode => {
     const priceNum = parseFloat(price);
-    
+
     if (priceNum === 0) {
       return (
         <span className="text-5xl font-extrabold">Free</span>
@@ -146,17 +147,17 @@ const PricingPage: React.FC = () => {
   const getTotalPrice = (plan: Plan): string => {
     const discountedPrice = getCurrentDiscountedPrice(plan);
     if (discountedPrice === 0) return "Free";
-    
+
     let multiplier = 1;
     if (billingCycle === 'six_months') multiplier = 6;
     if (billingCycle === 'yearly') multiplier = 12;
-    
+
     return `₦${(discountedPrice * multiplier).toLocaleString()} billed ${billingCycle === 'monthly' ? 'monthly' : billingCycle === 'six_months' ? 'every 6 months' : 'annually'}`;
   };
 
   // Get plan badge color
   const getPlanBadgeColor = (planName: string): string => {
-    switch(planName.toLowerCase()) {
+    switch (planName.toLowerCase()) {
       case 'free': return 'bg-gray-50 text-gray-700';
       case 'basic': return 'bg-blue-50 text-blue-700';
       case 'premium': return 'bg-purple-50 text-purple-700';
@@ -168,8 +169,8 @@ const PricingPage: React.FC = () => {
   // Get CTA button color
   const getCTAButtonColor = (planName: string, isPopular: boolean): string => {
     if (isPopular) return 'bg-[#348b8b] text-white hover:bg-[#297979]';
-    
-    switch(planName.toLowerCase()) {
+
+    switch (planName.toLowerCase()) {
       case 'free': return 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200';
       case 'basic': return 'bg-[#348b8b] text-white hover:bg-[#297979]';
       case 'premium': return 'bg-[#FB902D] text-white hover:bg-[#ea8519]';
@@ -195,8 +196,8 @@ const PricingPage: React.FC = () => {
         <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-700 mb-6">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-[#348b8b] text-white rounded-lg hover:bg-[#297979]"
           >
             Try Again
@@ -211,7 +212,7 @@ const PricingPage: React.FC = () => {
       <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">RealVista Subscription Plans</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Realvista Subscription Plans</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Choose the perfect plan for your real estate needs. No hidden fees, transparent pricing.
             </p>
@@ -392,9 +393,9 @@ const PricingPage: React.FC = () => {
             <p className="text-gray-600 mb-6">
               Our team can create a tailored plan to meet your specific business requirements and goals.
             </p>
-            <button className="inline-flex items-center px-6 py-3 rounded-lg bg-[#348b8b] text-white hover:bg-[#297979] transition-colors font-semibold">
+            <Link href="/contact" className="inline-flex items-center px-6 py-3 rounded-lg bg-[#348b8b] text-white hover:bg-[#297979] transition-colors font-semibold">
               Contact our sales team <ArrowRight className="ml-2 w-5 h-5" />
-            </button>
+            </Link>
           </div>
 
           {/* Testimonials */}

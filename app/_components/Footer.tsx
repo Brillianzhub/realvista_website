@@ -8,9 +8,11 @@ import {
   Mail,
   Phone,
   ChevronRight,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { FaWhatsapp } from "react-icons/fa";
 import Image from 'next/image';
 
 export default function Footer() {
@@ -18,7 +20,11 @@ export default function Footer() {
     { icon: Facebook, href: 'https://www.facebook.com/share/1FaQPGrXEN/' },
     { icon: Instagram, href: 'https://www.instagram.com/realvista_ng?igsh=MXVtazk2aWV5Mzl1ZA==' },
     { icon: X, href: 'https://x.com/Realvista_NG?t=4wyone_-O3TiMPEgw9Gw-w&s=09' },
-    { icon: Linkedin, href: 'https://www.linkedin.com/company/realvista-ng/' }
+    { icon: Linkedin, href: 'https://www.linkedin.com/company/realvista-ng/' },
+    {
+      icon: FaWhatsapp,
+      href: "https://wa.me/2347043065222",
+    },
   ];
 
   const companyLinks = [
@@ -90,11 +96,11 @@ export default function Footer() {
           <ul className="space-y-4">
             <li className="flex items-center space-x-3">
               <MapPin size={20} className="text-white/50" />
-              <span>123 Realvista Street</span>
+              <span>No 7 MCC Road Owerri</span>
             </li>
             <li className="flex items-center space-x-3">
               <MapPin size={20} className="text-white/50" />
-              <span>Location, City, Country</span>
+              <span>Imo State, Nigeria.</span>
             </li>
             <li className="flex items-center space-x-3">
               <Mail size={20} className="text-white/50" />
@@ -102,7 +108,7 @@ export default function Footer() {
             </li>
             <li className="flex items-center space-x-3">
               <Phone size={20} className="text-white/50" />
-              <span>07043065222
+              <span>+2347043065222
               </span>
             </li>
           </ul>
@@ -129,7 +135,7 @@ export default function Footer() {
         </p>
         <div className="flex space-x-4 text-sm text-white/70">
           <a href="https://www.realvistaproperties.com/privacy-policy" className="hover:text-white">Privacy Policy</a>
-          <a href="https://www.realvistaproperties.com/terms-of-use" className="hover:text-white">Terms of Service</a>
+          <a href="https://www.realvistaproperties.com/terms" className="hover:text-white">Terms of Service</a>
         </div>
       </div>
     </footer>

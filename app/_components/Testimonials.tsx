@@ -12,7 +12,7 @@ const TestimonialSection = () => {
         {
             id: 1,
             quote: "RealVista transformed how I manage my property listings. The interface is intuitive, and I've seen a 40% increase in client inquiries since switching over. The analytics dashboard gives me insights I never had before.",
-            name: "Roy Bennett",
+            name: "Ben Okechukwu",
             position: "Senior Property Manager, Horizon Estates",
             avatar: "/roy.jpg",
             rating: 5
@@ -20,7 +20,7 @@ const TestimonialSection = () => {
         {
             id: 2,
             quote: "As a realtor managing multiple properties, I needed a system that could scale with my business. RealVista has been a game-changer - from streamlined listings to automatic client notifications, everything just works beautifully.",
-            name: "Kenya Soval",
+            name: "Grace Agabi",
             position: "Independent Realtor, Prime Properties",
             avatar: "/ken.jpg",
             rating: 5
@@ -28,7 +28,7 @@ const TestimonialSection = () => {
         {
             id: 4,
             quote: "I was skeptical about switching platforms, but RealVista's features convinced me. The virtual tours integration and automated follow-ups have helped me close deals 30% faster. Worth every penny of the subscription.",
-            name: "Marcus Johnson",
+            name: "Praise Osondu",
             position: "Luxury Property Specialist, Prestige Homes",
             avatar: "/kath.jpg",
             rating: 5
@@ -96,13 +96,13 @@ const TestimonialSection = () => {
                             </div>
                             <p className="text-gray-700 mb-8 italic leading-relaxed flex-grow">{testimonial.quote}</p>
                             <div className="flex items-center mt-auto pt-6 border-t border-[#348b8b]/10">
-                                <div className="w-14 h-14 rounded-full mr-4 overflow-hidden border-2 border-[#348b8b]/30 shadow-md">
+                                {/* <div className="w-14 h-14 rounded-full mr-4 overflow-hidden border-2 border-[#348b8b]/30 shadow-md">
                                     <img
                                         src={testimonial.avatar}
                                         alt={`${testimonial.name}'s avatar`}
                                         className="w-full h-full object-cover"
                                     />
-                                </div>
+                                </div> */}
                                 <div>
                                     <h4 className="font-semibold text-gray-800">{testimonial.name}</h4>
                                     <p className="text-[#348b8b] text-sm">{testimonial.position}</p>

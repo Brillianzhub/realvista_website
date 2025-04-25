@@ -57,9 +57,9 @@ export default function AppDownloadSection() {
                         {/* Multiple phone mockups with slight overlap and perspective */}
                         <div className="flex justify-center relative">
                             <div className="relative">
-                                <div className="w-120 h-[500px] rounded-3xl overflow-hidden transform rotate-6 z-20 relative">
+                                <div className="w-120 h-[500px] z-20 relative">
                                     <img
-                                        src="/hero-image.webp"
+                                        src="/design4.jpg"
                                         alt="Realvista App Screens"
                                         className="absolute top-0 left-0 w-full h-full object-cover"
                                     />

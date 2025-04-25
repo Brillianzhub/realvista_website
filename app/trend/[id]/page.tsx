@@ -126,7 +126,7 @@ const ReportDetailPage: React.FC = () => {
             <div className="container mx-auto px-4 py-8 md:py-12">
                 {/* Back button */}
                 <Link
-                    href="/trends"
+                    href="/trend"
                     className="inline-flex items-center mb-8 text-teal-600 hover:text-teal-700 transition-colors font-medium"
                 >
                     <ArrowLeft className="mr-2 h-5 w-5" /> Back to Market Trends
