@@ -34,8 +34,11 @@ const PricingPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'six_months' | 'yearly'>('monthly');
   const [showBoostOptions, setShowBoostOptions] = useState<boolean>(false);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBoostSubmitting, setIsBoostSubmitting] = useState<Record<number, boolean>>({});
+  const token = "frrgkjrgrkgmlrkmglrgr"
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -53,6 +56,59 @@ const PricingPage: React.FC = () => {
 
     fetchPlans();
   }, []);
+
+  const handleBoost = async (boostId: number, packageName: string, durationDays: number, price: number) => {
+    try {
+      setIsBoostSubmitting(prev => ({ ...prev, [boostId]: true }));
+
+      // Include auth token in headers
+      const response = await api.post("/boost/boost-packages/", {
+        id: boostId,
+        name: packageName,
+        duration_days: durationDays,
+        price: price
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}` // Adjust based on your auth setup
+        }
+      });
+
+      console.log("Boost package purchased:", response.data);
+      // Handle success - maybe show a success message
+
+      return response.data;
+    } catch (error) {
+      console.error("Error purchasing boost package:", error);
+      // Handle error - maybe show an error notification
+    } finally {
+      setIsBoostSubmitting(prev => ({ ...prev, [boostId]: false }));
+    }
+  };
+
+  const handlePlans = async (planId: number) => {
+    try {
+      setIsSubmitting(prev => ({ ...prev, [planId]: true }));
+
+      // Include auth token in headers
+      const response = await api.post("/subscriptions/create-subscription/", {
+        plan_id: planId
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}` // Adjust based on your auth setup
+        }
+      });
+
+      console.log("Subscription created:", response.data);
+      // Handle success - maybe show a success message or redirect
+
+      return response.data;
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      // Handle error
+    } finally {
+      setIsSubmitting(prev => ({ ...prev, [planId]: false }));
+    }
+  };
 
   // Descriptions for each plan
   const planDescriptions: Record<string, string> = {
@@ -96,7 +152,7 @@ const PricingPage: React.FC = () => {
       title: 'Agent Boosting',
       options: [
         {
-          price: 1000,
+          price: 10000,
           duration: '1 week',
           description: 'Appear at the top of the agent search results and as a featured agent on the website for increased visibility.'
         }
@@ -298,12 +354,22 @@ const PricingPage: React.FC = () => {
                   )}
 
                   <button
+                    onClick={() => handlePlans(plan.id)}
+                    disabled={isSubmitting[plan.id] || parseFloat(getCurrentPrice(plan)) === 0}
                     className={`
-                      w-full py-3 px-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center
-                      ${getCTAButtonColor(plan.name, plan.popular)}
-                    `}
+                        w-full py-3 px-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center
+                        ${getCTAButtonColor(plan.name, plan.popular)}
+                        ${(isSubmitting[plan.id] || parseFloat(getCurrentPrice(plan)) === 0) ? 'opacity-70 cursor-not-allowed' : ''}
+                      `}
                   >
-                    {planCTAs[plan.name] || 'Get Started'} <ArrowRight className="ml-2 w-5 h-5" />
+                    {isSubmitting[plan.id] ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        {parseFloat(getCurrentPrice(plan)) === 0 ? 'Already Free' : planCTAs[plan.name] || 'Get Started'}
+                        {parseFloat(getCurrentPrice(plan)) !== 0 && <ArrowRight className="ml-2 w-5 h-5" />}
+                      </>
+                    )}
                   </button>
 
                   <div className="mt-8 text-left">
@@ -374,8 +440,26 @@ const PricingPage: React.FC = () => {
                             <p className="text-gray-700">{option.description}</p>
                           </CardContent>
                           <CardFooter>
-                            <button className="w-full py-3 rounded-lg bg-gray-100 hover:bg-gray-200 font-medium text-gray-800 transition-colors">
-                              Add Boost
+                            <button
+                              onClick={() => handleBoost(
+                                categoryIndex * 100 + optionIndex, // Creating a unique ID
+                                option.duration,
+                                option.duration.includes('week') ? 7 : option.duration.includes('month') ? 30 : 2, // Approximate days
+                                option.price
+                              )}
+                              disabled={isBoostSubmitting[categoryIndex * 100 + optionIndex]}
+                              className={`
+                                w-full text-white cursor-pointer py-3 rounded-lg font-medium transition-colors
+                                ${isBoostSubmitting[categoryIndex * 100 + optionIndex]
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-[#348b8b] text-gray-800'}
+                              `}
+                            >
+                              {isBoostSubmitting[categoryIndex * 100 + optionIndex] ? (
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mx-auto"></div>
+                              ) : (
+                                'Add Boost'
+                              )}
                             </button>
                           </CardFooter>
                         </Card>

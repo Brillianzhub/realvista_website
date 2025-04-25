@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Trophy, Monitor, BarChart, ArrowRight, CheckCircle } from 'lucide-react';
+import { Trophy, Monitor, BarChart, ArrowRight, CheckCircle, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RealvistaAdvantages() {
@@ -27,11 +27,11 @@ export default function RealvistaAdvantages() {
                 </div>
 
                 {/* Main Content */}
-                <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-start">
-                    {/* Left Content */}
+                <div className="grid md:grid-cols-3 gap-8 lg:gap-12 items-start">
+                    {/* First Column */}
                     <div className="space-y-8">
                         {/* First Card */}
-                        <div className="bg-white shadow-lg rounded-2xl p-8 border-t-4 border-[#348b8b] hover:shadow-xl transition-shadow duration-300">
+                        <div className="bg-white shadow-lg rounded-2xl py-10 p-8 border-t-4 border-[#348b8b] hover:shadow-xl transition-shadow duration-300">
                             <div className="inline-flex items-center justify-center p-3 bg-[#348b8b]/10 rounded-xl mb-6">
                                 <Monitor className="text-[#348b8b]" size={28} />
                             </div>
@@ -42,7 +42,10 @@ export default function RealvistaAdvantages() {
                                 Manage properties, track profits, and invest smarter. Realvista is your mobile companion for managing your real estate investments with ease, efficiency, and profitability.
                             </p>
                         </div>
+                    </div>
 
+                    {/* Second Column */}
+                    <div className="space-y-8">
                         {/* Second Card */}
                         <div className="bg-white shadow-lg rounded-2xl p-8 border-t-4 border-[#FB902D] hover:shadow-xl transition-shadow duration-300">
                             <div className="inline-flex items-center justify-center p-3 bg-[#FB902D]/10 rounded-xl mb-6">
@@ -66,38 +69,32 @@ export default function RealvistaAdvantages() {
                                 </li>
                             </ul>
                         </div>
-
-                        {/* CTA Button */}
-                        <Link href="/register" className="inline-block">
-                            <button className="group flex items-center gap-2 bg-[#348b8b] text-white px-8 py-4 rounded-xl hover:bg-[#2c7676] transition-all duration-300 font-medium">
-                                Get Started
-                                <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
-                            </button>
-                        </Link>
                     </div>
 
-                    {/* Right Phone Mockup */}
-                    <div className="relative">
-                        {/* Background Effects */}
-                        <div className="absolute w-full h-full max-w-md max-h-md">
-                            <div className="absolute top-1/4 -right-4 w-32 h-32 bg-[#FB902D]/20 rounded-full blur-2xl"></div>
-                            <div className="absolute bottom-1/4 -left-4 w-32 h-32 bg-[#348b8b]/20 rounded-full blur-2xl"></div>
-                        </div>
-
-                        {/* Phone Frame */}
-                        <div className="relative z-10 p-4">
-                            <div className="overflow-hidden rounded-2xl">
-                                <img
-                                    src="/design2.jpg"
-                                    alt="Realvista App Interface"
-                                    className="h-full object-cover"
-                                />
+                    {/* Third Column - New Content */}
+                    <div className="space-y-8">
+                        {/* Third Card */}
+                        <div className="bg-white shadow-lg rounded-2xl p-8 border-t-4 border-[#348b8b] hover:shadow-xl transition-shadow duration-300">
+                            <div className="inline-flex items-center justify-center p-3 bg-[#348b8b]/10 rounded-xl mb-6">
+                                <Users className="text-[#348b8b]" size={28} />
                             </div>
-                            {/* Decorative Elements */}
-                            <div className="absolute -right-6 top-1/3 w-12 h-12 rounded-full bg-[#FB902D] opacity-75"></div>
-                            <div className="absolute -left-4 bottom-1/4 w-8 h-8 rounded-full bg-[#348b8b] opacity-75"></div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">
+                                EXPERT SUPPORT
+                            </h3>
+                            <p className="text-gray-600 leading-relaxed">
+                                Connect with experienced real estate agents and advisors who can guide you through every step of your property investment journey. Our team of professionals is ready to assist.
+                            </p>
                         </div>
                     </div>
+                </div>
+                <div className='flex justify-center mt-10'>
+                    {/* CTA Button */}
+                    <Link href="/register" className="inline-block">
+                        <button className="group flex items-center gap-2 bg-[#348b8b] text-white px-10 cursor-pointer py-4 rounded-xl hover:bg-[#2c7676] transition-all duration-300 font-medium">
+                            Get Started
+                            <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+                        </button>
+                    </Link>
                 </div>
             </div>
         </section>

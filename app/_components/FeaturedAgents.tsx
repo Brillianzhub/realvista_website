@@ -49,6 +49,8 @@ const FeaturedAgents: React.FC = () => {
   const [agentListings, setAgentListings] = useState<Listing[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
+  console.log("agentListing--->", agentListings)
+
   // Brand color
   const primaryColor = "#348b8b";
 
@@ -75,10 +77,7 @@ const FeaturedAgents: React.FC = () => {
     try {
       const agentResponse = await api.get(`/agents/${agentId}/`);
       setSelectedAgent(agentResponse.data);
-      
-      // Fetch this agent's listings
-      const listingsResponse = await api.get(`/listings/?agent=${agentId}`);
-      setAgentListings(listingsResponse.data);
+      setAgentListings(agentResponse?.data?.properties);
     } catch (error) {
       console.error("Error fetching agent details:", error);
     } finally {
@@ -351,15 +350,15 @@ const FeaturedAgents: React.FC = () => {
                                   className="absolute top-2 right-2 text-white"
                                   style={{ backgroundColor: primaryColor }}
                                 >
-                                  {listing.listing_type}
+                                  {listing.property_type}
                                 </Badge>
                               </div>
                               <CardContent className="p-4">
                                 <h5 className="font-medium mb-1 line-clamp-1 text-lg">{listing.title}</h5>
                                 <p className="text-gray-500 text-sm mb-2 line-clamp-1 flex items-center">
-                                  <MapPin className="h-3 w-3 mr-1 inline" /> {listing.location}
+                                  {listing.property_type}
                                 </p>
-                                <p className="font-semibold text-lg" style={{ color: primaryColor }}>${listing.price.toLocaleString()}</p>
+                                {/* <p className="font-semibold text-lg" style={{ color: primaryColor }}>${listing.price.toLocaleString()}</p> */}
                               </CardContent>
                             </Card>
                           ))}

@@ -13,13 +13,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { FaWhatsapp } from "react-icons/fa";
+import { LuTwitter } from "react-icons/lu";
 import Image from 'next/image';
 
 export default function Footer() {
   const socialLinks = [
     { icon: Facebook, href: 'https://www.facebook.com/share/1FaQPGrXEN/' },
     { icon: Instagram, href: 'https://www.instagram.com/realvista_ng?igsh=MXVtazk2aWV5Mzl1ZA==' },
-    { icon: X, href: 'https://x.com/Realvista_NG?t=4wyone_-O3TiMPEgw9Gw-w&s=09' },
+    { icon: LuTwitter, href: 'https://x.com/Realvista_NG?t=4wyone_-O3TiMPEgw9Gw-w&s=09' },
     { icon: Linkedin, href: 'https://www.linkedin.com/company/realvista-ng/' },
     {
       icon: FaWhatsapp,

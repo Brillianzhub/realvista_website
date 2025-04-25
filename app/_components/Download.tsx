@@ -37,10 +37,10 @@ export default function AppDownloadSection() {
 
                     {/* Download Button */}
                     <div className="flex items-center space-x-6">
-                        <button className="flex items-center space-x-3 bg-orange-400 hover:bg-orange-500 transition-colors text-white font-semibold px-6 py-3 rounded-full shadow-lg">
+                        <a target='_blank' href="https://play.google.com/store/apps/details?id=com.brillianzhub.realvista" className="flex items-center space-x-3 bg-orange-400 hover:bg-orange-500 transition-colors text-white font-semibold px-6 py-3 rounded-full shadow-lg">
                             <Download size={20} />
                             <span>Download App</span>
-                        </button>
+                        </a>
 
                         {/* QR Code Placeholder */}
                         <div className="bg-white p-2 rounded-xl">

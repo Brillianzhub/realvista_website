@@ -1,9 +1,9 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { 
-  Star, 
-  Phone, 
-  Mail, 
+import {
+  Star,
+  Phone,
+  Mail,
   BadgeCheck,
   X,
   MapPin,
@@ -12,9 +12,18 @@ import {
   ArrowRight,
   Search,
   Filter,
-  MessageSquare
+  MessageSquare,
+  Award,
+  MessageCircle,
+  Clock
 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from '@/config/apiClient';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // Define TypeScript interfaces based on API response
 interface Agent {
@@ -76,9 +85,9 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onDetailsClick }) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transform transition-all hover:scale-105 hover:shadow-xl">
       <div className="relative">
-        <img 
-          src={agent.avatar || "/api/placeholder/400/400"} 
-          alt={agent.agency_name} 
+        <img
+          src={agent.avatar || "/api/placeholder/400/400"}
+          alt={agent.agency_name}
           className="w-full h-64 object-cover"
         />
         {agent.verified && (
@@ -111,8 +120,8 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onDetailsClick }) => {
           <h4 className="font-semibold text-gray-800 mb-2">Services</h4>
           <div className="flex flex-wrap gap-2">
             {services.map((service, index) => (
-              <span 
-                key={index} 
+              <span
+                key={index}
                 className="bg-teal-50 text-teal-600 text-sm px-3 py-1 rounded-full"
               >
                 {service}
@@ -134,7 +143,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onDetailsClick }) => {
               </div>
             )}
           </div>
-          <button 
+          <button
             onClick={() => onDetailsClick(agent.id)}
             className="bg-teal-500 text-white cursor-pointer text-nowrap px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors"
           >
@@ -150,9 +159,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="relative">
-        <img 
-          src={property.main_image || "/api/placeholder/400/300"} 
-          alt={property.title} 
+        <img
+          src={property.main_image || "/api/placeholder/400/300"}
+          alt={property.title}
           className="w-full h-48 object-cover"
         />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
@@ -182,6 +191,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
 const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose }) => {
   const [agent, setAgent] = useState<AgentWithListings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(true);
+  const [agentListings, setAgentListings] = useState<any[]>([]);
+  const primaryColor = "#348b8b"; // Default primary color
 
   useEffect(() => {
     const fetchAgentDetails = async () => {
@@ -189,6 +201,7 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
       try {
         const response = await api.get(`/agents/${agentId}/`);
         setAgent(response.data);
+        setAgentListings(response.data.properties || []);
       } catch (error) {
         console.error("Error fetching agent details:", error);
       } finally {
@@ -201,177 +214,205 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
     }
   }, [agentId]);
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-8 max-w-4xl w-full flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
-        </div>
-      </div>
-    );
-  }
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    onClose();
+  };
 
   if (!agent) {
     return null;
   }
 
-  // Create default services array if none provided by API
-  const services = agent.services || [
-    agent.agency_name ? "Agency Representation" : "Independent Agent",
-    `${agent.experience_years}+ Years Experience`
-  ];
+  const selectedAgent = agent;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 bg-white rounded-full p-1 shadow-md z-10"
-        >
-          <X className="w-6 h-6" />
-        </button>
-        
-        <div className="relative">
-          <div className="bg-gradient-to-r from-teal-500 to-blue-500 h-48"></div>
-          <div className="absolute bottom-0 left-0 w-full transform translate-y-1/2 flex justify-center">
-            <img 
-              src={agent.avatar || "/api/placeholder/200/200"} 
-              alt={agent.agency_name} 
-              className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
-            />
-          </div>
-        </div>
-        
-        <div className="mt-16 p-8">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-800">{agent.agency_name}</h2>
-            <p className="text-gray-600">{agent.user}</p>
-            <div className="flex items-center justify-center mt-2">
-              <Star className="text-yellow-500 mr-1" />
-              <span className="font-semibold">{agent.rating || 5.0}</span>
-              <span className="text-gray-500 ml-1">({agent.total_reviews || 0} reviews)</span>
-              {agent.verified && (
-                <span className="ml-3 bg-teal-50 text-teal-600 px-3 py-1 rounded-full flex items-center text-sm">
-                  <BadgeCheck className="mr-1 w-4 h-4" /> Verified Agent
-                </span>
-              )}
-              {agent.featured && (
-                <span className="ml-3 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm">
-                  Featured
-                </span>
-              )}
-            </div>
-          </div>
+    <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+        {selectedAgent && (
+          <>
+            <DialogHeader>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <DialogTitle className="text-2xl font-bold">{selectedAgent.agency_name}</DialogTitle>
+                <div className="flex gap-2">
+                  {selectedAgent.verified && (
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                      <Star className="w-3 h-3 mr-1 fill-green-800" /> Verified
+                    </Badge>
+                  )}
+                  {selectedAgent.featured && (
+                    <Badge style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
+                      <Award className="w-3 h-3 mr-1" /> Featured
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <DialogDescription>
+                Professional real estate agent with {selectedAgent.experience_years} {selectedAgent.experience_years === 1 ? 'year' : 'years'} of experience
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800">About</h3>
-                <p className="text-gray-600">{agent.bio}</p>
-              </div>
-              
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800">Contact Information</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="bg-teal-100 rounded-full p-2 mr-4">
-                      <Phone className="w-5 h-5 text-teal-600" />
+            <div className="flex flex-col md:flex-row gap-8 py-6">
+              <div className="md:w-1/3 flex flex-col items-center">
+                <Avatar className="w-32 h-32 mb-6 border-4 border-white shadow-md">
+                  {selectedAgent.avatar ? (
+                    <AvatarImage src={selectedAgent.avatar} alt={selectedAgent.agency_name} />
+                  ) : (
+                    <AvatarFallback style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
+                      {getInitials(selectedAgent.agency_name)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+
+                <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2 text-center" style={{ color: primaryColor }}>Contact Information</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
+                      <Phone className="h-4 w-4" style={{ color: primaryColor }} />
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Phone</p>
-                      <p className="font-medium">{agent.phone_number}</p>
-                    </div>
+                    <span className="text-sm">{selectedAgent.phone_number}</span>
                   </div>
-                  
-                  {agent.whatsapp_number && (
-                    <div className="flex items-center">
-                      <div className="bg-teal-100 rounded-full p-2 mr-4">
-                        <MessageSquare className="w-5 h-5 text-teal-600" />
+                  {selectedAgent.whatsapp_number && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
+                        <MessageCircle className="h-4 w-4" style={{ color: primaryColor }} />
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">WhatsApp</p>
-                        <p className="font-medium">{agent.whatsapp_number}</p>
-                        {agent.preferred_contact_mode === "whatsapp" && (
-                          <p className="text-xs text-teal-600">Preferred contact method</p>
-                        )}
-                      </div>
+                      <span className="text-sm">{selectedAgent.whatsapp_number}</span>
                     </div>
                   )}
-                  
-                  <div className="flex items-center">
-                    <div className="bg-teal-100 rounded-full p-2 mr-4">
-                      <Mail className="w-5 h-5 text-teal-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
+                      <Mail className="h-4 w-4" style={{ color: primaryColor }} />
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{agent.user}</p>
-                    </div>
+                    <span className="text-sm">{selectedAgent.user}</span>
                   </div>
-                  
-                  {agent.agency_address && (
-                    <div className="flex items-center">
-                      <div className="bg-teal-100 rounded-full p-2 mr-4">
-                        <MapPin className="w-5 h-5 text-teal-600" />
+                  {selectedAgent.agency_address && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
+                        <MapPin className="h-4 w-4" style={{ color: primaryColor }} />
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Office</p>
-                        <p className="font-medium">{agent.agency_address}</p>
-                      </div>
+                      <span className="text-sm">{selectedAgent.agency_address}</span>
                     </div>
                   )}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
+                      <Clock className="h-4 w-4" style={{ color: primaryColor }} />
+                    </div>
+                    <span className="text-sm">Member since {new Date(selectedAgent.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 w-full">
+                  <h4 className="font-medium mb-2">Preferred Contact Method</h4>
+                  <Badge className="w-full justify-center py-2 capitalize" style={{ backgroundColor: primaryColor }}>
+                    {selectedAgent.preferred_contact_mode}
+                  </Badge>
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800">Specializations</h3>
-                <div className="flex flex-wrap gap-2">
-                  {services.map((service, index) => (
-                    <span 
-                      key={index} 
-                      className="bg-teal-50 text-teal-600 px-3 py-2 rounded-lg"
+
+              <div className="md:w-2/3">
+                <Tabs defaultValue="about">
+                  <TabsList className="grid w-full grid-cols-2" style={{ backgroundColor: `${primaryColor}20` }}>
+                    <TabsTrigger
+                      value="about"
+                      className="data-[state=active]:text-white"
+                      style={{
+                        color: primaryColor,
+                        "--accent-foreground": "white",
+                        "--accent": primaryColor
+                      } as React.CSSProperties}
                     >
-                      {service}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800">Experience & Credentials</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <Calendar className="w-5 h-5 mr-3 text-teal-600" />
-                    <span>{agent.experience_years} Years in Real Estate</span>
-                  </div>
-                  <div className="flex items-center">
-                    <BadgeCheck className="w-5 h-5 mr-3 text-teal-600" />
-                    <span>Member since {new Date(agent.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
+                      About
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="listings"
+                      className="data-[state=active]:text-white"
+                      style={{
+                        color: primaryColor,
+                        "--accent-foreground": "white",
+                        "--accent": primaryColor
+                      } as React.CSSProperties}
+                    >
+                      Properties
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="about" className="mt-6">
+                    <h4 className="font-medium mb-3 text-lg" style={{ color: primaryColor }}>Agent Bio</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-700 mb-4 leading-relaxed">
+                        {selectedAgent.bio || "No bio information available. This agent has not provided a detailed bio yet."}
+                      </p>
+                    </div>
+
+                    <h4 className="font-medium mb-3 mt-6 text-lg" style={{ color: primaryColor }}>Expertise</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Residential</Badge>
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Commercial</Badge>
+                      <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Luxury</Badge>
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Investment</Badge>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="listings" className="mt-6">
+                    {loading ? (
+                      <div className="flex justify-center py-12">
+                        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: `${primaryColor} transparent ${primaryColor} ${primaryColor}` }}></div>
+                      </div>
+                    ) : agentListings.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {agentListings.map(listing => (
+                          <Card key={listing.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all cursor-pointer">
+                            <div className="h-44 bg-gray-200 relative">
+                              {listing.photos && listing.photos.length > 0 ? (
+                                <img
+                                  src={listing.photos[0]}
+                                  alt={listing.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                  <Building className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                              <Badge
+                                className="absolute top-2 right-2 text-white"
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                {listing.property_type}
+                              </Badge>
+                            </div>
+                            <CardContent className="p-4">
+                              <h5 className="font-medium mb-1 line-clamp-1 text-lg">{listing.title}</h5>
+                              <p className="text-gray-500 text-sm mb-2 line-clamp-1 flex items-center">
+                                {listing.property_type}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-gray-50 rounded-lg">
+                        <Building className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500">No active listings available from this agent.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
-          </div>
-          
-          {/* Agent's Listings Section */}
-          <div className="mt-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">Current Listings</h3>
-            {agent.listings && agent.listings.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {agent.listings.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-xl p-8 text-center">
-                <p className="text-gray-600">No active listings at the moment.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -398,39 +439,39 @@ const AgentsPage: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchAgents();
   }, []);
 
   useEffect(() => {
     let result = [...agents];
-    
+
     // Apply verified filter if selected
     if (filterVerified) {
       result = result.filter(agent => agent.verified);
     }
-    
+
     // Apply featured filter if selected
     if (filterFeatured) {
       result = result.filter(agent => agent.featured);
     }
-    
+
     // Apply search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(agent => 
-        agent.agency_name.toLowerCase().includes(term) || 
+      result = result.filter(agent =>
+        agent.agency_name.toLowerCase().includes(term) ||
         agent.bio.toLowerCase().includes(term) ||
         agent.agency_address.toLowerCase().includes(term)
       );
     }
-    
+
     // Apply experience filter
     if (experienceFilter !== "all") {
       const minExperience = parseInt(experienceFilter);
       result = result.filter(agent => agent.experience_years >= minExperience);
     }
-    
+
     setFilteredAgents(result);
   }, [agents, filterVerified, filterFeatured, searchTerm, experienceFilter]);
 
@@ -458,7 +499,7 @@ const AgentsPage: React.FC = () => {
             Our Real Estate Experts
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Our team of dedicated professionals is committed to helping you find your perfect property. 
+            Our team of dedicated professionals is committed to helping you find your perfect property.
             With extensive market knowledge and personalized service, we turn your real estate dreams into reality.
           </p>
         </div>
@@ -477,7 +518,7 @@ const AgentsPage: React.FC = () => {
                   className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
                 <div className="flex items-center">
                   <input
@@ -491,7 +532,7 @@ const AgentsPage: React.FC = () => {
                     Verified
                   </label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -504,7 +545,7 @@ const AgentsPage: React.FC = () => {
                     Featured
                   </label>
                 </div>
-                
+
                 <div className="relative w-full md:w-auto">
                   <Filter className="absolute left-3 top-3 text-gray-400" />
                   <select
@@ -530,9 +571,9 @@ const AgentsPage: React.FC = () => {
         {filteredAgents.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredAgents.map(agent => (
-              <AgentCard 
-                key={agent.id} 
-                agent={agent} 
+              <AgentCard
+                key={agent.id}
+                agent={agent}
                 onDetailsClick={handleAgentDetailsClick}
               />
             ))}
