@@ -17,7 +17,7 @@ export default function AboutUs() {
             <div className="w-full bg-[#348b8b] text-white">
                 <div className="container mx-auto px-4 py-20 md:py-32">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6">About Realvista Properties</h1>
-                    <p className="text-xl md:text-2xl max-w-3xl opacity-90">
+                    <p className="text-xl max-w-3xl opacity-90">
                         Here, we turn your real estate dreams into reality, one property at a time.
                     </p>
                 </div>
@@ -62,7 +62,7 @@ export default function AboutUs() {
                             {
                                 icon: <BookOpen />,
                                 title: "Mutual Investment",
-                                description: "Professional advice on high-yield property investments."
+                                description: "Unlock Bigger Opportunities. Share the Rewards."
                             },
                             {
                                 icon: <Users />,

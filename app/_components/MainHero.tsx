@@ -2,6 +2,14 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import Link from 'next/link';
+import api from '@/config/apiClient';
+
+interface Statistics {
+    properties: number;
+    cities: number;
+    happy_clients: number;
+    agents: number;
+  }
 
 export default function MainHero() {
     // State for background image rotation
@@ -9,6 +17,13 @@ export default function MainHero() {
     const [nextIndex, setNextIndex] = useState(1);
     const [transitioning, setTransitioning] = useState(false);
     const backgroundImages = ['/property.jpg', '/heroone.webp', '/herotwo.webp'];
+    const [loading, setLoading] = useState(false)
+    const [statistics, setStatistics] = useState<Statistics>({
+        properties: 1500,
+        cities: 40,
+        happy_clients: 2000,
+        agents: 100
+      })
 
     // Preload images for smoother transitions
     useEffect(() => {
@@ -16,6 +31,22 @@ export default function MainHero() {
             const img = new Image();
             img.src = src;
         });
+    }, []);
+
+    useEffect(() => {
+        const fetchPropertyStats = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get('/homepage-stats/');
+                setStatistics(response.data);
+            } catch (error) {
+                console.error("Error fetching properties:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPropertyStats();
     }, []);
 
     // Handle image rotation
@@ -103,10 +134,10 @@ export default function MainHero() {
                 <div className="mt-16 animate-fade-in-delay bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 lg:gap-12">
                         {[
-                            { label: "Properties", value: "1,500+" },
-                            { label: "Cities", value: "40+" },
-                            { label: "Happy Clients", value: "2000+" },
-                            { label: "Agents", value: "100+" }
+                            { label: "Properties", value: `${statistics?.properties?.toLocaleString() || '1,500'}+` },
+                            { label: "Cities", value: `${statistics?.cities || '40'}+` },
+                            { label: "Happy Clients", value: `${statistics?.happy_clients?.toLocaleString() || '2,000'}+` },
+                            { label: "Agents", value: `${statistics?.agents || '100'}+` }
                         ].map((stat, index) => (
                             <div key={index} className="text-center p-2">
                                 <p className="text-2xl md:text-3xl font-bold text-white">{stat.value}</p>

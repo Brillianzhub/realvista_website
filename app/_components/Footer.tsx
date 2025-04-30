@@ -117,15 +117,29 @@ export default function Footer() {
 
         {/* QR Code and Download Column */}
         <div className="flex flex-col items-center space-y-6">
-          <div className="bg-white p-4 rounded-xl shadow-lg">
+          <div className="bg-white p-2 rounded-xl shadow-lg">
             <div className="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-lg">
-              <span className="text-gray-500">QR Code</span>
+              <img src="/qrcode.jpeg" alt="code" />
             </div>
           </div>
+          <a
+            href="https://play.google.com/store/apps/details?id=com.brillianzhub.realvista"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center cursor-pointer justify-center gap-3 bg-[#FB902D] text-white font-medium py-2 px-10 rounded-full transition-colors shadow-md"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M325.3 234.3L104.1 28.4C95.3 20.2 84.3 16 72.4 16a40 40 0 0 0-15.4 3C44.4 24.1 32 40.3 32 58.5v395c0 18.2 12.4 34.4 25 39.5a40 40 0 0 0 15.4 3c11.9 0 22.9-4.2 31.7-12.4l221.2-205.9-10-9.9z" fill="white" />
+              <path d="M361.7 271.5 325.3 256 104.1 483.6a39.3 39.3 0 0 0 22.3 9.6c5.2 0 10.4-1 15.4-3l220-103.1c15.6-7.3 25.2-22.7 25.2-39.5 0-16.6-9.1-31.8-25.3-39.1z" fill="white" />
+              <path d="M447.6 228.5 361.7 188.3l-36.4 35.9 36.4 36.1 85.9-40.3c10.4-4.8 10.4-17.7 0-22.5z" fill="white" />
+              <path d="M361.7 240.2 72.4 16A39.9 39.9 0 0 0 66 15.2a37.3 37.3 0 0 0-13 2.8l254 247.9-254 248a39.3 39.3 0 0 0 13 2.8c2.2 0 4.3-.3 6.4-.8l289.3-224.2c10.4-8.1 10.4-24.1 0-32.3z" fill="white" />
+            </svg>
 
-          <button className="bg-[#FB902D] text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-colors flex items-center space-x-2">
-            <span>Download App</span>
-          </button>
+            <div className="flex flex-col items-start">
+              <span className="text-xs">Download on</span>
+              <span className="text-sm font-semibold">Google Play</span>
+            </div>
+          </a>
         </div>
       </div>
 

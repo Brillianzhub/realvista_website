@@ -214,7 +214,7 @@ const FeaturedProperties = () => {
                     <div className="relative p-6">
                       <div className="absolute -top-10 right-6 bg-white rounded-lg shadow-lg py-2 px-3">
                         <div className="text-lg lg:text-xl font-bold text-[#348b8b]">
-                          ${property.price ? property.price.toLocaleString() : "Price on request"}
+                          NGN{property.price ? property.price.toLocaleString() : "Price on request"}
                         </div>
                       </div>
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 mt-2 line-clamp-1">{property.title}</h3>

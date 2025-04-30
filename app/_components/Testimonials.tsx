@@ -3,9 +3,32 @@ import React, { useState, useEffect } from 'react';
 import { Quote, Star, ArrowUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import api from '@/config/apiClient';
 
 const TestimonialSection = () => {
     const [isVisible, setIsVisible] = useState(false);
+    const [loading, setLoading] = useState(false)
+    const [reviews, setReviews] = useState<any>(null)
+
+    useEffect(() => {
+        const fetchTestimonials = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get('/feedbacks/');
+                setReviews(response.data);
+                console.log("response------>", response)
+            } catch (error) {
+                console.error("Error fetching properties:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTestimonials();
+    }, []);
+
+
+    console.log("reviews---->", reviews)
 
     // Selected testimonials (just 3)
     const testimonials = [
@@ -74,7 +97,7 @@ const TestimonialSection = () => {
 
                 {/* Testimonial Cards */}
                 <div className="grid md:grid-cols-3 gap-8 mb-16">
-                    {testimonials.map((testimonial, index) => (
+                    {reviews?.map((testimonial: any, index: number) => (
                         <motion.div
                             key={testimonial.id}
                             initial={{ opacity: 0, y: 30 }}
@@ -94,15 +117,16 @@ const TestimonialSection = () => {
                                     ))}
                                 </div>
                             </div>
-                            <p className="text-gray-700 mb-8 italic leading-relaxed flex-grow">{testimonial.quote}</p>
+                            <p className="text-gray-700 mb-8 italic leading-relaxed flex-grow">{testimonial.feedback}</p>
                             <div className="flex items-center mt-auto pt-6 border-t border-[#348b8b]/10">
-                                {/* <div className="w-14 h-14 rounded-full mr-4 overflow-hidden border-2 border-[#348b8b]/30 shadow-md">
+                                {testimonial.avatar && (<div className="w-14 h-14 rounded-full mr-4 overflow-hidden border-2 border-[#348b8b]/30 shadow-md">
                                     <img
                                         src={testimonial.avatar}
                                         alt={`${testimonial.name}'s avatar`}
                                         className="w-full h-full object-cover"
                                     />
-                                </div> */}
+                                </div>)}
+
                                 <div>
                                     <h4 className="font-semibold text-gray-800">{testimonial.name}</h4>
                                     <p className="text-[#348b8b] text-sm">{testimonial.position}</p>

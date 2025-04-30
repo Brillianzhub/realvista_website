@@ -102,9 +102,6 @@ const SignUpPage = () => {
 
         if (userType === 'agent') {
             if (!formData.phoneNumber.trim()) errors.phoneNumber = "Phone number is required";
-            if (!formData.companyName.trim()) errors.companyName = "Company name is required";
-            if (!formData.licenseNumber.trim()) errors.licenseNumber = "License number is required";
-            if (!formData.agencyAddress.trim()) errors.agencyAddress = "Agency address is required";
             if (!formData.whatsappNumber.trim()) errors.whatsappNumber = "WhatsApp number is required";
             if (!formData.experienceYears.trim()) errors.experienceYears = "Experience years is required";
             if (!formData.bios.trim()) errors.bios = "Bio is required";
@@ -150,9 +147,7 @@ const SignUpPage = () => {
                 // Make API call
                 const response = await api.post('/accounts/register_user/', payload);
                 console.log('API Response:', response.data);
-
-                // If successful, move to success stage
-                setFormStage('success');
+                 router.push(`verify-email?id=${response.data.id}`)
             } catch (error: any) {
                 console.error('Registration error:', error);
                 setApiError(error.response?.data?.message || 'An error occurred during registration. Please try again.');
@@ -476,7 +471,7 @@ const SignUpPage = () => {
                     <div className="grid md:grid-cols-2 gap-6 mt-6">
                         <div>
                             <label htmlFor="companyName" className="block mb-2 text-gray-700 font-medium">
-                                Company/Agency Name
+                                Company/Agency Name (optional)
                             </label>
                             <div className="relative">
                                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#348b8b]">
@@ -505,7 +500,7 @@ const SignUpPage = () => {
 
                         <div>
                             <label htmlFor="licenseNumber" className="block mb-2 text-gray-700 font-medium">
-                                License Number
+                                License Number (optional)
                             </label>
                             <div className="relative">
                                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#348b8b]">
@@ -535,7 +530,7 @@ const SignUpPage = () => {
 
                     <div className="mt-6">
                         <label htmlFor="agencyAddress" className="block mb-2 text-gray-700 font-medium">
-                            Agency Address
+                            Agency Address (optional)
                         </label>
                         <div className="relative">
                             <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#348b8b]">
@@ -552,13 +547,9 @@ const SignUpPage = () => {
                                     border rounded-xl focus:outline-none 
                                     focus:ring-2 focus:ring-[#348b8b]
                                     transition-all duration-200
-                                    ${formErrors.agencyAddress ? 'border-red-500 bg-red-50' : 'border-gray-300'}
                                 `}
                                 placeholder="Agency Full Address"
                             />
-                            {formErrors.agencyAddress && (
-                                <p className="text-red-500 text-sm mt-1">{formErrors.agencyAddress}</p>
-                            )}
                         </div>
                     </div>
 

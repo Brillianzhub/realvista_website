@@ -40,7 +40,7 @@ import {
     DropdownMenuSubContent,
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import api from '@/config/apiClient';
@@ -59,6 +59,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { FaWhatsapp } from 'react-icons/fa';
+import { Button } from '@/components/ui/button';
 
 const PropertyDetailsPage = () => {
     const [isFavorite, setIsFavorite] = useState(false);
@@ -66,9 +67,48 @@ const PropertyDetailsPage = () => {
     const [loading, setLoading] = useState(false);
     const [listing, setListing] = useState<any>(null);
     const [vendorListings, setVendorListings] = useState<any[]>([]);
+    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
     const params = useParams();
     const id = params.id;
+    const [shareUrl, setShareUrl] = useState('');
 
+    // Update shareUrl when the component mounts and when listing changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setShareUrl(window.location.href);
+        }
+    }, [listing]);
+
+    const handleShare = (platform: string) => {
+        let shareLink = '';
+        const vendorName = listing?.owner?.owner_name || 'Real Estate Vendor';
+        const shareText = `Check out ${vendorName}'s real estate profile!`;
+
+        switch (platform) {
+            case 'twitter':
+                shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                break;
+            case 'facebook':
+                shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                break;
+            case 'linkedin':
+                shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+                break;
+            case 'whatsapp':
+                shareLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+                break;
+            default:
+                return;
+        }
+
+        // First close the dialog
+        setIsShareDialogOpen(false);
+
+        // Then open the share link in a new window/tab
+        setTimeout(() => {
+            window.open(shareLink, '_blank', 'noopener,noreferrer');
+        }, 100);
+    };
     const getShareUrl = () => {
         if (typeof window !== 'undefined') {
             return window.location.href;
@@ -131,6 +171,14 @@ const PropertyDetailsPage = () => {
         }
 
         window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setIsShareDialogOpen(false);
+        toast("Link copied!", {
+            description: "The agent's profile link has been copied to your clipboard.",
+        });
     };
 
     // Fetch vendor's other listings when dialog opens
@@ -559,6 +607,17 @@ const PropertyDetailsPage = () => {
                                                         </div>
                                                     </div>
 
+
+                                                    <div className="mt-6 w-full">
+                                                        <Button
+                                                            variant="outline"
+                                                            className="w-full flex cursor-pointer items-center justify-center gap-2 border-dashed border-gray-300"
+                                                            onClick={() => setIsShareDialogOpen(true)}
+                                                        >
+                                                            <Share2 className="h-4 w-4" />
+                                                            Share Profile
+                                                        </Button>
+                                                    </div>
                                                     <div className="mt-6 w-full">
                                                         <h4 className="font-medium mb-2">Preferred Contact Method</h4>
                                                         <div className="flex space-x-2 text-sm justify-center">
@@ -627,7 +686,7 @@ const PropertyDetailsPage = () => {
                                                                 <div className="bg-gray-50 p-4 rounded-lg mt-6">
                                                                     <h4 className="font-medium mb-3 text-lg text-teal-600">Achievements</h4>
                                                                     <ul className="list-disc pl-5 space-y-2">
-                                                                        {listing.owner.achievements.map((achievement:any, index:number) => (
+                                                                        {listing.owner.achievements.map((achievement: any, index: number) => (
                                                                             <li key={index} className="text-gray-700">{achievement}</li>
                                                                         ))}
                                                                     </ul>
@@ -643,7 +702,7 @@ const PropertyDetailsPage = () => {
                                                                     <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
                                                                         {listing.owner.base_state}
                                                                     </Badge>
-                                                                    {listing.owner.service_areas && listing.owner.service_areas.map((area:any, index:number) => (
+                                                                    {listing.owner.service_areas && listing.owner.service_areas.map((area: any, index: number) => (
                                                                         <Badge key={index} className="bg-amber-100 text-amber-800 hover:bg-amber-100">
                                                                             {area}
                                                                         </Badge>
@@ -727,6 +786,72 @@ const PropertyDetailsPage = () => {
                     </div>
                 </div>
             </div>
+            {/* Share Dialog */}
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Share Agent Profile</DialogTitle>
+                        <DialogDescription>
+                            Choose a platform to share this agent's profile
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-6 py-4">
+                        <div className="flex justify-center gap-6">
+                            <button
+                                onClick={() => handleShare('facebook')}
+                                className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+                                aria-label="Share on Facebook"
+                            >
+                                <Facebook className="h-6 w-6" />
+                            </button>
+                            <button
+                                onClick={() => handleShare('twitter')}
+                                className="p-3 rounded-full bg-sky-500 text-white hover:bg-sky-600 transition-colors flex items-center justify-center"
+                                aria-label="Share on Twitter"
+                            >
+                                <Twitter className="h-6 w-6" />
+                            </button>
+                            <button
+                                onClick={() => handleShare('linkedin')}
+                                className="p-3 rounded-full bg-blue-700 text-white hover:bg-blue-800 transition-colors flex items-center justify-center"
+                                aria-label="Share on LinkedIn"
+                            >
+                                <Linkedin className="h-6 w-6" />
+                            </button>
+                            <button
+                                onClick={() => handleShare('whatsapp')}
+                                className="p-3 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center justify-center"
+                                aria-label="Share on WhatsApp"
+                            >
+                                <FaWhatsapp className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="share-url" className="text-sm font-medium">
+                                Or copy this link
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="share-url"
+                                    type="text"
+                                    value={shareUrl}
+                                    readOnly
+                                    className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleCopyLink}
+                                    className="shrink-0"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
