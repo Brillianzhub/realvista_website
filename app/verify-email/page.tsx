@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle, XCircle, RefreshCw, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ function EmailVerificationContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const router = useRouter()
 
     const userId = searchParams.get('id');
 
@@ -53,12 +54,9 @@ function EmailVerificationContent() {
 
         try {
             // Using axios instead of fetch
-            const response = await api.post('/accounts/verify-email', {
-                userId: userId,
-                verificationCode: code
-            });
+            const response = await api.post(`/accounts/verify-email/${userId}/?code=${code}`);
 
-            if (response.data.success) {
+            if (response.data) {
                 setVerificationStatus('success');
                 setMessage('Your email has been successfully verified!');
             } else {
@@ -95,11 +93,9 @@ function EmailVerificationContent() {
 
         setIsLoading(true);
         try {
-            const response = await api.post('/accounts/resend-verification', {
-                userId: userId
-            });
+            const response = await api.post('/accounts/resend_token/');
 
-            if (response.data.success) {
+            if (response.data) {
                 setMessage('A new verification code has been sent to your email.');
             } else {
                 setErrorMessage(response.data.message || 'Failed to resend verification code.');
@@ -133,7 +129,7 @@ function EmailVerificationContent() {
             case 'pending':
                 return 'border-blue-200';
             case 'success':
-                return 'border-green-200';
+                return 'border-teal-200';
             case 'error':
                 return 'border-red-200';
             default:
@@ -217,8 +213,8 @@ function EmailVerificationContent() {
                         {verificationStatus === 'success' ? (
                             <Button
                                 variant="default"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => window.location.href = '/login'}
+                                className="bg-teal-600 cursor-pointer hover:bg-teal-700"
+                                onClick={() => router.push("/sign-in")}
                             >
                                 Continue to Login
                             </Button>

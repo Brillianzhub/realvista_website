@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Eye, EyeOff, LogIn, Home } from 'lucide-react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import api from '@/config/apiClient';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,38 +14,43 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleSubmit = async (e:any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
       // Make the API request
-      const response = await axios.post('/accounts/signin', {
+      const response = await api.post('/accounts/signin/', {
         email,
         password
       });
-      
+
       // Assuming the response contains user details
       const userData = {
         id: response.data.id || 'user-id',
-        email: email,
+        email: response.data.email,
         name: response.data.name || email.split('@')[0],
         avatar: response.data.avatar || null,
         token: response.data.token || 'sample-token',
         isLoggedIn: true
       };
-      
+
       // Store user data in localStorage
       localStorage.setItem('userData', JSON.stringify(userData));
-      
+
+      console.log("token--->", response.data.token)
+
+      localStorage.setItem('token', response.data.token);
+
+
       // Dispatch a custom event to notify navbar about login
       window.dispatchEvent(new Event('userLogin'));
-      
+
       // Redirect to homepage or dashboard
       router.push('/');
-      
-    } catch (err:any) {
+
+    } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
@@ -63,7 +69,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-      
+
       {/* Right panel with login form */}
       <div className="flex flex-col justify-center items-center w-full md:w-1/2 p-6">
         <div className="w-full max-w-md">
@@ -73,16 +79,16 @@ export default function LoginPage() {
               <Home size={32} className="text-white" />
             </div>
           </div>
-          
+
           <h2 className="text-3xl font-bold mb-2 text-gray-800">Sign in</h2>
           <p className="text-gray-600 mb-8">Please enter your credentials to continue</p>
-          
+
           {error && (
             <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -98,14 +104,14 @@ export default function LoginPage() {
                 required
               />
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <a 
-                  href="/forgot-password" 
+                <a
+                  href="/forgot-password"
                   className="text-sm font-medium hover:underline"
                   style={{ color: '#348b8b' }}
                 >
@@ -131,10 +137,10 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            
+
             <button
               type="submit"
-              className="w-full py-3 px-4 flex justify-center items-center text-white rounded-lg font-medium transition-colors"
+              className="w-full py-3 cursor-pointer px-4 flex justify-center items-center text-white rounded-lg font-medium transition-colors"
               style={{ backgroundColor: '#348b8b' }}
               disabled={isLoading}
             >
@@ -151,12 +157,12 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-          
+
           <div className="mt-8 text-center">
             <p className="text-gray-600">
               Don't have an account yet?{' '}
-              <a 
-                href="/register" 
+              <a
+                href="/register"
                 className="font-medium hover:underline"
                 style={{ color: '#348b8b' }}
               >

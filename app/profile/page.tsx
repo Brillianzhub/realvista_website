@@ -25,7 +25,10 @@ import {
     Calendar,
     FileEdit,
     Upload,
-    CheckCircle
+    CheckCircle,
+    HeartIcon,
+    AlertCircle,
+    CreditCard
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,139 +42,170 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from 'sonner';
+import api from '@/config/apiClient';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 
-const AgentProfile = () => {
-    // Agent profile data state
-    const [profileData, setProfileData] = useState({
-        id: "1",
-        name: "David Williams",
-        photo: "/api/placeholder/150/150",
-        email: "david.williams@realestate.com",
-        phone: "+123-456-7890",
-        location: "New York, NY",
-        bio: "Experienced real estate agent with over 10 years of expertise in residential and commercial properties. Specializing in luxury homes and investment properties in the greater New York area.",
-        verified: true,
-        specialties: ["Luxury Homes", "Commercial", "Investment Properties"],
-        languages: ["English", "Spanish"],
-        certifications: ["Licensed Real Estate Broker", "Certified Residential Specialist (CRS)"],
+interface Agent {
+    id: string | null;
+    agency_name: string;
+    agency_address: string;
+    phone_number: string;
+    whatsapp_number: string;
+    experience_years: number;
+    preferred_contact_mode: string;
+    verified: boolean;
+    featured: boolean;
+    bio: string;
+    total_views: number;
+    total_inquiries: number;
+    total_bookmarks: number;
+    total_listings: number;
+}
+
+interface Profile {
+    avatar?: string;
+    phone_number?: string;
+    city?: string;
+    state?: string;
+}
+
+interface UserProfile {
+    id: string;
+    name?: string;
+    first_name?: string;
+    email?: string;
+    profile?: Profile;
+    agent?: Agent | null;
+    is_active?: boolean;
+    date_joined?: string;
+    subscription?: {
+        plan: string;
+        status: string;
+    };
+    referral_code?: string;
+    referred_users_count?: number;
+    total_referral_earnings?: number;
+}
+
+interface UpdateData {
+    name: string;
+    profile: {
+        phone_number: string;
+        city: string;
+        state: string;
+    };
+    agent?: {
+        agency_name: string;
+        agency_address: string;
+        phone_number: string;
+        whatsapp_number: string;
+        bio: string;
+        preferred_contact_mode: string;
+    };
+}
+
+const Profile = () => {
+
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [emailNotifications, setEmailNotifications] = useState(true);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+    const [isIdVerified, setIsIdVerified] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+
+    const handlePasswordChange = () => {
+        // Password change logic would go here
+        alert("Password updated successfully!");
+        setPasswordDialogOpen(false);
+        // Reset fields
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+    };
+
+    const handleDeleteAccount = () => {
+        // Account deletion logic would go here
+        alert("Account scheduled for deletion in 30 days");
+        setIsDeleteConfirmOpen(false);
+    };
+
+    const [profileData, setProfileData] = useState<any>({
+        id: "",
+        name: "",
+        first_name: "",
+        email: "",
+        photo: "/api/placeholder/150/150", // A default placeholder is fine
+        phone: "",
+        location: "",
+        bio: "",
+        verified: false,
+        agency_name: "",
+        agency_address: "",
+        whatsapp_number: "",
+        experience_years: 0,
+        preferred_contact_mode: "",
+        featured: false,
+        specialties: [],
+        languages: [],
+        certifications: [],
         socialMedia: {
-            linkedin: "linkedin.com/in/davidwilliams",
-            twitter: "twitter.com/davidwilliams",
-            instagram: "instagram.com/davidwilliams_realty"
+            linkedin: "",
+            twitter: "",
+            instagram: ""
         },
-        achievements: [
-            "Top Producer 2023",
-            "$50M+ in sales volume last year",
-            "180+ properties sold lifetime"
-        ],
-        joinedDate: "2014-05-12"
+        achievements: [],
+        joinedDate: "",
+        subscription: {
+            plan: "Free",
+            status: "active"
+        },
+        referral_code: "",
+        referred_users_count: 0,
+        total_referral_earnings: 0,
+        agent: {
+            id: null,
+            agency_name: "",
+            agency_address: "",
+            phone_number: "",
+            whatsapp_number: "",
+            experience_years: 0,
+            preferred_contact_mode: "",
+            verified: false,
+            featured: false,
+            bio: "",
+            total_views: 0,
+            total_inquiries: 0,
+            total_bookmarks: 0,
+            total_listings: 0
+        }
     });
 
     // Listings data state
-    const [listings, setListings] = useState<any>([
-        {
-            id: "1",
-            title: "Modern Luxury Apartment",
-            address: "123 Park Avenue, New York, NY",
-            price: 750000,
-            type: "Apartment",
-            status: "Active",
-            bedrooms: 2,
-            bathrooms: 2,
-            area: 1200,
-            image: "/api/placeholder/300/200",
-            listed_date: "2024-02-15",
-            views: 342,
-            inquiries: 24,
-            favorites: 18,
-            performance: {
-                viewsPerDay: 12,
-                trend: "up",
-                percentageChange: 8
-            }
-        },
-        {
-            id: "2",
-            title: "Waterfront Villa with Pool",
-            address: "456 Ocean Drive, Miami, FL",
-            price: 1250000,
-            type: "Villa",
-            status: "Active",
-            bedrooms: 4,
-            bathrooms: 3,
-            area: 3200,
-            image: "/api/placeholder/300/200",
-            listed_date: "2024-01-08",
-            views: 520,
-            inquiries: 35,
-            favorites: 42,
-            performance: {
-                viewsPerDay: 9,
-                trend: "down",
-                percentageChange: 3
-            }
-        },
-        {
-            id: "3",
-            title: "Downtown Commercial Space",
-            address: "789 Business Ave, Chicago, IL",
-            price: 980000,
-            type: "Commercial",
-            status: "Under Contract",
-            bedrooms: 0,
-            bathrooms: 2,
-            area: 2800,
-            image: "/api/placeholder/300/200",
-            listed_date: "2023-11-20",
-            views: 270,
-            inquiries: 18,
-            favorites: 9,
-            performance: {
-                viewsPerDay: 5,
-                trend: "up",
-                percentageChange: 2
-            }
-        },
-        {
-            id: "4",
-            title: "Suburban Family Home",
-            address: "321 Maple St, Boston, MA",
-            price: 595000,
-            type: "House",
-            status: "Sold",
-            bedrooms: 3,
-            bathrooms: 2.5,
-            area: 2100,
-            image: "/api/placeholder/300/200",
-            listed_date: "2023-10-05",
-            views: 480,
-            inquiries: 29,
-            favorites: 26,
-            performance: {
-                viewsPerDay: 0,
-                trend: "neutral",
-                percentageChange: 0
-            }
-        }
+    const [listings, setListings] = useState([
     ]);
 
     // Analytics data for dashboard
     const [analytics, setAnalytics] = useState({
-        totalListings: 18,
-        activeListings: 9,
-        underContractListings: 3,
-        soldListings: 6,
-        totalViews: 6892,
-        totalInquiries: 418,
-        conversionRate: 6.1,
-        averageDaysToSell: 32,
+        totalListings: 0,
+        activeListings: 0,
+        underContractListings: 0,
+        soldListings: 0,
+        totalViews: 0,
+        totalInquiries: 0,
+        conversionRate: 0,
+        averageDaysToSell: 0,
         performanceByMonth: [
-            { month: "Jan", sales: 2, value: 850000 },
-            { month: "Feb", sales: 1, value: 420000 },
-            { month: "Mar", sales: 3, value: 1250000 },
-            { month: "Apr", sales: 2, value: 980000 },
-            { month: "May", sales: 4, value: 1600000 },
-            { month: "Jun", sales: 2, value: 925000 }
+            { month: "Jan", sales: 0, value: 0 },
+            { month: "Feb", sales: 0, value: 0 },
+            { month: "Mar", sales: 0, value: 0 },
+            { month: "Apr", sales: 0, value: 0 },
+            { month: "May", sales: 0, value: 0 },
+            { month: "Jun", sales: 0, value: 0 }
         ]
     });
 
@@ -190,11 +224,158 @@ const AgentProfile = () => {
         description: ""
     });
 
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                setLoading(true);
+                const response = await api.get("/accounts/current-user/", {
+                    headers: {
+                        "Content-Type": "Application/json",
+                        Authorization: `Token ${token}`
+                    }
+                });
+                setProfile(response.data);
+
+                // Update profileData with fetched data
+                const userData = response.data;
+                setProfileData({
+                    id: userData.id,
+                    name: userData.name || "",
+                    first_name: userData.first_name || "",
+                    email: userData.email || "",
+                    photo: userData.profile?.avatar || "/api/placeholder/150/150",
+                    phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
+                    location: userData.profile?.city ?
+                        `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
+                        "Uyo, Nigeria",
+                    bio: userData.agent?.bio || "A nice agent that charges high fee.",
+                    verified: userData.is_active || false,
+                    agency_name: userData.agent?.agency_name || "Developer Agent",
+                    agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
+                    whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
+                    experience_years: userData.agent?.experience_years || 5,
+                    preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
+                    featured: userData.agent?.featured || false,
+                    specialties: [],
+                    languages: ["English"],
+                    certifications: [],
+                    socialMedia: {
+                        linkedin: "",
+                        twitter: "",
+                        instagram: ""
+                    },
+                    achievements: [],
+                    joinedDate: userData.date_joined || "",
+                    subscription: {
+                        plan: userData.subscription?.plan || "Free",
+                        status: userData.subscription?.status || "active"
+                    },
+                    referral_code: userData.referral_code || "",
+                    referred_users_count: userData.referred_users_count || 0,
+                    total_referral_earnings: userData.total_referral_earnings || 0,
+                    agent: userData.agent || null
+                });
+
+                setEditableProfile({
+                    id: userData.id,
+                    name: userData.name || "",
+                    first_name: userData.first_name || "",
+                    email: userData.email || "",
+                    photo: userData.profile?.avatar || "/api/placeholder/150/150",
+                    phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
+                    location: userData.profile?.city ?
+                        `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
+                        "Uyo, Nigeria",
+                    bio: userData.agent?.bio || "A nice agent that charges high fee.",
+                    verified: userData.is_active || false,
+                    agency_name: userData.agent?.agency_name || "Developer Agent",
+                    agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
+                    whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
+                    experience_years: userData.agent?.experience_years || 5,
+                    preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
+                    featured: userData.agent?.featured || false,
+                    specialties: [],
+                    languages: ["English"],
+                    certifications: [],
+                    socialMedia: {
+                        linkedin: "",
+                        twitter: "",
+                        instagram: ""
+                    },
+                    achievements: [],
+                    joinedDate: userData.date_joined || ""
+                });
+
+                // Update analytics based on agent data if available
+                if (userData.agent) {
+                    setAnalytics({
+                        ...analytics,
+                        totalListings: userData.agent.total_listings || 0,
+                        activeListings: userData.agent.total_listings || 0,
+                        totalViews: userData.agent.total_views || 0,
+                        totalInquiries: userData.agent.total_inquiries || 0
+                    });
+                }
+
+                setLoading(false);
+            } catch (err) {
+                console.error("Error fetching user data:", err);
+                setLoading(false);
+                toast.error("Failed to load profile data. Please try again later.");
+            }
+        };
+
+        fetchProfile();
+    }, [token]);
+
     // Handle profile update
-    const handleProfileUpdate = () => {
-        setProfileData(editableProfile);
-        setIsEditing(false);
-        toast.success("Profile updated successfully!");
+    const handleProfileUpdate = async () => {
+        try {
+            setLoading(true);
+
+            // Extract the data needed for the API
+            const updateData: UpdateData  = {
+                name: editableProfile.name,
+                profile: {
+                    phone_number: editableProfile.phone,
+                    city: editableProfile.location.split(',')[0]?.trim(),
+                    state: editableProfile.location.split(',')[1]?.trim() || "",
+                }
+            };
+
+            // For agent data if user is an agent
+            if (profile && profile?.agent) {
+                updateData.agent = {
+                    agency_name: editableProfile.agency_name,
+                    agency_address: editableProfile.agency_address,
+                    phone_number: editableProfile.phone,
+                    whatsapp_number: editableProfile.whatsapp_number,
+                    bio: editableProfile.bio,
+                    preferred_contact_mode: editableProfile.preferred_contact_mode
+                };
+            }
+
+            // Make API call to update profile
+            const response = await api.patch("/accounts/update-profile/", updateData, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            // Update the local state with the response data
+            setProfileData({ ...editableProfile });
+            setIsEditing(false);
+            setLoading(false);
+            toast.success("Profile updated successfully!");
+        } catch (err) {
+            console.error("Error updating profile:", err);
+            setLoading(false);
+            toast.error("Failed to update profile. Please try again later.");
+        }
     };
 
     // Handle new listing creation
@@ -215,7 +396,7 @@ const AgentProfile = () => {
             }
         };
 
-        setListings([listing, ...listings]);
+        // setListings([listing, ...listings]);
         setIsAddingListing(false);
         setNewListing({
             title: "",
@@ -242,16 +423,55 @@ const AgentProfile = () => {
 
     // Format date
     const formatDate = (dateString: any) => {
-        const options: any = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('en-US', options);
+        if (!dateString) return "";
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('en-US', options as any);
     };
 
     // Calculate years of experience
     const calculateExperience = (dateString: any) => {
-        const joinedYear = new Date(dateString).getFullYear();
-        const currentYear = new Date().getFullYear();
-        return currentYear - joinedYear;
+        if (!profileData.experience_years) return "New";
+        return profileData.experience_years;
     };
+
+    // Get subscription status
+    const getSubscriptionInfo = () => {
+        if (!profileData.subscription) return { plan: "Free", status: "inactive" };
+        return {
+            plan: profileData.subscription.plan || "Free",
+            status: profileData.subscription.status || "inactive"
+        };
+    };
+
+    // Get user initials for avatar
+    const getUserInitials = () => {
+        if (!profileData.name) return "";
+        return profileData.name.split(' ').map((n:any) => n[0]).join('');
+    };
+
+    if (loading && !profile) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-t-teal-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading profile data...</p>
+                </div>
+            </div>
+        );
+    }
+
+
+    const EmptyState = () => (
+        <div className="border border-dashed rounded-lg p-12 flex w-full flex-col items-center justify-center text-center bg-gray-50">
+            <div className="bg-blue-100 p-4 rounded-full mb-6">
+                <Home className="h-12 w-12 text-teal-600" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No listings yet</h3>
+            <p className="text-gray-500 mb-6 max-w-md">
+                You haven't added any property listings to your portfolio. Add your first property to start tracking performance.
+            </p>
+        </div>
+    );
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -265,13 +485,13 @@ const AgentProfile = () => {
                                 <div className="flex justify-center mb-4">
                                     <Avatar className="h-24 w-24">
                                         <AvatarImage src={profileData.photo} alt={profileData.name} />
-                                        <AvatarFallback>{profileData.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                        <AvatarFallback>{getUserInitials()}</AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <CardTitle>{profileData.name}</CardTitle>
                                 <div className="flex items-center justify-center space-x-2 mt-1">
                                     <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
-                                        {calculateExperience(profileData.joinedDate)}+ Years Experience
+                                        {calculateExperience(profileData.joinedDate)} yrs Experience
                                     </Badge>
                                     {profileData.verified && (
                                         <Badge className="bg-blue-100 text-blue-800 border-blue-200">
@@ -281,14 +501,28 @@ const AgentProfile = () => {
                                 </div>
                             </CardHeader>
                             <CardContent className="text-center space-y-2 pt-2">
-                                <div className="flex items-center justify-center text-gray-600">
-                                    <MapPin className="h-4 w-4 mr-1" /> {profileData.location}
-                                </div>
+                                {profileData.location && (
+                                    <div className="flex items-center justify-center text-gray-600">
+                                        <MapPin className="h-4 w-4 mr-1" /> {profileData.location}
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-center text-gray-600">
                                     <Mail className="h-4 w-4 mr-1" /> {profileData.email}
                                 </div>
-                                <div className="flex items-center justify-center text-gray-600">
-                                    <Phone className="h-4 w-4 mr-1" /> {profileData.phone}
+                                {profileData.phone && (
+                                    <div className="flex items-center justify-center text-gray-600">
+                                        <Phone className="h-4 w-4 mr-1" /> {profileData.phone}
+                                    </div>
+                                )}
+                                {profileData.agency_name && (
+                                    <div className="flex items-center justify-center text-gray-600">
+                                        <Building className="h-4 w-4 mr-1" /> {profileData.agency_name}
+                                    </div>
+                                )}
+                                <div className="mt-2">
+                                    <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                                        {getSubscriptionInfo().plan} Plan
+                                    </Badge>
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-center pt-2">
@@ -323,7 +557,7 @@ const AgentProfile = () => {
                                                     <div className="flex items-center gap-3">
                                                         <Avatar className="h-10 w-10">
                                                             <AvatarImage src={editableProfile.photo} alt={editableProfile.name} />
-                                                            <AvatarFallback>{editableProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                                            <AvatarFallback>{getUserInitials()}</AvatarFallback>
                                                         </Avatar>
                                                         <Button variant="outline" size="sm">
                                                             <Upload className="h-4 w-4 mr-1" /> Upload
@@ -338,7 +572,7 @@ const AgentProfile = () => {
                                                         id="email"
                                                         type="email"
                                                         value={editableProfile.email}
-                                                        onChange={(e) => setEditableProfile({ ...editableProfile, email: e.target.value })}
+                                                        disabled
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
@@ -352,93 +586,145 @@ const AgentProfile = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="location">Location</Label>
+                                                <Label htmlFor="location">Location (City, State)</Label>
                                                 <Input
                                                     id="location"
                                                     value={editableProfile.location}
                                                     onChange={(e) => setEditableProfile({ ...editableProfile, location: e.target.value })}
+                                                    placeholder="e.g. Lagos, Nigeria"
                                                 />
                                             </div>
+                                            {profileData.agent && (
+                                                <>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="agencyName">Agency Name</Label>
+                                                        <Input
+                                                            id="agencyName"
+                                                            value={editableProfile.agency_name}
+                                                            onChange={(e) => setEditableProfile({ ...editableProfile, agency_name: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="agencyAddress">Agency Address</Label>
+                                                        <Input
+                                                            id="agencyAddress"
+                                                            value={editableProfile.agency_address}
+                                                            onChange={(e) => setEditableProfile({ ...editableProfile, agency_address: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                                                        <Input
+                                                            id="whatsapp"
+                                                            value={editableProfile.whatsapp_number}
+                                                            onChange={(e) => setEditableProfile({ ...editableProfile, whatsapp_number: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="preferredContact">Preferred Contact Method</Label>
+                                                        <Select
+                                                            defaultValue={editableProfile.preferred_contact_mode}
+                                                            onValueChange={(value) => setEditableProfile({ ...editableProfile, preferred_contact_mode: value })}
+                                                        >
+                                                            <SelectTrigger id="preferredContact">
+                                                                <SelectValue placeholder="Select contact method" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="phone">Phone</SelectItem>
+                                                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                                                <SelectItem value="email">Email</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="space-y-2">
                                                 <Label htmlFor="bio">Bio</Label>
                                                 <Textarea
                                                     id="bio"
                                                     rows={4}
                                                     value={editableProfile.bio}
-                                                    onChange={(e: any) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="specialties">Specialties (comma separated)</Label>
-                                                <Input
-                                                    id="specialties"
-                                                    value={editableProfile.specialties.join(', ')}
-                                                    onChange={(e) => setEditableProfile({ ...editableProfile, specialties: e.target.value.split(',').map(s => s.trim()) })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="certifications">Certifications (comma separated)</Label>
-                                                <Input
-                                                    id="certifications"
-                                                    value={editableProfile.certifications.join(', ')}
-                                                    onChange={(e) => setEditableProfile({ ...editableProfile, certifications: e.target.value.split(',').map(s => s.trim()) })}
+                                                    onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
                                                 />
                                             </div>
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                                            <Button onClick={handleProfileUpdate}>Save Changes</Button>
+                                            <Button onClick={handleProfileUpdate} disabled={loading}>
+                                                {loading ? "Saving..." : "Save Changes"}
+                                            </Button>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
                             </CardFooter>
                         </Card>
 
-                        {/* Navigation Links */}
+                        {/* Subscription Info */}
                         <Card>
-                            <CardContent className="p-4">
-                                <nav className="space-y-1">
-                                    <a className="flex items-center px-3 py-2 text-teal-600 bg-teal-50 rounded-md font-medium">
-                                        <Home className="h-5 w-5 mr-2" /> Dashboard
-                                    </a>
-                                    <a className="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-                                        <Building className="h-5 w-5 mr-2" /> My Listings
-                                    </a>
-                                    <a className="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-                                        <Settings className="h-5 w-5 mr-2" /> Settings
-                                    </a>
-                                    <a className="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-                                        <LogOut className="h-5 w-5 mr-2" /> Logout
-                                    </a>
-                                </nav>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-lg">Subscription</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2 space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <p className="font-medium">{getSubscriptionInfo().plan} Plan</p>
+                                        <p className="text-sm text-gray-500">Status: {getSubscriptionInfo().status}</p>
+                                    </div>
+                                    <Badge className="capitalize">
+                                        {getSubscriptionInfo().status}
+                                    </Badge>
+                                </div>
+
+                                {getSubscriptionInfo().plan === "Free" && (
+                                    <div className="pt-2">
+                                        <Button variant="outline" className="w-full" size="sm">
+                                            Upgrade Plan
+                                        </Button>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
-                        {/* Achievements Card */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg">Achievements</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-2">
-                                <ul className="space-y-2">
-                                    {profileData.achievements.map((achievement, index) => (
-                                        <li key={index} className="flex items-center">
-                                            <CheckCircle className="h-4 w-4 text-teal-500 mr-2 flex-shrink-0" />
-                                            <span className="text-sm">{achievement}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
+                        {/* Referral Info */}
+                        {profileData.referral_code && (
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-lg">Referrals</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-2 space-y-4">
+                                    <div>
+                                        <p className="text-sm text-gray-500">Your Referral Code</p>
+                                        <div className="flex items-center space-x-2 mt-1">
+                                            <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">{profileData.referral_code}</code>
+                                            <Button variant="outline" size="sm" onClick={() => {
+                                                navigator.clipboard.writeText(profileData.referral_code);
+                                                toast.success("Referral code copied to clipboard!");
+                                            }}>
+                                                Copy
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Referred Users</p>
+                                        <p className="font-medium">{profileData.referred_users_count}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Total Earnings</p>
+                                        <p className="font-medium">₦{profileData.total_referral_earnings.toLocaleString()}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Main Content Area */}
                     <div className="w-full md:w-3/4 mb-10">
                         <Tabs defaultValue="dashboard">
-                            <TabsList className="grid grid-cols-3 mb-8">
+                            <TabsList className="grid grid-cols-4 gap-8 mb-8">
                                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                                 <TabsTrigger value="listings">My Listings</TabsTrigger>
                                 <TabsTrigger value="profile">Profile</TabsTrigger>
+                                <TabsTrigger value="favorites">Favorites</TabsTrigger>
                             </TabsList>
 
                             {/* Dashboard Tab */}
@@ -449,140 +735,109 @@ const AgentProfile = () => {
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-sm font-medium text-gray-500">Total Listings</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="pt-2">
+                                        <CardContent className="pt-0">
                                             <div className="text-2xl font-bold">{analytics.totalListings}</div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                Active: {analytics.activeListings} | Sold: {analytics.soldListings}
-                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">Properties in your portfolio</p>
                                         </CardContent>
                                     </Card>
+
+                                    <Card className="bg-white">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-sm font-medium text-gray-500">Active Listings</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="text-2xl font-bold">{analytics.activeListings}</div>
+                                            <p className="text-xs text-gray-500 mt-1">Currently on the market</p>
+                                        </CardContent>
+                                    </Card>
+
                                     <Card className="bg-white">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-sm font-medium text-gray-500">Total Views</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="pt-2">
-                                            <div className="text-2xl font-bold">{analytics.totalViews.toLocaleString()}</div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                Last 30 days: +942 views
-                                            </div>
+                                        <CardContent className="pt-0">
+                                            <div className="text-2xl font-bold">{analytics.totalViews}</div>
+                                            <p className="text-xs text-gray-500 mt-1">Across all properties</p>
                                         </CardContent>
                                     </Card>
+
                                     <Card className="bg-white">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Inquiries</CardTitle>
+                                            <CardTitle className="text-sm font-medium text-gray-500">Total Inquiries</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="pt-2">
+                                        <CardContent className="pt-0">
                                             <div className="text-2xl font-bold">{analytics.totalInquiries}</div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                Conversion: {analytics.conversionRate}%
+                                            <p className="text-xs text-gray-500 mt-1">From potential buyers</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Performance Charts */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Property Views Trend</CardTitle>
+                                            <CardDescription>Last 30 days performance</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="h-[300px] flex items-center justify-center">
+                                                <BarChart className="h-10 w-10 text-gray-300" />
+                                                <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
                                             </div>
                                         </CardContent>
                                     </Card>
-                                    <Card className="bg-white">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Avg. Days to Sell</CardTitle>
+
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Inquiries Conversion</CardTitle>
+                                            <CardDescription>Views to inquiries ratio</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="pt-2">
-                                            <div className="text-2xl font-bold">{analytics.averageDaysToSell}</div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                Industry Avg: 45 days
+                                        <CardContent>
+                                            <div className="h-[300px] flex items-center justify-center">
+                                                <PieChart className="h-10 w-10 text-gray-300" />
+                                                <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
                                             </div>
                                         </CardContent>
                                     </Card>
                                 </div>
 
-                                {/* Performance Chart */}
+                                {/* Recent Activities */}
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Performance Overview</CardTitle>
-                                        <CardDescription>
-                                            Monthly sales performance and value
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="h-80 w-full">
-                                            {/* Chart would go here - simplified representation */}
-                                            <div className="h-full w-full bg-gray-50 rounded-md flex items-center justify-center">
-                                                <div className="space-y-6 w-full px-6">
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="font-medium">Sales by Month</span>
-                                                            <span className="text-gray-500">Total: 14 Properties</span>
-                                                        </div>
-                                                        <div className="flex space-x-2 h-40">
-                                                            {analytics.performanceByMonth.map((month, index) => (
-                                                                <div key={index} className="flex-1 flex flex-col justify-end">
-                                                                    <div
-                                                                        className="bg-teal-500 rounded-t-sm w-full"
-                                                                        style={{ height: `${(month.sales / 4) * 100}%` }}
-                                                                    ></div>
-                                                                    <div className="text-xs text-center mt-1">{month.month}</div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="font-medium">Sales Value ($)</span>
-                                                            <span className="text-gray-500">Total: $6.02M</span>
-                                                        </div>
-                                                        <div className="flex space-x-2 h-40">
-                                                            {analytics.performanceByMonth.map((month, index) => (
-                                                                <div key={index} className="flex-1 flex flex-col justify-end">
-                                                                    <div
-                                                                        className="bg-blue-400 rounded-t-sm w-full"
-                                                                        style={{ height: `${(month.value / 1600000) * 100}%` }}
-                                                                    ></div>
-                                                                    <div className="text-xs text-center mt-1">{month.month}</div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Top Performing Listings */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Top Performing Listings</CardTitle>
-                                        <CardDescription>
-                                            Properties with the highest engagement rates
-                                        </CardDescription>
+                                        <CardTitle>Recent Activities</CardTitle>
+                                        <CardDescription>Latest interactions with your listings</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {listings
-                                                .sort((a: any, b: any) => b.views - a.views)
-                                                .slice(0, 3)
-                                                .map((listing: any) => (
-                                                    <div key={listing.id} className="flex items-center space-x-4">
-                                                        <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                                                            <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="text-sm font-medium text-gray-900 truncate">{listing.title}</h4>
-                                                            <p className="text-sm text-gray-500 truncate">{listing.address}</p>
-                                                            <div className="flex items-center mt-1">
-                                                                <span className="text-xs font-medium text-gray-700 mr-4">{formatPrice(listing.price)}</span>
-                                                                <span className="text-xs text-gray-500 flex items-center">
-                                                                    <Eye className="h-3 w-3 mr-1" /> {listing.views}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className={`flex items-center text-xs font-medium ${listing.performance.trend === 'up' ? 'text-green-600' :
-                                                            listing.performance.trend === 'down' ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
-                                                            {listing.performance.trend === 'up' && <ArrowUpRight className="h-3 w-3 mr-1" />}
-                                                            {listing.performance.trend === 'down' && <ArrowUpRight className="h-3 w-3 mr-1 transform rotate-90" />}
-                                                            {listing.performance.trend === 'neutral' && <ChevronRight className="h-3 w-3 mr-1" />}
-                                                            {listing.performance.percentageChange}%
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                            <div className="flex items-start space-x-4">
+                                                <div className="bg-blue-100 p-2 rounded-full">
+                                                    <Eye className="h-5 w-5 text-blue-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">New view on <span className="text-blue-600">Modern Luxury Apartment</span></p>
+                                                    <p className="text-xs text-gray-500">10 minutes ago</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start space-x-4">
+                                                <div className="bg-green-100 p-2 rounded-full">
+                                                    <MessageSquare className="h-5 w-5 text-green-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">New inquiry for <span className="text-blue-600">Waterfront Villa with Pool</span></p>
+                                                    <p className="text-xs text-gray-500">2 hours ago</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start space-x-4">
+                                                <div className="bg-red-100 p-2 rounded-full">
+                                                    <Heart className="h-5 w-5 text-red-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">New favorite on <span className="text-blue-600">Downtown Commercial Space</span></p>
+                                                    <p className="text-xs text-gray-500">4 hours ago</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -590,20 +845,19 @@ const AgentProfile = () => {
 
                             {/* Listings Tab */}
                             <TabsContent value="listings" className="space-y-6">
-                                {/* Add New Listing Button */}
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-2xl font-bold text-gray-800">My Properties</h2>
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold">My Properties</h2>
                                     <Dialog>
                                         <DialogTrigger asChild>
-                                            <Button onClick={() => setIsAddingListing(true)}>
-                                                <Plus className="h-4 w-4 mr-1" /> Add New Listing
+                                            <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
+                                                <Plus className="h-4 w-4 mr-1" /> Add New Property
                                             </Button>
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
                                             <DialogHeader>
-                                                <DialogTitle>Add New Property Listing</DialogTitle>
+                                                <DialogTitle>Add New Property</DialogTitle>
                                                 <DialogDescription>
-                                                    Fill in the details to create a new property listing.
+                                                    Enter details for your new property listing.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="grid gap-4 py-4">
@@ -613,7 +867,37 @@ const AgentProfile = () => {
                                                         id="title"
                                                         value={newListing.title}
                                                         onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
+                                                        placeholder="e.g. Modern 3 Bedroom Apartment"
                                                     />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="type">Property Type</Label>
+                                                        <Select
+                                                            onValueChange={(value) => setNewListing({ ...newListing, type: value })}
+                                                        >
+                                                            <SelectTrigger id="type">
+                                                                <SelectValue placeholder="Select type" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Apartment">Apartment</SelectItem>
+                                                                <SelectItem value="House">House</SelectItem>
+                                                                <SelectItem value="Villa">Villa</SelectItem>
+                                                                <SelectItem value="Commercial">Commercial</SelectItem>
+                                                                <SelectItem value="Land">Land</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="price">Price (USD)</Label>
+                                                        <Input
+                                                            id="price"
+                                                            type="number"
+                                                            value={newListing.price}
+                                                            onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                                                            placeholder="e.g. 500000"
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="address">Address</Label>
@@ -621,34 +905,8 @@ const AgentProfile = () => {
                                                         id="address"
                                                         value={newListing.address}
                                                         onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
+                                                        placeholder="Full property address"
                                                     />
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="price">Price ($)</Label>
-                                                        <Input
-                                                            id="price"
-                                                            type="number"
-                                                            value={newListing.price}
-                                                            onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="type">Property Type</Label>
-                                                        <Select onValueChange={(value) => setNewListing({ ...newListing, type: value })}>
-                                                            <SelectTrigger id="type">
-                                                                <SelectValue placeholder="Select type" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="House">House</SelectItem>
-                                                                <SelectItem value="Apartment">Apartment</SelectItem>
-                                                                <SelectItem value="Condo">Condo</SelectItem>
-                                                                <SelectItem value="Villa">Villa</SelectItem>
-                                                                <SelectItem value="Commercial">Commercial</SelectItem>
-                                                                <SelectItem value="Land">Land</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div className="space-y-2">
@@ -658,6 +916,15 @@ const AgentProfile = () => {
                                                             type="number"
                                                             value={newListing.bedrooms}
                                                             onChange={(e) => setNewListing({ ...newListing, bedrooms: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="bathrooms">Bathrooms</Label>
+                                                        <Input
+                                                            id="bathrooms"
+                                                            type="number"
+                                                            value={newListing.bathrooms}
+                                                            onChange={(e) => setNewListing({ ...newListing, bathrooms: e.target.value })}
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -677,87 +944,42 @@ const AgentProfile = () => {
                                                         rows={4}
                                                         value={newListing.description}
                                                         onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                                                        placeholder="Describe the property features and highlights"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="photo">Property Photos</Label>
-                                                    <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+                                                    <Label htmlFor="images">Upload Images</Label>
+                                                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
                                                         <Upload className="h-8 w-8 mx-auto text-gray-400" />
                                                         <p className="mt-2 text-sm text-gray-500">Drag and drop images here or click to browse</p>
-                                                        <Button variant="outline" size="sm" className="mt-2">
-                                                            Upload Photos
+                                                        <Button variant="outline" size="sm" className="mt-4">
+                                                            Choose Files
                                                         </Button>
                                                     </div>
                                                 </div>
                                             </div>
                                             <DialogFooter>
                                                 <Button variant="outline" onClick={() => setIsAddingListing(false)}>Cancel</Button>
-                                                <Button onClick={handleAddListing}>Create Listing</Button>
+                                                <Button onClick={handleAddListing}>Add Property</Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
 
-                                {/* Listings Filter */}
-                                <Card className="bg-white">
-                                    <CardContent className="p-4">
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <div className="flex-1 min-w-[200px]">
-                                                <Input placeholder="Search listings..." />
-                                            </div>
-                                            <Select defaultValue="all">
-                                                <SelectTrigger className="w-[150px]">
-                                                    <SelectValue placeholder="Status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All Status</SelectItem>
-                                                    <SelectItem value="active">Active</SelectItem>
-                                                    <SelectItem value="under-contract">Under Contract</SelectItem>
-                                                    <SelectItem value="sold">Sold</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <Select defaultValue="all">
-                                                <SelectTrigger className="w-[150px]">
-                                                    <SelectValue placeholder="Property Type" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All Types</SelectItem>
-                                                    <SelectItem value="house">House</SelectItem>
-                                                    <SelectItem value="apartment">Apartment</SelectItem>
-                                                    <SelectItem value="condo">Condo</SelectItem>
-                                                    <SelectItem value="villa">Villa</SelectItem>
-                                                    <SelectItem value="commercial">Commercial</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <Select defaultValue="newest">
-                                                <SelectTrigger className="w-[150px]">
-                                                    <SelectValue placeholder="Sort By" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="newest">Newest First</SelectItem>
-                                                    <SelectItem value="price-high">Price (High-Low)</SelectItem>
-                                                    <SelectItem value="price-low">Price (Low-High)</SelectItem>
-                                                    <SelectItem value="views">Most Viewed</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Listings Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {listings.map((listing: any) => (
-                                        <Card key={listing.id} className="overflow-hidden">
-                                            <div className="relative">
+                                {/* Listing Cards */}
+                                {listings.length === 0 ? (<EmptyState />) : listings.map((listing: any) => (
+                                    <div key={listing.id} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Card className="overflow-hidden">
+                                            <div className="relative h-48">
                                                 <img
                                                     src={listing.image}
                                                     alt={listing.title}
-                                                    className="w-full h-48 object-cover"
+                                                    className="w-full h-full object-cover"
                                                 />
                                                 <Badge
-                                                    className={`absolute top-3 left-3 ${listing.status === 'Active' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                        listing.status === 'Under Contract' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                                                            'bg-blue-100 text-blue-800 border-blue-200'
+                                                    className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
+                                                        listing.status === 'Under Contract' ? 'bg-amber-500' :
+                                                            'bg-blue-500'
                                                         }`}
                                                 >
                                                     {listing.status}
@@ -765,177 +987,395 @@ const AgentProfile = () => {
                                             </div>
                                             <CardHeader className="pb-2">
                                                 <div className="flex justify-between items-start">
-                                                    <CardTitle className="text-lg">{listing.title}</CardTitle>
-                                                    <div className="text-lg font-bold text-teal-600">{formatPrice(listing.price)}</div>
+                                                    <div>
+                                                        <CardTitle>{listing.title}</CardTitle>
+                                                        <CardDescription className="flex items-center mt-1">
+                                                            <MapPin className="h-3 w-3 mr-1" /> {listing.address}
+                                                        </CardDescription>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
+                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                    </div>
                                                 </div>
-                                                <CardDescription className="flex items-center">
-                                                    <MapPin className="h-3 w-3 mr-1" /> {listing.address}
-                                                </CardDescription>
                                             </CardHeader>
-                                            <CardContent className="pb-2 pt-0">
-                                                <div className="flex justify-between mb-4">
-                                                    <div className="flex space-x-4">
-                                                        <div className="text-sm">
-                                                            <span className="font-medium">{listing.bedrooms}</span> <span className="text-gray-500">bd</span>
-                                                        </div>
-                                                        <div className="text-sm">
-                                                            <span className="font-medium">{listing.bathrooms}</span> <span className="text-gray-500">ba</span>
-                                                        </div>
-                                                        <div className="text-sm">
-                                                            <span className="font-medium">{listing.area.toLocaleString()}</span> <span className="text-gray-500">sqft</span>
-                                                        </div>
+                                            <CardContent className="pt-2">
+                                                <div className="flex justify-between text-sm mb-4">
+                                                    <div className="flex items-center">
+                                                        <Badge variant="outline" className="mr-2">
+                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="mr-2">
+                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                        </Badge>
+                                                        <Badge variant="outline">
+                                                            {listing.area} sqft
+                                                        </Badge>
                                                     </div>
-                                                    <div className="text-sm text-gray-500">
-                                                        Listed: {formatDate(listing.listed_date)}
+                                                    <Badge variant="secondary">{listing.type}</Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Views</p>
+                                                        <p className="font-semibold">{listing.views}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Inquiries</p>
+                                                        <p className="font-semibold">{listing.inquiries}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Favorites</p>
+                                                        <p className="font-semibold">{listing.favorites}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex space-x-4 text-sm text-gray-500">
+
+                                                <div className="flex items-center justify-between mt-4">
                                                     <div className="flex items-center">
-                                                        <Eye className="h-4 w-4 mr-1" /> {listing.views}
+                                                        <div className={`flex items-center ${listing.performance.trend === 'up' ? 'text-green-600' :
+                                                            listing.performance.trend === 'down' ? 'text-red-600' :
+                                                                'text-gray-600'
+                                                            }`}>
+                                                            {listing.performance.trend === 'up' ? (
+                                                                <TrendingUp className="h-4 w-4 mr-1" />
+                                                            ) : listing.performance.trend === 'down' ? (
+                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
+                                                            ) : (
+                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
+                                                            )}
+                                                            <span className="text-sm font-medium">
+                                                                {listing.performance.percentageChange}% {listing.performance.trend !== 'neutral' && (listing.performance.trend === 'up' ? 'increase' : 'decrease')}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-xs text-gray-500 ml-2">in views this week</span>
                                                     </div>
-                                                    <div className="flex items-center">
-                                                        <MessageSquare className="h-4 w-4 mr-1" /> {listing.inquiries}
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <Heart className="h-4 w-4 mr-1" /> {listing.favorites}
-                                                    </div>
+                                                    <Button variant="outline" size="sm">
+                                                        <FileEdit className="h-4 w-4 mr-1" /> Edit
+                                                    </Button>
                                                 </div>
                                             </CardContent>
-                                            <CardFooter className="pt-0 flex justify-between">
-                                                <Button variant="outline" size="sm">
-                                                    <Eye className="h-4 w-4 mr-1" /> View
-                                                </Button>
-                                                <Button variant="outline" size="sm">
-                                                    <FileEdit className="h-4 w-4 mr-1" /> Edit
-                                                </Button>
-                                            </CardFooter>
                                         </Card>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </TabsContent>
 
                             {/* Profile Tab */}
                             <TabsContent value="profile" className="space-y-6">
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Agent Information</CardTitle>
-                                        <CardDescription>
-                                            Complete profile information that will be visible to clients and other agents.
-                                        </CardDescription>
+                                        <CardTitle>Personal Information</CardTitle>
+                                        <CardDescription>Review and update your personal details</CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-6">
-                                        <div className="flex flex-col md:flex-row gap-6">
-                                            <div className="w-full md:w-1/3">
-                                                <div className="aspect-square rounded-md bg-gray-100 flex items-center justify-center overflow-hidden">
-                                                    <img
-                                                        src={profileData.photo}
-                                                        alt={profileData.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-                                                <div className="mt-4 text-center">
-                                                    <Button variant="outline" size="sm">
-                                                        <Upload className="h-4 w-4 mr-1" /> Change Photo
-                                                    </Button>
-                                                </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Full Name</h3>
+                                                <p>{profileData.name}</p>
                                             </div>
-                                            <div className="w-full md:w-2/3 space-y-4">
-                                                <div>
-                                                    <h3 className="text-lg font-semibold">{profileData.name}</h3>
-                                                    <p className="text-gray-500">Member since {formatDate(profileData.joinedDate)}</p>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <div className="font-medium">Contact Information</div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="flex items-center space-x-2 text-gray-700">
-                                                            <Mail className="h-4 w-4" />
-                                                            <span>{profileData.email}</span>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2 text-gray-700">
-                                                            <Phone className="h-4 w-4" />
-                                                            <span>{profileData.phone}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <div className="font-medium">Personal Bio</div>
-                                                    <p className="text-gray-700">{profileData.bio}</p>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <div className="font-medium">Specialties</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {profileData.specialties.map((specialty, index) => (
-                                                            <Badge key={index} variant="secondary">{specialty}</Badge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <div className="font-medium">Languages</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {profileData.languages.map((language, index) => (
-                                                            <Badge key={index} variant="outline">{language}</Badge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <div className="font-medium">Certifications</div>
-                                                    <ul className="list-disc list-inside text-gray-700">
-                                                        {profileData.certifications.map((cert, index) => (
-                                                            <li key={index}>{cert}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
+                                            <div>
+                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Email Address</h3>
+                                                <p>{profileData.email}</p>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Phone Number</h3>
+                                                <p>{profileData.phone}</p>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Location</h3>
+                                                <p>{profileData.location}</p>
                                             </div>
                                         </div>
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Bio</h3>
+                                            <p className="text-gray-700">{profileData.bio}</p>
+                                        </div>
+
                                     </CardContent>
-                                    <CardFooter>
-                                        <Button onClick={() => {
-                                            setIsEditing(true);
-                                            setEditableProfile({ ...profileData });
-                                        }}>
-                                            <Edit className="h-4 w-4 mr-1" /> Edit Profile
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
+
+                                {profileData.agent && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Agency Information</CardTitle>
+                                            <CardDescription>Your real estate business details</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Name</h3>
+                                                    <p>{profileData.agency_name}</p>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Experience</h3>
+                                                    <p>{profileData.experience_years} years</p>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Address</h3>
+                                                    <p>{profileData.agency_address}</p>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">WhatsApp</h3>
+                                                    <p>{profileData.whatsapp_number}</p>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Preferred Contact Method</h3>
+                                                    <p className="capitalize">{profileData.preferred_contact_mode}</p>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Verification Status</h3>
+                                                    <div className="flex items-center">
+                                                        {profileData.verified ? (
+                                                            <>
+                                                                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                                                                <span className="text-green-600">Verified</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-amber-600">Pending Verification</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-4 border-t border-gray-200">
+                                                <h3 className="text-sm font-medium text-gray-500 mb-3">Account Statistics</h3>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                        <p className="text-sm text-gray-500">Total Views</p>
+                                                        <p className="text-xl font-bold">{profileData.agent.total_views}</p>
+                                                    </div>
+                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                        <p className="text-sm text-gray-500">Total Inquiries</p>
+                                                        <p className="text-xl font-bold">{profileData.agent.total_inquiries}</p>
+                                                    </div>
+                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                        <p className="text-sm text-gray-500">Bookmarks</p>
+                                                        <p className="text-xl font-bold">{profileData.agent.total_bookmarks}</p>
+                                                    </div>
+                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                        <p className="text-sm text-gray-500">Total Listings</p>
+                                                        <p className="text-xl font-bold">{profileData.agent.total_listings}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
 
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>Account Settings</CardTitle>
-                                        <CardDescription>
-                                            Manage your account preferences and security settings.
-                                        </CardDescription>
+                                        <CardDescription>Manage your account preferences</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="flex items-center justify-between">
+                                    <CardContent className="space-y-6">
+                                        {/* Email Notifications - Toggle */}
+                                        <div className="flex items-center justify-between py-2">
                                             <div>
-                                                <h4 className="font-medium">Email Notifications</h4>
-                                                <p className="text-sm text-gray-500">Receive notifications about new inquiries, messages, and listing updates.</p>
+                                                <h3 className="font-medium">Email Notifications</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Receive updates about your listings and inquiries
+                                                </p>
                                             </div>
-                                            <div>
-                                                {/* Toggle component placeholder */}
-                                                <div className="w-12 h-6 bg-teal-500 rounded-full relative cursor-pointer">
-                                                    <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1"></div>
-                                                </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Switch
+                                                    id="email-notifications"
+                                                    checked={emailNotifications}
+                                                    onCheckedChange={setEmailNotifications}
+                                                />
+                                                <Label htmlFor="email-notifications">
+                                                    {emailNotifications ? "Active" : "Inactive"}
+                                                </Label>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between">
+
+                                        {/* Change Password - Dialog Modal */}
+                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
                                             <div>
-                                                <h4 className="font-medium">Two-Factor Authentication</h4>
-                                                <p className="text-sm text-gray-500">Add an extra layer of security to your account.</p>
+                                                <h3 className="font-medium">Change Password</h3>
+                                                <p className="text-sm text-gray-500">Update your account password</p>
                                             </div>
-                                            <Button variant="outline" size="sm">Enable</Button>
+                                            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline" size="sm">
+                                                        Update
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Change Password</DialogTitle>
+                                                        <DialogDescription>
+                                                            Enter your old password and a new password to update
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="current-password">Current Password</Label>
+                                                            <Input
+                                                                id="current-password"
+                                                                type="password"
+                                                                placeholder="Enter current password"
+                                                                value={currentPassword}
+                                                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="new-password">New Password</Label>
+                                                            <Input
+                                                                id="new-password"
+                                                                type="password"
+                                                                placeholder="Enter new password"
+                                                                value={newPassword}
+                                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                                                            Cancel
+                                                        </Button>
+                                                        <Button type="button" onClick={handlePasswordChange}>
+                                                            Save Changes
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
                                         </div>
-                                        <div className="flex items-center justify-between">
+
+                                        {/* Phone Verification */}
+                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
                                             <div>
-                                                <h4 className="font-medium">Password</h4>
-                                                <p className="text-sm text-gray-500">Last changed 3 months ago</p>
+                                                <h3 className="font-medium">Phone Verification</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Add an extra layer of security to your account
+                                                </p>
                                             </div>
-                                            <Button variant="outline" size="sm">Change</Button>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline" size="sm">
+                                                        <Phone className="h-4 w-4 mr-1" />
+                                                        {isPhoneVerified ? "Verified" : "Verify"}
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Verify Your Phone Number</DialogTitle>
+                                                        <DialogDescription>
+                                                            Enter your phone number to receive a verification code
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="phone-number">Phone Number</Label>
+                                                            <Input
+                                                                id="phone-number"
+                                                                type="tel"
+                                                                placeholder="+1 (555) 123-4567"
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            onClick={() => setIsPhoneVerified(true)}
+                                                            className="w-full"
+                                                        >
+                                                            Send Verification Code
+                                                        </Button>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+
+                                        {/* ID Card Verification */}
+                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                            <div>
+                                                <h3 className="font-medium">ID Card Verification</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Verify your identity with a government-issued ID
+                                                </p>
+                                            </div>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline" size="sm">
+                                                        <CreditCard className="h-4 w-4 mr-1" />
+                                                        {isIdVerified ? "Verified" : "Verify"}
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Verify Your Identity</DialogTitle>
+                                                        <DialogDescription>
+                                                            Upload a photo of your government-issued ID
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4">
+                                                        <div className="border-2 border-dashed border-gray-200 p-6 rounded-md text-center">
+                                                            <div className="flex flex-col items-center">
+                                                                <CreditCard className="h-8 w-8 text-gray-400 mb-2" />
+                                                                <p className="text-sm text-gray-500 mb-2">
+                                                                    Drag and drop or click to upload
+                                                                </p>
+                                                                <input
+                                                                    type="file"
+                                                                    className="hidden"
+                                                                    id="id-upload"
+                                                                    accept="image/*"
+                                                                />
+                                                                <label htmlFor="id-upload">
+                                                                    <Button variant="outline" size="sm" type="button">
+                                                                        Select File
+                                                                    </Button>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            onClick={() => setIsIdVerified(true)}
+                                                            className="w-full"
+                                                        >
+                                                            Submit for Verification
+                                                        </Button>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+
+                                        {/* Delete Account - Confirmation Modal */}
+                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                            <div>
+                                                <h3 className="font-medium text-red-600">Delete Account</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Permanently remove your account and all data
+                                                </p>
+                                            </div>
+                                            <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="destructive" size="sm">
+                                                        Delete
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Schedule Account Deletion</DialogTitle>
+                                                        <DialogDescription>
+                                                            Your account will be scheduled for deletion in 30 days. During this period, you can log in to cancel the deletion process.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="py-4">
+                                                        <Alert variant="destructive">
+                                                            <AlertCircle className="h-4 w-4" />
+                                                            <AlertTitle>Warning</AlertTitle>
+                                                            <AlertDescription>
+                                                                This action cannot be undone after the 30-day period. All your data will be permanently deleted.
+                                                            </AlertDescription>
+                                                        </Alert>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+                                                            Cancel
+                                                        </Button>
+                                                        <Button variant="destructive" onClick={handleDeleteAccount}>
+                                                            Schedule Deletion
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -948,4 +1388,4 @@ const AgentProfile = () => {
     );
 };
 
-export default AgentProfile;
+export default Profile;
