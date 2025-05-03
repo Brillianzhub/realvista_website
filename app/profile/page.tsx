@@ -419,6 +419,8 @@ const Profile = () => {
                 availability_date: newListing.availability_date
             };
 
+            console.log("checking token----->", token)
+
             // Make API call to list the property
             const response = await api.post("/market/list-property", payload, {
                 headers: {

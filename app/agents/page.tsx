@@ -241,6 +241,20 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
     return null;
   }
 
+  const generateShareUrl = () => {
+    // Use window.location to get the base URL of the current page
+    const baseUrl = window.location.origin;
+    // Construct a URL for the agent's profile
+    return `${baseUrl}/agents/${selectedAgent.id}`;
+  };
+
+  // Update the button click handler
+  const handleOpenShareDialog = () => {
+    // Set the share URL before opening the dialog
+    setShareUrl(generateShareUrl());
+    setIsShareDialogOpen(true);
+  };
+
   const selectedAgent = agent;
 
   const handleShare = (platform: string) => {
@@ -363,7 +377,7 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
                     <Button
                       variant="outline"
                       className="w-full flex cursor-pointer items-center justify-center gap-2 border-dashed border-gray-300"
-                      onClick={() => setIsShareDialogOpen(true)}
+                      onClick={handleOpenShareDialog}
                     >
                       <Share2 className="h-4 w-4" />
                       Share Profile
