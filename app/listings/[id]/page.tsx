@@ -488,7 +488,7 @@ const PropertyDetailsPage = () => {
                                                 width="100%"
                                                 height="100%"
                                                 frameBorder="0"
-                                                src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${listing.market_coordinates[0].latitude},${listing.market_coordinates[0].longitude}`}
+                                                src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API}&q=${listing.market_coordinates[0].latitude},${listing.market_coordinates[0].longitude}`}
                                                 allowFullScreen
                                             ></iframe>
                                         </div>

@@ -46,6 +46,7 @@ import { toast } from 'sonner';
 import api from '@/config/apiClient';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
+import Link from 'next/link';
 
 interface Agent {
     id: string | null;
@@ -196,6 +197,7 @@ const Profile = () => {
     // Analytics data for dashboard
     const [analytics, setAnalytics] = useState({
         totalListings: 0,
+        totalFavorites: 0,
         activeListings: 0,
         underContractListings: 0,
         soldListings: 0,
@@ -327,7 +329,7 @@ const Profile = () => {
                     setAnalytics({
                         ...analytics,
                         totalListings: userData.agent.total_listings || 0,
-                        activeListings: userData.agent.total_listings || 0,
+                        totalFavorites: userData.agent.total_bookmarks || 0,
                         totalViews: userData.agent.total_views || 0,
                         totalInquiries: userData.agent.total_inquiries || 0
                     });
@@ -416,22 +418,22 @@ const Profile = () => {
                 lot_size: newListing.lot_size,
                 year_built: newListing.year_built,
                 availability: newListing.availability,
-                availability_date: newListing.availability_date
+                // availability_date: newListing.availability !== "now" && newListing.availability_date
             };
 
             console.log("checking token----->", token)
 
             // Make API call to list the property
-            const response = await api.post("/market/list-property", payload, {
+            const response = await api.post("/market/list-property/", payload, {
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Token ${token}`
                 }
             });
 
             // If successful, add to local state
             if (response.data) {
-                const newProperty:any = {
+                const newProperty: any = {
                     ...response.data,
                     id: response.data.id || (listings.length + 1).toString(),
                     status: "Active",
@@ -531,7 +533,7 @@ const Profile = () => {
 
     // Format price with commas
     const formatPrice = (price: any) => {
-        return price.toLocaleString('en-US', {
+        return price?.toLocaleString('en-US', {
             style: 'currency',
             currency: 'USD',
             maximumFractionDigits: 0
@@ -860,10 +862,10 @@ const Profile = () => {
 
                                     <Card className="bg-white">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Active Listings</CardTitle>
+                                            <CardTitle className="text-sm font-medium text-gray-500">Total Favorites</CardTitle>
                                         </CardHeader>
                                         <CardContent className="pt-0">
-                                            <div className="text-2xl font-bold">{analytics.activeListings}</div>
+                                            <div className="text-2xl font-bold">{analytics?.totalFavorites}</div>
                                             <p className="text-xs text-gray-500 mt-1">Currently on the market</p>
                                         </CardContent>
                                     </Card>
@@ -1241,7 +1243,7 @@ const Profile = () => {
                                                         <div className="mt-4">
                                                             <Label>Selected Images ({selectedImages.length})</Label>
                                                             <div className="grid grid-cols-3 gap-4 mt-2">
-                                                                {selectedImages.map((image:any, index:any) => (
+                                                                {selectedImages.map((image: any, index: any) => (
                                                                     <div key={index} className="relative group">
                                                                         <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
                                                                             <img
@@ -1296,8 +1298,8 @@ const Profile = () => {
 
                                 {/* Listing Cards */}
                                 {listings.length === 0 ? (<EmptyState />) : listings.map((listing: any) => (
-                                    <div key={listing.id} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Card className="overflow-hidden">
+                                    <div key={listing.id} className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
+                                        <Card className="">
                                             <div className="relative h-48">
                                                 <img
                                                     src={listing.image}
@@ -1577,7 +1579,11 @@ const Profile = () => {
                                                     Add an extra layer of security to your account
                                                 </p>
                                             </div>
-                                            <Dialog>
+                                            <Link href="/verify-number" className='flex items-center gap-2'>
+                                                <Phone className="h-4 w-4 mr-1" />
+                                                {isPhoneVerified ? "Verified" : "Verify"}
+                                            </Link>
+                                            {/* <Dialog>
                                                 <DialogTrigger asChild>
                                                     <Button variant="outline" size="sm">
                                                         <Phone className="h-4 w-4 mr-1" />
@@ -1608,7 +1614,7 @@ const Profile = () => {
                                                         </Button>
                                                     </div>
                                                 </DialogContent>
-                                            </Dialog>
+                                            </Dialog> */}
                                         </div>
 
                                         {/* ID Card Verification */}

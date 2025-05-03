@@ -31,6 +31,7 @@ type formDataProps = {
     experienceYears: string,
     preferredContactMode: string,
     bios: string
+    acceptTerms: boolean
 }
 
 const SignUpPage = () => {
@@ -49,7 +50,8 @@ const SignUpPage = () => {
         whatsappNumber: '',
         experienceYears: '0',
         preferredContactMode: 'whatsapp',
-        bios: ''
+        bios: '',
+        acceptTerms: false // Add this new field
     });
     const [formStage, setFormStage] = useState<any>('type-selection');
     const [formErrors, setFormErrors] = useState<any>({});
@@ -64,6 +66,15 @@ const SignUpPage = () => {
             setFormStage('details');
         }
     };
+
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: checked
+        }));
+    };
+
 
     const handleUserTypeSelect = (type: string) => {
         setUserType(type);
@@ -106,6 +117,9 @@ const SignUpPage = () => {
             if (!formData.experienceYears.trim()) errors.experienceYears = "Experience years is required";
             if (!formData.bios.trim()) errors.bios = "Bio is required";
         }
+        if (!formData.acceptTerms) {
+            errors.acceptTerms = "You must accept the Terms and Conditions";
+        }
 
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
@@ -147,7 +161,7 @@ const SignUpPage = () => {
                 // Make API call
                 const response = await api.post('/accounts/register_user/', payload);
                 console.log('API Response:', response.data);
-                 router.push(`verify-email?id=${response.data.id}`)
+                router.push(`verify-email?id=${response.data.id}`)
             } catch (error: any) {
                 console.error('Registration error:', error);
                 setApiError(error.response?.data?.message || 'An error occurred during registration. Please try again.');
@@ -641,6 +655,34 @@ const SignUpPage = () => {
                     </div>
                 </div>
             )}
+            <div className="mt-6">
+                <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                        <input
+                            id="acceptTerms"
+                            name="acceptTerms"
+                            type="checkbox"
+                            checked={formData.acceptTerms}
+                            onChange={handleCheckboxChange}
+                            className={`
+                    h-5 w-5 rounded 
+                    border-gray-300 text-[#348b8b] 
+                    focus:ring-[#348b8b]
+                    ${formErrors.acceptTerms ? 'border-red-500 bg-red-50' : ''}
+                `}
+                        />
+                    </div>
+                    <div className="ml-3 text-sm">
+                        <label htmlFor="acceptTerms" className="font-medium text-gray-700">
+                            I agree to the <Link href="/terms" className="text-[#348b8b] hover:underline">Terms and Conditions</Link> and <Link href="/privacy" className="text-[#348b8b] hover:underline">Privacy Policy</Link>
+                        </label>
+                        {formErrors.acceptTerms && (
+                            <p className="text-red-500 text-sm mt-1">{formErrors.acceptTerms}</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
 
             <div className="mt-8 text-center">
                 <button
