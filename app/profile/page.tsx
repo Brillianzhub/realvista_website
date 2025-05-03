@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     User,
     MapPin,
@@ -28,7 +28,8 @@ import {
     CheckCircle,
     HeartIcon,
     AlertCircle,
-    CreditCard
+    CreditCard,
+    X
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,6 +118,9 @@ const Profile = () => {
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+    const fileInputRef = useRef<any>(null);
+    const [selectedImages, setSelectedImages] = useState<any>([]);
+
 
     const handlePasswordChange = () => {
         // Password change logic would go here
@@ -186,7 +190,7 @@ const Profile = () => {
     });
 
     // Listings data state
-    const [listings, setListings] = useState([
+    const [listings, setListings] = useState<any>([
     ]);
 
     // Analytics data for dashboard
@@ -213,15 +217,24 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editableProfile, setEditableProfile] = useState({ ...profileData });
     const [isAddingListing, setIsAddingListing] = useState(false);
-    const [newListing, setNewListing] = useState({
+    const [newListing, setNewListing] = useState<any>({
         title: "",
-        address: "",
+        description: "",
+        property_type: "",
         price: "",
-        type: "",
+        currency: "USD",
+        listing_purpose: "sale",
+        address: "",
+        city: "",
+        state: "",
+        zip_code: "",
         bedrooms: "",
         bathrooms: "",
-        area: "",
-        description: ""
+        square_feet: "",
+        lot_size: "",
+        year_built: "",
+        availability: "now",
+        availability_date: ""
     });
 
 
@@ -318,7 +331,10 @@ const Profile = () => {
                         totalViews: userData.agent.total_views || 0,
                         totalInquiries: userData.agent.total_inquiries || 0
                     });
+
+                    setListings(userData.agent?.properties)
                 }
+
 
                 setLoading(false);
             } catch (err) {
@@ -337,7 +353,7 @@ const Profile = () => {
             setLoading(true);
 
             // Extract the data needed for the API
-            const updateData: UpdateData  = {
+            const updateData: UpdateData = {
                 name: editableProfile.name,
                 profile: {
                     phone_number: editableProfile.phone,
@@ -378,38 +394,137 @@ const Profile = () => {
         }
     };
 
-    // Handle new listing creation
-    const handleAddListing = () => {
-        const listing = {
-            ...newListing,
-            id: (listings.length + 1).toString(),
-            status: "Active",
-            image: "/api/placeholder/300/200",
-            listed_date: new Date().toISOString().split('T')[0],
-            views: 0,
-            inquiries: 0,
-            favorites: 0,
-            performance: {
-                viewsPerDay: 0,
-                trend: "neutral",
-                percentageChange: 0
+    const handleAddListing = async () => {
+        try {
+            setLoading(true);
+
+            // Prepare the payload according to the required format
+            const payload = {
+                title: newListing.title,
+                description: newListing.description,
+                property_type: newListing.property_type,
+                price: newListing.price,
+                currency: newListing.currency,
+                listing_purpose: newListing.listing_purpose,
+                address: newListing.address,
+                city: newListing.city,
+                state: newListing.state,
+                zip_code: newListing.zip_code,
+                bedrooms: newListing.bedrooms,
+                bathrooms: newListing.bathrooms,
+                square_feet: newListing.square_feet,
+                lot_size: newListing.lot_size,
+                year_built: newListing.year_built,
+                availability: newListing.availability,
+                availability_date: newListing.availability_date
+            };
+
+            // Make API call to list the property
+            const response = await api.post("/market/list-property", payload, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            // If successful, add to local state
+            if (response.data) {
+                const newProperty:any = {
+                    ...response.data,
+                    id: response.data.id || (listings.length + 1).toString(),
+                    status: "Active",
+                    image: response.data.image || "/api/placeholder/300/200",
+                    listed_date: new Date().toISOString().split('T')[0],
+                    views: 0,
+                    inquiries: 0,
+                    favorites: 0,
+                    performance: {
+                        viewsPerDay: 0,
+                        trend: "neutral",
+                        percentageChange: 0
+                    }
+                };
+
+                setListings([newProperty, ...listings]);
+                setIsAddingListing(false);
+
+                // Reset the form
+                setNewListing({
+                    title: "",
+                    description: "",
+                    property_type: "",
+                    price: "",
+                    currency: "USD",
+                    listing_purpose: "sale",
+                    address: "",
+                    city: "",
+                    state: "",
+                    zip_code: "",
+                    bedrooms: "",
+                    bathrooms: "",
+                    square_feet: "",
+                    lot_size: "",
+                    year_built: "",
+                    availability: "now",
+                    availability_date: ""
+                });
+
+                toast.success("New property listed successfully!");
             }
-        };
 
-        // setListings([listing, ...listings]);
-        setIsAddingListing(false);
-        setNewListing({
-            title: "",
-            address: "",
-            price: "",
-            type: "",
-            bedrooms: "",
-            bathrooms: "",
-            area: "",
-            description: ""
-        });
+            setLoading(false);
+        } catch (error) {
+            console.error("Error adding property:", error);
+            setLoading(false);
+            toast.error("Failed to add property. Please try again.");
+        }
+    };
 
-        toast.success("New property listed successfully!");
+    const handleFileSelect = (e: any) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        // Create previews for the selected files
+        const newImages = files.map((file: any) => ({
+            file,
+            preview: URL.createObjectURL(file),
+            name: file.name
+        }));
+
+        // Update the selectedImages state (separate from newListing)
+        setSelectedImages((prevImages: any) => [...prevImages, ...newImages]);
+    };
+
+    // Remove an image
+    const removeImage = (indexToRemove: any) => {
+        setSelectedImages((prevImages: any) =>
+            prevImages.filter(((_: any, index: any) => index !== indexToRemove)
+            ));
+    };
+
+    // Handle drag events
+    const handleDragOver = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files);
+
+            // Create previews for the dropped files
+            const newImages = files.map((file: any) => ({
+                file,
+                preview: URL.createObjectURL(file),
+                name: file.name
+            }));
+
+            // Update the selectedImages state
+            setSelectedImages((prevImages: any) => [...prevImages, ...newImages]);
+        }
     };
 
     // Format price with commas
@@ -446,7 +561,7 @@ const Profile = () => {
     // Get user initials for avatar
     const getUserInitials = () => {
         if (!profileData.name) return "";
-        return profileData.name.split(' ').map((n:any) => n[0]).join('');
+        return profileData.name.split(' ').map((n: any) => n[0]).join('');
     };
 
     if (loading && !profile) {
@@ -861,53 +976,134 @@ const Profile = () => {
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="grid gap-4 py-4">
+                                                {/* Basic Property Information */}
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="title">Property Title</Label>
+                                                    <Label htmlFor="title">Property Title*</Label>
                                                     <Input
                                                         id="title"
                                                         value={newListing.title}
                                                         onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
                                                         placeholder="e.g. Modern 3 Bedroom Apartment"
+                                                        required
                                                     />
                                                 </div>
+
                                                 <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="type">Property Type</Label>
+                                                    <div className="space-y-2 w-full">
+                                                        <Label htmlFor="property_type">Property Type*</Label>
                                                         <Select
-                                                            onValueChange={(value) => setNewListing({ ...newListing, type: value })}
+                                                            onValueChange={(value) => setNewListing({ ...newListing, property_type: value })}
+                                                            value={newListing.property_type}
+
                                                         >
-                                                            <SelectTrigger id="type">
+                                                            <SelectTrigger id="property_type" className="w-full">
                                                                 <SelectValue placeholder="Select type" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="Apartment">Apartment</SelectItem>
-                                                                <SelectItem value="House">House</SelectItem>
-                                                                <SelectItem value="Villa">Villa</SelectItem>
-                                                                <SelectItem value="Commercial">Commercial</SelectItem>
-                                                                <SelectItem value="Land">Land</SelectItem>
+                                                                <SelectItem value="apartment">Apartment</SelectItem>
+                                                                <SelectItem value="house">House</SelectItem>
+                                                                <SelectItem value="villa">Villa</SelectItem>
+                                                                <SelectItem value="commercial">Commercial</SelectItem>
+                                                                <SelectItem value="land">Land</SelectItem>
+                                                                <SelectItem value="condo">Condo</SelectItem>
+                                                                <SelectItem value="townhouse">Townhouse</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
+                                                    <div className="space-y-2 w-full">
+                                                        <Label htmlFor="listing_purpose">Listing Purpose*</Label>
+                                                        <Select
+                                                            onValueChange={(value) => setNewListing({ ...newListing, listing_purpose: value })}
+                                                            defaultValue="sale"
+                                                        >
+                                                            <SelectTrigger id="listing_purpose" className='w-full'>
+                                                                <SelectValue placeholder="Select purpose" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="sale">For Sale</SelectItem>
+                                                                <SelectItem value="rent">For Rent</SelectItem>
+                                                                <SelectItem value="lease">For Lease</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="price">Price (USD)</Label>
+                                                        <Label htmlFor="price">Price*</Label>
                                                         <Input
                                                             id="price"
                                                             type="number"
                                                             value={newListing.price}
                                                             onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
-                                                            placeholder="e.g. 500000"
+                                                            placeholder="e.g. 250000"
+                                                            required
                                                         />
                                                     </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="currency">Currency</Label>
+                                                        <Select
+                                                            onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
+                                                            defaultValue="USD"
+                                                        >
+                                                            <SelectTrigger id="currency" className='w-full'>
+                                                                <SelectValue placeholder="Select currency" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="USD">USD ($)</SelectItem>
+                                                                <SelectItem value="NGN">NGN (₦)</SelectItem>
+                                                                <SelectItem value="EUR">EUR (€)</SelectItem>
+                                                                <SelectItem value="GBP">GBP (£)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 </div>
+
+                                                {/* Location Information */}
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="address">Address</Label>
+                                                    <Label htmlFor="address">Street Address*</Label>
                                                     <Input
                                                         id="address"
                                                         value={newListing.address}
                                                         onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
-                                                        placeholder="Full property address"
+                                                        placeholder="e.g. 123 Main Street"
+                                                        required
                                                     />
                                                 </div>
+
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="city">City*</Label>
+                                                        <Input
+                                                            id="city"
+                                                            value={newListing.city}
+                                                            onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
+                                                            placeholder="e.g. San Francisco"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="state">State*</Label>
+                                                        <Input
+                                                            id="state"
+                                                            value={newListing.state}
+                                                            onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
+                                                            placeholder="e.g. California"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="zip_code">ZIP Code</Label>
+                                                        <Input
+                                                            id="zip_code"
+                                                            value={newListing.zip_code}
+                                                            onChange={(e) => setNewListing({ ...newListing, zip_code: e.target.value })}
+                                                            placeholder="e.g. 94103"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Property Details */}
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div className="space-y-2">
                                                         <Label htmlFor="bedrooms">Bedrooms</Label>
@@ -916,6 +1112,7 @@ const Profile = () => {
                                                             type="number"
                                                             value={newListing.bedrooms}
                                                             onChange={(e) => setNewListing({ ...newListing, bedrooms: e.target.value })}
+                                                            placeholder="e.g. 3"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -925,42 +1122,171 @@ const Profile = () => {
                                                             type="number"
                                                             value={newListing.bathrooms}
                                                             onChange={(e) => setNewListing({ ...newListing, bathrooms: e.target.value })}
+                                                            placeholder="e.g. 2"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="area">Area (sq ft)</Label>
+                                                        <Label htmlFor="year_built">Year Built</Label>
                                                         <Input
-                                                            id="area"
+                                                            id="year_built"
                                                             type="number"
-                                                            value={newListing.area}
-                                                            onChange={(e) => setNewListing({ ...newListing, area: e.target.value })}
+                                                            value={newListing.year_built}
+                                                            onChange={(e) => setNewListing({ ...newListing, year_built: e.target.value })}
+                                                            placeholder="e.g. 2015"
                                                         />
                                                     </div>
                                                 </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="square_feet">Square Feet (Interior)</Label>
+                                                        <Input
+                                                            id="square_feet"
+                                                            type="number"
+                                                            value={newListing.square_feet}
+                                                            onChange={(e) => setNewListing({ ...newListing, square_feet: e.target.value })}
+                                                            placeholder="e.g. 1200"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="lot_size">Lot Size (sq ft)</Label>
+                                                        <Input
+                                                            id="lot_size"
+                                                            type="number"
+                                                            value={newListing.lot_size}
+                                                            onChange={(e) => setNewListing({ ...newListing, lot_size: e.target.value })}
+                                                            placeholder="e.g. 1500"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Availability */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="availability">Availability</Label>
+                                                        <Select
+                                                            onValueChange={(value) => setNewListing({ ...newListing, availability: value })}
+                                                            defaultValue="now"
+                                                        >
+                                                            <SelectTrigger id="availability">
+                                                                <SelectValue placeholder="Select availability" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="now">Available Now</SelectItem>
+                                                                <SelectItem value="date">Available From Date</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    {newListing.availability === "date" && (
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="availability_date">Available From</Label>
+                                                            <Input
+                                                                id="availability_date"
+                                                                type="date"
+                                                                value={newListing.availability_date}
+                                                                onChange={(e) => setNewListing({ ...newListing, availability_date: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Description */}
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="description">Description</Label>
+                                                    <Label htmlFor="description">Description*</Label>
                                                     <Textarea
                                                         id="description"
                                                         rows={4}
                                                         value={newListing.description}
                                                         onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
                                                         placeholder="Describe the property features and highlights"
+                                                        required
                                                     />
                                                 </div>
+
                                                 <div className="space-y-2">
                                                     <Label htmlFor="images">Upload Images</Label>
-                                                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                                                    <div
+                                                        className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                                        onClick={() => fileInputRef.current.click()}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={handleDrop}
+                                                    >
                                                         <Upload className="h-8 w-8 mx-auto text-gray-400" />
                                                         <p className="mt-2 text-sm text-gray-500">Drag and drop images here or click to browse</p>
-                                                        <Button variant="outline" size="sm" className="mt-4">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="mt-4"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fileInputRef.current.click();
+                                                            }}
+                                                        >
                                                             Choose Files
                                                         </Button>
+                                                        <input
+                                                            type="file"
+                                                            ref={fileInputRef}
+                                                            multiple
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={handleFileSelect}
+                                                        />
                                                     </div>
+
+                                                    {/* Image Previews */}
+                                                    {selectedImages.length > 0 && (
+                                                        <div className="mt-4">
+                                                            <Label>Selected Images ({selectedImages.length})</Label>
+                                                            <div className="grid grid-cols-3 gap-4 mt-2">
+                                                                {selectedImages.map((image:any, index:any) => (
+                                                                    <div key={index} className="relative group">
+                                                                        <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
+                                                                            <img
+                                                                                src={image.preview}
+                                                                                alt={`Property image ${index + 1}`}
+                                                                                className="h-full w-full object-cover"
+                                                                            />
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation(); // Prevent triggering the parent click handler
+                                                                                removeImage(index);
+                                                                            }}
+                                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <X className="h-4 w-4" />
+                                                                        </button>
+                                                                        <p className="text-xs text-gray-500 truncate mt-1">{image.name}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
+
                                             </div>
                                             <DialogFooter>
                                                 <Button variant="outline" onClick={() => setIsAddingListing(false)}>Cancel</Button>
-                                                <Button onClick={handleAddListing}>Add Property</Button>
+                                                <Button
+                                                    onClick={handleAddListing}
+                                                    disabled={loading || !newListing.title || !newListing.description || !newListing.property_type || !newListing.price}
+                                                >
+                                                    {loading ? (
+                                                        <>
+                                                            <span className="mr-2">
+                                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                            </span>
+                                                            Adding Property...
+                                                        </>
+                                                    ) : (
+                                                        "Add Property"
+                                                    )}
+                                                </Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>

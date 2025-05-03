@@ -235,7 +235,7 @@ export default function Navbar() {
                     <div className="border-t py-1">
                       <button
                         onClick={handleLogout}
-                        className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        className="flex w-full cursor-pointer items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         Sign out
