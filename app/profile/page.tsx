@@ -1358,19 +1358,19 @@ const Profile = () => {
 
                                                 <div className="flex items-center justify-between mt-4">
                                                     <div className="flex items-center">
-                                                        <div className={`flex items-center ${listing.performance.trend === 'up' ? 'text-green-600' :
-                                                            listing.performance.trend === 'down' ? 'text-red-600' :
+                                                        <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
+                                                            listing.performance?.trend === 'down' ? 'text-red-600' :
                                                                 'text-gray-600'
                                                             }`}>
-                                                            {listing.performance.trend === 'up' ? (
+                                                            {listing.performance?.trend === 'up' ? (
                                                                 <TrendingUp className="h-4 w-4 mr-1" />
-                                                            ) : listing.performance.trend === 'down' ? (
+                                                            ) : listing.performance?.trend === 'down' ? (
                                                                 <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
                                                             ) : (
                                                                 <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
                                                             )}
                                                             <span className="text-sm font-medium">
-                                                                {listing.performance.percentageChange}% {listing.performance.trend !== 'neutral' && (listing.performance.trend === 'up' ? 'increase' : 'decrease')}
+                                                                {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
                                                             </span>
                                                         </div>
                                                         <span className="text-xs text-gray-500 ml-2">in views this week</span>
