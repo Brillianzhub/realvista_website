@@ -423,7 +423,7 @@ const Profile = () => {
             const response = await api.post("/market/list-property", payload, {
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Token ${token}`
+                    Authorization: `Bearer ${token}`
                 }
             });
 
