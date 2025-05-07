@@ -127,6 +127,7 @@ export default function Navbar() {
   const handleLogout = () => {
     // Remove user data from localStorage
     localStorage.removeItem('userData');
+    localStorage.removeItem('token');
     
     // Update state
     setUserData(null);

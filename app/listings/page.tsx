@@ -30,6 +30,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Define TypeScript interfaces
 interface PropertyImage {
@@ -88,9 +90,11 @@ interface ActiveFilter {
 
 // Property Card Component
 const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [favorites, setFavorites] = useState<any>({});
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const router = useRouter()
 
   // Format property price
   const formatPrice = (price: string) => {
@@ -105,25 +109,59 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
     return "/default-property.jpg"; // Default image if none available
   };
 
-  const toggleFavorite = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation
-    setIsLoading(true);
+  const toggleFavorite = async (propertyId: any) => {
+    // Get current favorite status
+    const isFavorite = favorites[propertyId] || false;
+
+    console.log("token-->", token)
+
+    if (!token) {
+      // Handle unauthenticated users
+      console.error('Authentication required to manage favorites');
+      router.push("/sign-in")
+    }
 
     try {
+      // Determine which endpoint to use based on current status
+      let response;
       if (isFavorite) {
-        // Remove from favorites
-        await api.delete(`/market/remove-bookmark/${property.id}/`);
+        // Remove from favorites if it's currently favorited
+        response = await api.delete(
+          `/market/remove-bookmark/${propertyId}/`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Token ${token}`
+            }
+          }
+        );
       } else {
-        // Add to favorites
-        await api.post(`/market/bookmark-property/${property.id}/`);
+        // Add to favorites if it's not currently favorited
+        response = await api.post(
+          `/market/bookmark-property/${propertyId}/`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Token ${token}`
+            }
+          }
+        );
       }
-      // Toggle the favorite status
-      setIsFavorite(!isFavorite);
-    } catch (error) {
-      console.error("Error toggling favorite status:", error);
-      // Optionally show error message to user
-    } finally {
-      setIsLoading(false);
+
+      // Check if the request was successful
+      if (response.status === 200 || response.status === 201) {
+        // Update local state to reflect the change
+        setFavorites((prev: any) => ({
+          ...prev,
+          [propertyId]: !isFavorite
+        }));
+
+        // Optionally show a success message
+        toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
+      }
+    } catch (error: any) {
+      // Handle error scenarios
+      console.error('Error toggling favorite status:', error);
     }
   };
 
@@ -160,7 +198,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
 
           <div className="absolute top-4 right-4 flex space-x-2">
             <button
-              onClick={toggleFavorite}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent navigation
+                toggleFavorite(property.id);
+              }}
               disabled={isLoading}
               className={`bg-white/90 p-2 rounded-full hover:bg-white transition-colors ${isLoading ? 'opacity-70' : ''}`}
             >
@@ -168,16 +209,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-[#348b8b] rounded-full animate-spin"></div>
               ) : (
                 <Heart
-                  className={`w-5 h-5 ${isFavorite ? 'text-[#348b8b] fill-[#348b8b]' : 'text-gray-700'}`}
+                  className={`w-5 h-5 ${favorites[property.id] ? 'text-[#348b8b] fill-[#348b8b]' : 'text-gray-700'}`}
                 />
               )}
             </button>
-            <button
+            {/* <button
               onClick={(e) => e.preventDefault()}
               className="bg-white/90 p-2 rounded-full hover:bg-white transition-colors"
             >
               <Share2 className="w-5 h-5 text-gray-700" />
-            </button>
+            </button> */}
           </div>
         </div>
       </Link>

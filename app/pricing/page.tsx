@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import axios from 'axios';
 import api from '@/config/apiClient';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // TypeScript interfaces
 interface Duration {
@@ -37,8 +39,10 @@ const PricingPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [boostOptions, setBoostOptions] = useState<any>(null)
   const [isBoostSubmitting, setIsBoostSubmitting] = useState<Record<number, boolean>>({});
-  const token = "frrgkjrgrkgmlrkmglrgr"
+  const router = useRouter()
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -57,7 +61,28 @@ const PricingPage: React.FC = () => {
     fetchPlans();
   }, []);
 
+  useEffect(() => {
+    const getBoost = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/boost/boost-packages/");
+        console.log(response)
+        setBoostOptions(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching boost:", err);
+        setError("Failed to load subscription plans. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    getBoost();
+  }, []);
+
   const handleBoost = async (boostId: number, packageName: string, durationDays: number, price: number) => {
+    if (!token) {
+      router.push("/sign-in")
+    }
     try {
       setIsBoostSubmitting(prev => ({ ...prev, [boostId]: true }));
 
@@ -86,6 +111,11 @@ const PricingPage: React.FC = () => {
   };
 
   const handlePlans = async (planId: number) => {
+    if (!token) {
+      router.push("/sign-in");
+      return;
+    }
+
     try {
       setIsSubmitting(prev => ({ ...prev, [planId]: true }));
 
@@ -94,17 +124,25 @@ const PricingPage: React.FC = () => {
         plan_id: planId
       }, {
         headers: {
-          Authorization: `Bearer ${token}` // Adjust based on your auth setup
+          Authorization: `Token ${token}`
         }
       });
 
-      console.log("Subscription created:", response.data);
-      // Handle success - maybe show a success message or redirect
+      toast.success("subscription added successfully!")
 
-      return response.data;
+      // Handle the response
+      const data = response.data;
+
+      if (data.authorization_url) {
+        // Redirect the user to the Paystack payment page
+        window.location.href = data.authorization_url;
+      } else {
+        // Handle other response types if needed
+        console.log("Subscription response:", data);
+      }
     } catch (error) {
       console.error("Error creating subscription:", error);
-      // Handle error
+      // You might want to show an error message to the user here
     } finally {
       setIsSubmitting(prev => ({ ...prev, [planId]: false }));
     }
@@ -127,38 +165,38 @@ const PricingPage: React.FC = () => {
   };
 
   // Boost options
-  const boostOptions = [
-    {
-      title: 'Featured Listings',
-      options: [
-        {
-          price: 500,
-          duration: '48 hours',
-          description: 'Appear at the top of search results and on the website for increased visibility.'
-        },
-        {
-          price: 1000,
-          duration: '48 hours',
-          description: 'Appear at the top of search results, on our social media pages, and on the website for enhanced visibility.'
-        },
-        {
-          price: 5000,
-          duration: '1 month',
-          description: 'Appear at the top of search results, on our social media pages, our website, and partner websites for maximum visibility.'
-        }
-      ]
-    },
-    {
-      title: 'Agent Boosting',
-      options: [
-        {
-          price: 10000,
-          duration: '1 week',
-          description: 'Appear at the top of the agent search results and as a featured agent on the website for increased visibility.'
-        }
-      ]
-    }
-  ];
+  // const boostOptions = [
+  //   {
+  //     title: 'Featured Listings',
+  //     options: [
+  //       {
+  //         price: 500,
+  //         duration: '48 hours',
+  //         description: 'Appear at the top of search results and on the website for increased visibility.'
+  //       },
+  //       {
+  //         price: 1000,
+  //         duration: '48 hours',
+  //         description: 'Appear at the top of search results, on our social media pages, and on the website for enhanced visibility.'
+  //       },
+  //       {
+  //         price: 5000,
+  //         duration: '1 month',
+  //         description: 'Appear at the top of search results, on our social media pages, our website, and partner websites for maximum visibility.'
+  //       }
+  //     ]
+  //   },
+  //   {
+  //     title: 'Agent Boosting',
+  //     options: [
+  //       {
+  //         price: 10000,
+  //         duration: '1 week',
+  //         description: 'Appear at the top of the agent search results and as a featured agent on the website for increased visibility.'
+  //       }
+  //     ]
+  //   }
+  // ];
 
   // Format price for display
   const formatPrice = (price: string): React.ReactNode => {
@@ -420,53 +458,51 @@ const PricingPage: React.FC = () => {
                   <p className="text-gray-600 mt-2">Increase your visibility and leads with our flexible boosting options</p>
                 </div>
 
-                {boostOptions.map((category, categoryIndex) => (
-                  <div key={categoryIndex} className="mb-16 last:mb-0">
-                    <h3 className="text-2xl font-bold mb-6 text-gray-900 flex items-center">
-                      <Zap className="w-6 h-6 mr-2 text-[#348b8b]" />
-                      {category.title}
-                    </h3>
+                <div className="mb-16 last:mb-0">
+                  <h3 className="text-2xl font-bold mb-6 text-gray-900 flex items-center">
+                    <Zap className="w-6 h-6 mr-2 text-[#348b8b]" />
+                    Boost Your Visibility
+                  </h3>
 
-                    <div className="grid md:grid-cols-3 gap-6">
-                      {category.options.map((option, optionIndex) => (
-                        <Card key={optionIndex} className="border border-gray-200 transition-all duration-300 hover:shadow-lg">
-                          <CardHeader>
-                            <div className="flex justify-between items-center mb-2">
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700">{option.duration}</Badge>
-                              <span className="text-2xl font-bold text-gray-900">₦{option.price.toLocaleString()}</span>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-gray-700">{option.description}</p>
-                          </CardContent>
-                          <CardFooter>
-                            <button
-                              onClick={() => handleBoost(
-                                categoryIndex * 100 + optionIndex, // Creating a unique ID
-                                option.duration,
-                                option.duration.includes('week') ? 7 : option.duration.includes('month') ? 30 : 2, // Approximate days
-                                option.price
-                              )}
-                              disabled={isBoostSubmitting[categoryIndex * 100 + optionIndex]}
-                              className={`
-                                w-full text-white cursor-pointer py-3 rounded-lg font-medium transition-colors
-                                ${isBoostSubmitting[categoryIndex * 100 + optionIndex]
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : 'bg-[#348b8b] text-gray-800'}
-                              `}
-                            >
-                              {isBoostSubmitting[categoryIndex * 100 + optionIndex] ? (
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mx-auto"></div>
-                              ) : (
-                                'Add Boost'
-                              )}
-                            </button>
-                          </CardFooter>
-                        </Card>
-                      ))}
-                    </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {boostOptions.map((option:any) => (
+                      <Card key={option.id} className="border border-gray-200 transition-all duration-300 hover:shadow-lg">
+                        <CardHeader>
+                          <div className="flex justify-between items-center mb-2">
+                            <Badge variant="outline" className="bg-blue-50 text-teal-700">{option.name}</Badge>
+                            <span className="text-2xl font-bold text-gray-900">₦{parseFloat(option.price).toLocaleString()}</span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-gray-700">
+                            {option.name === "24 Hours" && "Quick boost for immediate visibility"}
+                            {option.name === "48 Hours" && "Extended visibility for two full days"}
+                            {option.name === "1 Week" && "Weekly promotion for sustained engagement"}
+                            {option.name === "1 Month" && "Premium month-long promotion for maximum exposure"}
+                          </p>
+                        </CardContent>
+                        <CardFooter>
+                          <button
+                            onClick={() => handleBoost(option.id, option.name, option.duration_days, parseFloat(option.price))}
+                            disabled={isBoostSubmitting[option.id]}
+                            className={`
+                  w-full text-white cursor-pointer py-3 rounded-lg font-medium transition-colors
+                  ${isBoostSubmitting[option.id]
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#348b8b] hover:bg-[#2a7070] text-white'}
+                `}
+                          >
+                            {isBoostSubmitting[option.id] ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mx-auto"></div>
+                            ) : (
+                              'Add Boost'
+                            )}
+                          </button>
+                        </CardFooter>
+                      </Card>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             )}
           </div>

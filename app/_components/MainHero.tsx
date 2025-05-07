@@ -95,7 +95,7 @@ export default function MainHero() {
             {/* Hero Content */}
             <div className="relative z-20 h-full flex flex-col justify-center items-center px-4 md:px-8">
                 <div className="max-w-5xl mx-auto text-center space-y-6 mb-12">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight animate-fade-in">
+                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight animate-fade-in">
                         Make smarter decisions
                     </h1>
                     <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto animate-fade-in-delay">
@@ -132,7 +132,7 @@ export default function MainHero() {
 
                 {/* Property Stats */}
                 <div className="mt-16 animate-fade-in-delay bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 lg:gap-12">
+                    <div className="grid mt-[-10px] md:mt-0 grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 lg:gap-12">
                         {[
                             { label: "Properties", value: `${statistics?.properties?.toLocaleString() || '1,500'}+` },
                             { label: "Cities", value: `${statistics?.cities || '40'}+` },

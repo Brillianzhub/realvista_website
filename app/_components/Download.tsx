@@ -4,7 +4,7 @@ import { Download, MapPin, Calculator, Layers } from 'lucide-react';
 export default function AppDownloadSection() {
     return (
         <section className="relative overflow-hidden bg-gradient-to-br from-[#348b8b] to-teal-600 text-white">
-            <div className="container mx-auto px-4 py-10 lg:py-24 grid lg:grid-cols-2 gap-12 items-center relative z-10">
+            <div className="container mx-auto px-4 py-10 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
                 {/* Content Section */}
                 <div className="space-y-6">
                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 inline-block">

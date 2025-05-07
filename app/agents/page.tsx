@@ -291,9 +291,7 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
     setIsShareDialogOpen(false);
-    toast("Link copied!", {
-      description: "The agent's profile link has been copied to your clipboard.",
-    });
+    toast("Link copied!, The agent's profile link has been copied to your clipboard.")
   };
 
   return (
@@ -666,7 +664,7 @@ const AgentsPage: React.FC = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="relative w-full md:w-1/3">
@@ -727,7 +725,7 @@ const AgentsPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {filteredAgents.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">

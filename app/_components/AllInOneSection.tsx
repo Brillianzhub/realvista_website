@@ -55,7 +55,7 @@ export default function RealvistaAllInOneSection() {
               </p>
             </div>
 
-            <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 space-y-8 transform transition-all hover:shadow-2xl">
+            <div className=" mt-[-2rem] rounded-2xl p-8 border border-gray-100 space-y-8 transform transition-all hover:shadow-2xl">
               <h3 className="text-2xl font-semibold text-gray-800">
                 Your Real Estate, Your Way!
               </h3>
@@ -106,7 +106,7 @@ export default function RealvistaAllInOneSection() {
                 </div>
               </div>
               
-              <div className="pt-4">
+              <div className="pt-1">
                 <button className="inline-flex items-center space-x-2 bg-gradient-to-r from-[#FB902D] to-orange-500 text-white px-6 py-3 rounded-lg font-medium shadow-lg shadow-orange-200/50 hover:shadow-orange-300/50 transition-all hover:-translate-y-0.5">
                   <span>Explore Features</span>
                   <ArrowRight size={18} />

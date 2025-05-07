@@ -368,7 +368,7 @@ const PropertyDetailsPage = () => {
                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Features & Amenities</h3>
                             <div className="grid md:grid-cols-3 grid-cols-2 gap-3 mb-4">
                                 <div className="flex items-center">
-                                    {features.parking_available ? (
+                                    {features?.parking_available ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -376,7 +376,7 @@ const PropertyDetailsPage = () => {
                                     <span>Parking Available</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.furnished ? (
+                                    {features?.furnished ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -384,7 +384,7 @@ const PropertyDetailsPage = () => {
                                     <span>Furnished</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.pet_friendly ? (
+                                    {features?.pet_friendly ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -392,7 +392,7 @@ const PropertyDetailsPage = () => {
                                     <span>Pet Friendly</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.swimming_pool ? (
+                                    {features?.swimming_pool ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -400,7 +400,7 @@ const PropertyDetailsPage = () => {
                                     <span>Swimming Pool</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.garden ? (
+                                    {features?.garden ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -408,7 +408,7 @@ const PropertyDetailsPage = () => {
                                     <span>Garden</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.security ? (
+                                    {features?.security ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -416,7 +416,7 @@ const PropertyDetailsPage = () => {
                                     <span>Security</span>
                                 </div>
                                 <div className="flex items-center">
-                                    {features.water_supply ? (
+                                    {features?.water_supply ? (
                                         <Check className="text-teal-500 mr-2 w-5 h-5" />
                                     ) : (
                                         <X className="text-red-500 mr-2 w-5 h-5" />
@@ -425,26 +425,53 @@ const PropertyDetailsPage = () => {
                                 </div>
                                 <div className="flex items-center">
                                     <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Road Network: {features.road_network}</span>
+                                    <span>Road Network: {features?.road_network}</span>
                                 </div>
                                 <div className="flex items-center">
                                     <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Development: {features.development_level}</span>
+                                    <span>Development: {features?.development_level}</span>
                                 </div>
                                 <div className="flex items-center">
                                     <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Electricity: {features.electricity_proximity}</span>
+                                    <span>Electricity: {features?.electricity_proximity}</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center text-gray-600 mt-6">
                                 <Clock className="mr-2 text-teal-500 w-5 h-5" />
-                                <span>Available: {listing.availability === 'now' ? 'Immediately' : formatDate(listing.availability_date)}</span>
+                                <span>Available: {listing?.availability === 'now' ? 'Immediately' : formatDate(listing.availability_date)}</span>
                             </div>
 
                             <div className="flex items-center text-gray-600 mt-2">
                                 <Calendar className="mr-2 text-teal-500 w-5 h-5" />
                                 <span>Listed on: {formatDate(listing.listed_date)}</span>
+                            </div>
+                        </div>
+                        <div className='mt-8'>
+                            <div className="h-96 w-full bg-gray-100 rounded-lg overflow-hidden">
+                                <iframe
+                                    title="Property Location"
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API}&q=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
+                                    allowFullScreen
+                                ></iframe>
+                            </div>
+                            <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                                <div className="flex items-center">
+                                    <MapPin className="text-teal-500 mr-1 w-4 h-4" />
+                                    Coordinates: {listing?.market_coordinates[0]?.latitude.toFixed(6)}, {listing?.market_coordinates[0]?.longitude.toFixed(6)}
+                                </div>
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center text-teal-600 hover:underline"
+                                >
+                                    Get Directions
+                                    <ChevronLeft className="rotate-180 ml-1 w-4 h-4" />
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -455,9 +482,9 @@ const PropertyDetailsPage = () => {
                         <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                             <h2 className="text-xl font-semibold text-gray-800 mb-2">Price</h2>
                             <div className="text-3xl font-bold text-teal-600 mb-2">
-                                {listing.currency} {formatPrice(listing.price)}
+                                {listing?.currency} {formatPrice(listing?.price)}
                             </div>
-                            {features.negotiable && (
+                            {features?.negotiable && (
                                 <span className="text-sm bg-teal-100 text-teal-700 px-3 py-1 rounded-full">
                                     {features.negotiable === 'yes' ? 'Negotiable' :
                                         features.negotiable === 'slightly' ? 'Slightly Negotiable' : 'Fixed Price'}
@@ -495,10 +522,10 @@ const PropertyDetailsPage = () => {
                                         <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
                                             <div className="flex items-center">
                                                 <MapPin className="text-teal-500 mr-1 w-4 h-4" />
-                                                Coordinates: {listing.market_coordinates[0].latitude.toFixed(6)}, {listing.market_coordinates[0].longitude.toFixed(6)}
+                                                Coordinates: {listing?.market_coordinates[0]?.latitude.toFixed(6)}, {listing?.market_coordinates[0]?.longitude.toFixed(6)}
                                             </div>
                                             <a
-                                                href={`https://www.google.com/maps/dir/?api=1&destination=${listing.market_coordinates[0].latitude},${listing.market_coordinates[0].longitude}`}
+                                                href={`https://www.google.com/maps/dir/?api=1&destination=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="flex items-center text-teal-600 hover:underline"
@@ -516,7 +543,7 @@ const PropertyDetailsPage = () => {
                         <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                             <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Vendor</h2>
                             <div className="flex items-center mb-4">
-                                {listing.owner.owner_photo ? (
+                                {listing?.owner.owner_photo ? (
                                     <img
                                         src={listing.owner.owner_photo}
                                         alt={listing.owner.owner_name}
@@ -528,9 +555,9 @@ const PropertyDetailsPage = () => {
                                     </div>
                                 )}
                                 <div>
-                                    <h3 className="font-semibold text-gray-800">{listing.owner.owner_name}</h3>
+                                    <h3 className="font-semibold text-gray-800">{listing?.owner.owner_name}</h3>
                                     <p className="text-sm text-gray-600">
-                                        {listing.owner.base_city}, {listing.owner.base_state}
+                                        {listing?.owner.base_city}, {listing.owner.base_state}
                                     </p>
                                     <p className="text-sm text-gray-500">
                                         Active since {new Date(listing.owner.active_since).getFullYear()}
@@ -555,7 +582,7 @@ const PropertyDetailsPage = () => {
                                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                                                     <DialogTitle className="text-2xl font-bold">{listing.owner.owner_name}</DialogTitle>
                                                     <div className="flex gap-2">
-                                                        {features.verified_user && (
+                                                        {features?.verified_user && (
                                                             <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                                                                 <Check className="w-3 h-3 mr-1" /> Verified Vendor
                                                             </Badge>
@@ -563,7 +590,7 @@ const PropertyDetailsPage = () => {
                                                     </div>
                                                 </div>
                                                 <DialogDescription>
-                                                    {listing.owner.base_city}, {listing.owner.base_state} • Active since {new Date(listing.owner.active_since).getFullYear()}
+                                                    {listing?.owner.base_city}, {listing.owner.base_state} • Active since {new Date(listing.owner.active_since).getFullYear()}
                                                 </DialogDescription>
                                             </DialogHeader>
 
@@ -753,33 +780,33 @@ const PropertyDetailsPage = () => {
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Furnished</span>
-                                    <span className={`font-semibold ${features.furnished ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features.furnished ? 'Yes' : 'No'}
+                                    <span className={`font-semibold ${features?.furnished ? 'text-green-600' : 'text-red-600'}`}>
+                                        {features?.furnished ? 'Yes' : 'No'}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Pet Friendly</span>
-                                    <span className={`font-semibold ${features.pet_friendly ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features.pet_friendly ? 'Yes' : 'No'}
+                                    <span className={`font-semibold ${features?.pet_friendly ? 'text-green-600' : 'text-red-600'}`}>
+                                        {features?.pet_friendly ? 'Yes' : 'No'}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Parking Available</span>
-                                    <span className={`font-semibold ${features.parking_available ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features.parking_available ? 'Yes' : 'No'}
+                                    <span className={`font-semibold ${features?.parking_available ? 'text-green-600' : 'text-red-600'}`}>
+                                        {features?.parking_available ? 'Yes' : 'No'}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Electricity</span>
-                                    <span className="font-semibold capitalize">{features.electricity_proximity}</span>
+                                    <span className="font-semibold capitalize">{features?.electricity_proximity}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Road Network</span>
-                                    <span className="font-semibold capitalize">{features.road_network}</span>
+                                    <span className="font-semibold capitalize">{features?.road_network}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Negotiable</span>
-                                    <span className="font-semibold capitalize">{features.negotiable || 'No'}</span>
+                                    <span className="font-semibold capitalize">{features?.negotiable || 'No'}</span>
                                 </div>
                             </div>
                         </div>

@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Heart, Star, BedDouble, Bath, Square } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/config/apiClient';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 // Define TypeScript interfaces
 interface PropertyImage {
@@ -20,6 +22,7 @@ interface Property {
   bathrooms: number;
   area: number;
   featured: boolean;
+  currency: string;
   image_files: PropertyImage[];
 }
 
@@ -34,13 +37,8 @@ const FeaturedProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const slideIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
+  const router = useRouter()
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   // Fetch properties from API
   useEffect(() => {
@@ -61,6 +59,103 @@ const FeaturedProperties = () => {
     };
     getListings();
   }, []);
+
+  // Initialize favorites when component mounts
+  // useEffect(() => {
+  //   initializeFavorites();
+  // }, []);
+
+  // Function to fetch user's favorites when component loads
+  // const initializeFavorites = async () => {
+  //   const token = localStorage.getItem('authToken');
+
+  //   if (!token) {
+  //     Router.push
+  //   }
+
+  //   try {
+  //     const response = await axios.get(
+  //       'https://realvistamanagement.com/market/user-bookmarks',
+  //       {
+  //         headers: {
+  //           'Authorization': `Bearer ${token}`
+  //         }
+  //       }
+  //     );
+
+  //     if (response.data && Array.isArray(response.data)) {
+  //       // Convert the array of favorite property IDs to an object for easier lookup
+  //       const favoritesObject = response.data.reduce((acc: any, propertyId: string) => {
+  //         acc[propertyId] = true;
+  //         return acc;
+  //       }, {});
+
+  //       setFavorites(favoritesObject);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching user favorites:', error);
+  //   }
+  // };
+
+  // Function to toggle favorite status
+  const toggleFavorite = async (propertyId: any) => {
+    // Get current favorite status
+    const isFavorite = favorites[propertyId] || false;
+
+    console.log("token-->", token)
+
+    if (!token) {
+      // Handle unauthenticated users
+      console.error('Authentication required to manage favorites');
+      router.push("/sign-in")
+    }
+
+    try {
+
+      // Determine which endpoint to use based on current status
+      let response;
+      if (isFavorite) {
+        // Remove from favorites if it's currently favorited
+        response = await api.delete(
+          `/market/remove-bookmark/${propertyId}/`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Token ${token}`
+            }
+          }
+        );
+      } else {
+        // Add to favorites if it's not currently favorited
+        response = await api.post(
+          `/market/bookmark-property/${propertyId}/`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Token ${token}`
+            }
+          }
+        );
+      }
+
+      // Check if the request was successful
+      if (response.status === 200 || response.status === 201) {
+        // Update local state to reflect the change
+        setFavorites(prev => ({
+          ...prev,
+          [propertyId]: !isFavorite
+        }));
+
+        // Optionally show a success message
+        toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
+      }
+    } catch (error: any) {
+      // Handle error scenarios
+      console.error('Error toggling favorite status:', error);
+    }
+  };
+
+
 
   // Number of cards to display at once based on screen size
   const getVisibleCount = (): number => {
@@ -214,7 +309,7 @@ const FeaturedProperties = () => {
                     <div className="relative p-6">
                       <div className="absolute -top-10 right-6 bg-white rounded-lg shadow-lg py-2 px-3">
                         <div className="text-lg lg:text-xl font-bold text-[#348b8b]">
-                          NGN{property.price ? property.price.toLocaleString() : "Price on request"}
+                          <span className='mr-1'>{property.currency} </span>{property?.price.toLocaleString()}
                         </div>
                       </div>
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 mt-2 line-clamp-1">{property.title}</h3>

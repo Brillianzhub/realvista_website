@@ -29,7 +29,12 @@ import {
     HeartIcon,
     AlertCircle,
     CreditCard,
-    X
+    X,
+    EyeOff,
+    FileText,
+    Camera,
+    PlusCircle,
+    Loader2
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +52,7 @@ import api from '@/config/apiClient';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Agent {
     id: string | null;
@@ -118,19 +124,69 @@ const Profile = () => {
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const fileInputRef = useRef<any>(null);
     const [selectedImages, setSelectedImages] = useState<any>([]);
+    const [favorites, setFavorites] = useState<any>(null)
+    const router = useRouter()
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [referrerCode, setReferrerCode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
 
-    const handlePasswordChange = () => {
-        // Password change logic would go here
-        alert("Password updated successfully!");
-        setPasswordDialogOpen(false);
-        // Reset fields
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+
+    const handlePasswordChange = async () => {
+        // Validation
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            toast.error("All fields are required");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            toast.error("New passwords don't match");
+            return;
+        }
+
+        console.log(currentPassword, newPassword, confirmPassword)
+
+        // Password strength validation
+        const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#]{4,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            toast.error("Password must be at least 4 characters and include uppercase, lowercase, and number");
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await api.post("/accounts/change-password/", {
+                old_password: currentPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            }, {
+                headers: {
+                    "Content-Type": "Application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            toast.success("Password updated successfully!");
+            setPasswordDialogOpen(false);
+            // Reset fields
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+        } catch (error: any) {
+            // Handle axios error responses
+            const errorMessage = error.response?.data?.message || error.message || "Failed to update password";
+            toast.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDeleteAccount = () => {
@@ -190,9 +246,18 @@ const Profile = () => {
         }
     });
 
+
+    const handleCardClick = (listingId: string) => {
+        router.push(`/listings/${listingId}`);
+    };
+
     // Listings data state
     const [listings, setListings] = useState<any>([
     ]);
+
+    const idCardInputRef = useRef(null);
+    const photoInputRef = useRef(null);
+    const businessRegInputRef = useRef(null);
 
     // Analytics data for dashboard
     const [analytics, setAnalytics] = useState({
@@ -238,6 +303,27 @@ const Profile = () => {
         availability: "now",
         availability_date: ""
     });
+    const [submitStatus, setSubmitStatus] = useState<any>(null); // null, 'success', 'error'
+    const [statusMessage, setStatusMessage] = useState<any>("");
+    const [files, setFiles] = useState<any>({
+        id_card: null,
+        photo: null,
+        business_registration: null,
+    });
+    const isFileSelected = (type: any) => {
+        return files[type] !== null;
+    };
+    const resetForm = () => {
+        setFiles({
+            id_card: null,
+            photo: null,
+            business_registration: null
+        });
+        setSubmitStatus(null);
+        setStatusMessage("");
+    };
+
+
 
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -300,7 +386,14 @@ const Profile = () => {
                     first_name: userData.first_name || "",
                     email: userData.email || "",
                     photo: userData.profile?.avatar || "/api/placeholder/150/150",
-                    phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
+                    phone_number: userData.profile.phone_number,
+                    country_of_residence: userData.profile.country_of_residence || "Nigeria",
+                    state: userData.profile.state || "",
+                    city: userData.profile.city || "",
+                    street: userData.profile.street || "",
+                    house_number: userData.profile.house_number || "",
+                    postal_code: userData.profile.postal_code || "",
+                    birth_date: userData.profile.birth_date || "",
                     location: userData.profile?.city ?
                         `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
                         "Uyo, Nigeria",
@@ -335,6 +428,7 @@ const Profile = () => {
                     });
 
                     setListings(userData.agent?.properties)
+                    // setFavorites(userData.agent?.bookmarks)
                 }
 
 
@@ -349,35 +443,24 @@ const Profile = () => {
         fetchProfile();
     }, [token]);
 
-    // Handle profile update
     const handleProfileUpdate = async () => {
         try {
             setLoading(true);
 
-            // Extract the data needed for the API
-            const updateData: UpdateData = {
-                name: editableProfile.name,
-                profile: {
-                    phone_number: editableProfile.phone,
-                    city: editableProfile.location.split(',')[0]?.trim(),
-                    state: editableProfile.location.split(',')[1]?.trim() || "",
-                }
+            // Create the update data object using the proper property names
+            const updateData = {
+                phone_number: editableProfile.phone_number || "",
+                country_of_residence: editableProfile.country_of_residence || "Nigeria",
+                state: editableProfile.state || "",
+                city: editableProfile.city || "",
+                street: editableProfile.street || "",
+                house_number: editableProfile.house_number || "",
+                postal_code: editableProfile.postal_code || "",
+                birth_date: editableProfile.birth_date || ""
             };
 
-            // For agent data if user is an agent
-            if (profile && profile?.agent) {
-                updateData.agent = {
-                    agency_name: editableProfile.agency_name,
-                    agency_address: editableProfile.agency_address,
-                    phone_number: editableProfile.phone,
-                    whatsapp_number: editableProfile.whatsapp_number,
-                    bio: editableProfile.bio,
-                    preferred_contact_mode: editableProfile.preferred_contact_mode
-                };
-            }
-
             // Make API call to update profile
-            const response = await api.patch("/accounts/update-profile/", updateData, {
+            const response = await api.put("/accounts/profile/create/", updateData, {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Token ${token}`
@@ -385,7 +468,18 @@ const Profile = () => {
             });
 
             // Update the local state with the response data
-            setProfileData({ ...editableProfile });
+            setProfileData((prev: any) => ({
+                ...prev,
+                phone: editableProfile.phone_number,
+                city: editableProfile.city,
+                state: editableProfile.state,
+                country_of_residence: editableProfile.country_of_residence,
+                street: editableProfile.street,
+                house_number: editableProfile.house_number,
+                postal_code: editableProfile.postal_code,
+                birth_date: editableProfile.birth_date
+            }));
+
             setIsEditing(false);
             setLoading(false);
             toast.success("Profile updated successfully!");
@@ -484,20 +578,55 @@ const Profile = () => {
         }
     };
 
-    const handleFileSelect = (e: any) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
+    const handleEmailNotificationToggle = async (checked: any) => {
+        try {
+            setLoading(true);
 
-        // Create previews for the selected files
-        const newImages = files.map((file: any) => ({
-            file,
-            preview: URL.createObjectURL(file),
-            name: file.name
-        }));
+            // Determine which endpoint to use based on the toggle state
+            const endpoint = checked
+                ? "/notifications/email-notifications/subscribe/"
+                : "/notifications/email-notifications/unsubscribe/";
 
-        // Update the selectedImages state (separate from newListing)
-        setSelectedImages((prevImages: any) => [...prevImages, ...newImages]);
+            // Prepare the payload with username and email
+            const payload = {
+                username: profileData.name,
+                email: profileData.email
+            };
+
+            // Make the API call
+            const response = await api.post(endpoint, payload, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            // Update the state based on the response
+            setEmailNotifications(checked);
+
+            // Show success message
+            toast.success(checked
+                ? "Successfully subscribed to email notifications"
+                : "Successfully unsubscribed from email notifications");
+
+        } catch (error) {
+            console.error("Error toggling email notifications:", error);
+
+            // Revert the UI state since the API call failed
+            setEmailNotifications(!checked);
+
+            toast.error("Failed to update email notification preferences. Please try again.");
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const triggerFileInput = (inputRef: any) => () => {
+        if (inputRef && inputRef.current) {
+            inputRef.current.click();
+        }
+    };
+
 
     // Remove an image
     const removeImage = (indexToRemove: any) => {
@@ -510,6 +639,112 @@ const Profile = () => {
     const handleDragOver = (e: any) => {
         e.preventDefault();
         e.stopPropagation();
+    };
+
+    const handleFileSelect = (type: any) => (e: any) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            setFiles((prev: any) => ({
+                ...prev,
+                [type]: selectedFile
+            }));
+        }
+    };
+
+
+    const handleSubmitReferrerCode = async (e:any) => {
+        e.preventDefault();
+
+        if (!referrerCode.trim()) {
+            setError('Please enter a referrer code');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            const response = await api.post('/market/code', {
+                referrer_code: referrerCode.trim()
+            });
+
+            toast.success('Referrer code applied successfully!');
+            setReferrerCode('');
+            setIsDialogOpen(false);
+
+            // Optional: Update the profile data if needed
+            // updateProfileData();
+
+        } catch (error: any) {
+            console.error('Error submitting referrer code:', error);
+
+            if (error.response?.data?.message) {
+                setError(error.response.data.message);
+            } else {
+                setError('Failed to apply referrer code. Please try again.');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+    const handleVerificationSubmit = async () => {
+        // Check if required files are present
+        if (!files.id_card || !files.photo) {
+            setSubmitStatus("error");
+            setStatusMessage("ID card and photo are required.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitStatus(null);
+
+        try {
+            // Create form data to send files
+            const formData = new FormData();
+            formData.append("id_card", files.id_card);
+            formData.append("photo", files.photo);
+
+            // Only append business registration if it exists
+            if (files.business_registration) {
+                formData.append("business_registration", files.business_registration);
+            }
+
+            // Make API request using axios
+            const response = await api.post(
+                "/agents/verifications/",
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Token ${token}`
+                    }
+                }
+            );
+
+            toast.success("ID verification was successful")
+
+            // Axios automatically throws errors for non-2xx responses,
+            // so if we reach here, the request was successful
+            setIsIdVerified(true);
+            setSubmitStatus("success");
+            setStatusMessage("Verification submitted successfully!");
+
+
+        } catch (error: any) {
+            console.error("Verification error:", error);
+
+            // Extract error message from axios error object
+            const errorMessage = error.response?.data?.message ||
+                error.message ||
+                "Something went wrong. Please try again.";
+
+            setSubmitStatus("error");
+            setStatusMessage(errorMessage);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDrop = (e: any) => {
@@ -647,7 +882,7 @@ const Profile = () => {
                             <CardFooter className="flex justify-center pt-2">
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="text-teal-600" onClick={() => {
+                                        <Button variant="outline" size="sm" className="text-teal-600 cursor-pointer" onClick={() => {
                                             setIsEditing(true);
                                             setEditableProfile({ ...profileData });
                                         }}>
@@ -668,6 +903,7 @@ const Profile = () => {
                                                     <Input
                                                         id="name"
                                                         value={editableProfile.name}
+                                                        disabled
                                                         onChange={(e) => setEditableProfile({ ...editableProfile, name: e.target.value })}
                                                     />
                                                 </div>
@@ -700,20 +936,81 @@ const Profile = () => {
                                                         id="phone"
                                                         type="tel"
                                                         value={editableProfile.phone}
+                                                        placeholder='+2348061752152"'
                                                         onChange={(e) => setEditableProfile({ ...editableProfile, phone: e.target.value })}
                                                     />
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="location">Location (City, State)</Label>
+                                                <Label htmlFor="birth_date">Date of Birth</Label>
                                                 <Input
-                                                    id="location"
-                                                    value={editableProfile.location}
-                                                    onChange={(e) => setEditableProfile({ ...editableProfile, location: e.target.value })}
-                                                    placeholder="e.g. Lagos, Nigeria"
+                                                    id="birth_date"
+                                                    type="date"
+                                                    value={editableProfile.birth_date || ""}
+                                                    onChange={(e) => setEditableProfile({ ...editableProfile, birth_date: e.target.value })}
                                                 />
                                             </div>
-                                            {profileData.agent && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="location">Location</Label>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="city">City</Label>
+                                                        <Input
+                                                            id="city"
+                                                            value={editableProfile.city || ""}
+                                                            onChange={(e) => setEditableProfile({ ...editableProfile, city: e.target.value })}
+                                                            placeholder="e.g. Ikeja"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="state">State</Label>
+                                                        <Input
+                                                            id="state"
+                                                            value={editableProfile.state || ""}
+                                                            onChange={(e) => setEditableProfile({ ...editableProfile, state: e.target.value })}
+                                                            placeholder="e.g. Lagos"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="house_number">House Number</Label>
+                                                    <Input
+                                                        id="house_number"
+                                                        value={editableProfile.house_number || ""}
+                                                        onChange={(e) => setEditableProfile({ ...editableProfile, house_number: e.target.value })}
+                                                        placeholder="e.g. 12B"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="postal_code">Postal Code</Label>
+                                                    <Input
+                                                        id="postal_code"
+                                                        value={editableProfile.postal_code || ""}
+                                                        onChange={(e) => setEditableProfile({ ...editableProfile, postal_code: e.target.value })}
+                                                        placeholder="e.g. 100001"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="street">Street</Label>
+                                                <Input
+                                                    id="street"
+                                                    value={editableProfile.street || ""}
+                                                    onChange={(e) => setEditableProfile({ ...editableProfile, street: e.target.value })}
+                                                    placeholder="e.g. Allen Avenue"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="country">Country</Label>
+                                                <Input
+                                                    id="country"
+                                                    value={editableProfile.country_of_residence || "Nigeria"}
+                                                    onChange={(e) => setEditableProfile({ ...editableProfile, country_of_residence: e.target.value })}
+                                                />
+                                            </div>
+                                            {/* {profileData.agent && (
                                                 <>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="agencyName">Agency Name</Label>
@@ -756,20 +1053,11 @@ const Profile = () => {
                                                         </Select>
                                                     </div>
                                                 </>
-                                            )}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="bio">Bio</Label>
-                                                <Textarea
-                                                    id="bio"
-                                                    rows={4}
-                                                    value={editableProfile.bio}
-                                                    onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
-                                                />
-                                            </div>
+                                            )} */}
                                         </div>
                                         <DialogFooter>
-                                            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                                            <Button onClick={handleProfileUpdate} disabled={loading}>
+                                            {/* <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button> */}
+                                            <Button className='cursor-pointer bg-teal-600 hover:bg-teal-700' onClick={handleProfileUpdate} disabled={loading}>
                                                 {loading ? "Saving..." : "Save Changes"}
                                             </Button>
                                         </DialogFooter>
@@ -794,13 +1082,13 @@ const Profile = () => {
                                     </Badge>
                                 </div>
 
-                                {getSubscriptionInfo().plan === "Free" && (
+                                {/* {getSubscriptionInfo().plan === "Free" && (
                                     <div className="pt-2">
                                         <Button variant="outline" className="w-full" size="sm">
                                             Upgrade Plan
                                         </Button>
                                     </div>
-                                )}
+                                )} */}
                             </CardContent>
                         </Card>
 
@@ -830,6 +1118,18 @@ const Profile = () => {
                                     <div>
                                         <p className="text-sm text-gray-500">Total Earnings</p>
                                         <p className="font-medium">₦{profileData.total_referral_earnings.toLocaleString()}</p>
+                                    </div>
+
+                                    {/* New button to enter referrer code */}
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <Button
+                                          
+                                            className="w-full flex items-center bg-teal-600 cursor-pointer hover:bg-teal-700 text-white justify-center hover:text-teal-70"
+                                            onClick={() => setIsDialogOpen(true)}
+                                        >
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Enter Referrer Code
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -923,41 +1223,25 @@ const Profile = () => {
                                 {/* Recent Activities */}
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Recent Activities</CardTitle>
-                                        <CardDescription>Latest interactions with your listings</CardDescription>
+                                        <CardTitle>Top Performing Properties</CardTitle>
+                                        <CardDescription>Below are the top performing properties</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            <div className="flex items-start space-x-4">
-                                                <div className="bg-blue-100 p-2 rounded-full">
-                                                    <Eye className="h-5 w-5 text-blue-600" />
+                                            {profileData?.agent?.top_performing_properties?.map((property: any, index:number) => (
+                                                <div key={index} className="flex items-start space-x-4">
+                                                    <div className="bg-blue-100 p-2 rounded-full">
+                                                        <Eye className="h-5 w-5 text-teal-600" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-medium">{property?.title}</p>
+                                                        <p className="text-teal-600 text-sm"><span className='text-gray-800 mr-1'>{property.currency}</span>
+                                                            {(property?.price)?.toLocaleString()}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">New view on <span className="text-blue-600">Modern Luxury Apartment</span></p>
-                                                    <p className="text-xs text-gray-500">10 minutes ago</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start space-x-4">
-                                                <div className="bg-green-100 p-2 rounded-full">
-                                                    <MessageSquare className="h-5 w-5 text-green-600" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">New inquiry for <span className="text-blue-600">Waterfront Villa with Pool</span></p>
-                                                    <p className="text-xs text-gray-500">2 hours ago</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start space-x-4">
-                                                <div className="bg-red-100 p-2 rounded-full">
-                                                    <Heart className="h-5 w-5 text-red-600" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">New favorite on <span className="text-blue-600">Downtown Commercial Space</span></p>
-                                                    <p className="text-xs text-gray-500">4 hours ago</p>
-                                                </div>
-                                            </div>
+                                            ))}
                                         </div>
+
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -1234,7 +1518,7 @@ const Profile = () => {
                                                             multiple
                                                             accept="image/*"
                                                             className="hidden"
-                                                            onChange={handleFileSelect}
+                                                            onChange={handleFileSelect('business_registration')}
                                                         />
                                                     </div>
 
@@ -1297,96 +1581,100 @@ const Profile = () => {
                                 </div>
 
                                 {/* Listing Cards */}
-                                {listings.length === 0 ? (<EmptyState />) : listings.map((listing: any) => (
-                                    <div key={listing.id} className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
-                                        <Card className="">
-                                            <div className="relative h-48">
-                                                <img
-                                                    src={listing.image}
-                                                    alt={listing.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                <Badge
-                                                    className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
-                                                        listing.status === 'Under Contract' ? 'bg-amber-500' :
-                                                            'bg-blue-500'
-                                                        }`}
-                                                >
-                                                    {listing.status}
-                                                </Badge>
-                                            </div>
-                                            <CardHeader className="pb-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <CardTitle>{listing.title}</CardTitle>
-                                                        <CardDescription className="flex items-center mt-1">
-                                                            <MapPin className="h-3 w-3 mr-1" /> {listing.address}
-                                                        </CardDescription>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
-                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                    </div>
+                                {listings.length === 0 ? (
+                                    <EmptyState />
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {listings.map((listing: any) => (
+                                            <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
+                                                <div className="relative h-48">
+                                                    <img
+                                                        src={listing.image}
+                                                        alt={listing.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <Badge
+                                                        className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
+                                                            listing.status === 'Under Contract' ? 'bg-amber-500' :
+                                                                'bg-blue-500'
+                                                            }`}
+                                                    >
+                                                        {listing.status}
+                                                    </Badge>
                                                 </div>
-                                            </CardHeader>
-                                            <CardContent className="pt-2">
-                                                <div className="flex justify-between text-sm mb-4">
-                                                    <div className="flex items-center">
-                                                        <Badge variant="outline" className="mr-2">
-                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                        </Badge>
-                                                        <Badge variant="outline" className="mr-2">
-                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                        </Badge>
-                                                        <Badge variant="outline">
-                                                            {listing.area} sqft
-                                                        </Badge>
-                                                    </div>
-                                                    <Badge variant="secondary">{listing.type}</Badge>
-                                                </div>
-
-                                                <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Views</p>
-                                                        <p className="font-semibold">{listing.views}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Inquiries</p>
-                                                        <p className="font-semibold">{listing.inquiries}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Favorites</p>
-                                                        <p className="font-semibold">{listing.favorites}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between mt-4">
-                                                    <div className="flex items-center">
-                                                        <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
-                                                            listing.performance?.trend === 'down' ? 'text-red-600' :
-                                                                'text-gray-600'
-                                                            }`}>
-                                                            {listing.performance?.trend === 'up' ? (
-                                                                <TrendingUp className="h-4 w-4 mr-1" />
-                                                            ) : listing.performance?.trend === 'down' ? (
-                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
-                                                            ) : (
-                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
-                                                            )}
-                                                            <span className="text-sm font-medium">
-                                                                {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
-                                                            </span>
+                                                <CardHeader className="pb-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <CardTitle>{listing.title}</CardTitle>
+                                                            <CardDescription className="flex items-center mt-1">
+                                                                <MapPin className="h-3 w-3 mr-1" /> {listing.address}
+                                                            </CardDescription>
                                                         </div>
-                                                        <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                        <div className="text-right">
+                                                            <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
+                                                            <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                        </div>
                                                     </div>
-                                                    <Button variant="outline" size="sm">
-                                                        <FileEdit className="h-4 w-4 mr-1" /> Edit
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                </CardHeader>
+                                                <CardContent className="pt-2">
+                                                    <div className="flex justify-between text-sm mb-4">
+                                                        <div className="flex items-center flex-wrap gap-1">
+                                                            <Badge variant="outline" className="mr-1">
+                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="mr-1">
+                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                            </Badge>
+                                                            <Badge variant="outline">
+                                                                {listing.area} sqft
+                                                            </Badge>
+                                                        </div>
+                                                        <Badge variant="secondary">{listing.type}</Badge>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Views</p>
+                                                            <p className="font-semibold">{listing.views}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Inquiries</p>
+                                                            <p className="font-semibold">{listing.inquiries}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Favorites</p>
+                                                            <p className="font-semibold">{listing.favorites}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between mt-4">
+                                                        <div className="flex items-center">
+                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
+                                                                listing.performance?.trend === 'down' ? 'text-red-600' :
+                                                                    'text-gray-600'
+                                                                }`}>
+                                                                {listing.performance?.trend === 'up' ? (
+                                                                    <TrendingUp className="h-4 w-4 mr-1" />
+                                                                ) : listing.performance?.trend === 'down' ? (
+                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
+                                                                ) : (
+                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
+                                                                )}
+                                                                <span className="text-sm font-medium">
+                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                        </div>
+                                                        {/* <Button variant="outline" size="sm">
+                                                            <FileEdit className="h-4 w-4 mr-1" /> Edit
+                                                        </Button> */}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </TabsContent>
 
                             {/* Profile Tab */}
@@ -1510,7 +1798,8 @@ const Profile = () => {
                                                 <Switch
                                                     id="email-notifications"
                                                     checked={emailNotifications}
-                                                    onCheckedChange={setEmailNotifications}
+                                                    onCheckedChange={handleEmailNotificationToggle}
+                                                    disabled={loading}
                                                 />
                                                 <Label htmlFor="email-notifications">
                                                     {emailNotifications ? "Active" : "Inactive"}
@@ -1527,7 +1816,7 @@ const Profile = () => {
                                             <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
                                                 <DialogTrigger asChild>
                                                     <Button variant="outline" size="sm">
-                                                        Update
+                                                        Update Password
                                                     </Button>
                                                 </DialogTrigger>
                                                 <DialogContent className="sm:max-w-md">
@@ -1540,31 +1829,93 @@ const Profile = () => {
                                                     <div className="space-y-4 py-4">
                                                         <div className="space-y-2">
                                                             <Label htmlFor="current-password">Current Password</Label>
-                                                            <Input
-                                                                id="current-password"
-                                                                type="password"
-                                                                placeholder="Enter current password"
-                                                                value={currentPassword}
-                                                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                                            />
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="current-password"
+                                                                    type={showCurrentPassword ? "text" : "password"}
+                                                                    placeholder="Enter current password"
+                                                                    value={currentPassword}
+                                                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                >
+                                                                    {showCurrentPassword ? (
+                                                                        <EyeOff className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <Eye className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="new-password">New Password</Label>
-                                                            <Input
-                                                                id="new-password"
-                                                                type="password"
-                                                                placeholder="Enter new password"
-                                                                value={newPassword}
-                                                                onChange={(e) => setNewPassword(e.target.value)}
-                                                            />
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="new-password"
+                                                                    type={showNewPassword ? "text" : "password"}
+                                                                    placeholder="Enter new password"
+                                                                    value={newPassword}
+                                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                >
+                                                                    {showNewPassword ? (
+                                                                        <EyeOff className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <Eye className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="confirm-password"
+                                                                    type={showConfirmPassword ? "text" : "password"}
+                                                                    placeholder="Confirm new password"
+                                                                    value={confirmPassword}
+                                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                >
+                                                                    {showConfirmPassword ? (
+                                                                        <EyeOff className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <Eye className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <DialogFooter>
-                                                        <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setPasswordDialogOpen(false);
+                                                                setCurrentPassword("");
+                                                                setNewPassword("");
+                                                                setConfirmPassword("");
+                                                            }}
+                                                        >
                                                             Cancel
                                                         </Button>
-                                                        <Button type="button" onClick={handlePasswordChange}>
-                                                            Save Changes
+                                                        <Button
+                                                            type="button"
+                                                            className='bg-teal-600 hover:bg-teal-700 cursor-pointer'
+                                                            onClick={handlePasswordChange}
+                                                            disabled={loading}
+                                                        >
+                                                            {loading ? "Updating..." : "Save Changes"}
                                                         </Button>
                                                     </DialogFooter>
                                                 </DialogContent>
@@ -1618,60 +1969,161 @@ const Profile = () => {
                                         </div>
 
                                         {/* ID Card Verification */}
-                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                            <div>
-                                                <h3 className="font-medium">ID Card Verification</h3>
-                                                <p className="text-sm text-gray-500">
-                                                    Verify your identity with a government-issued ID
-                                                </p>
-                                            </div>
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="outline" size="sm">
-                                                        <CreditCard className="h-4 w-4 mr-1" />
-                                                        {isIdVerified ? "Verified" : "Verify"}
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Verify Your Identity</DialogTitle>
-                                                        <DialogDescription>
-                                                            Upload a photo of your government-issued ID
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="space-y-4 py-4">
-                                                        <div className="border-2 border-dashed border-gray-200 p-6 rounded-md text-center">
-                                                            <div className="flex flex-col items-center">
-                                                                <CreditCard className="h-8 w-8 text-gray-400 mb-2" />
-                                                                <p className="text-sm text-gray-500 mb-2">
-                                                                    Drag and drop or click to upload
-                                                                </p>
-                                                                <input
-                                                                    type="file"
-                                                                    className="hidden"
-                                                                    id="id-upload"
-                                                                    accept="image/*"
-                                                                />
-                                                                <label htmlFor="id-upload">
-                                                                    <Button variant="outline" size="sm" type="button">
-                                                                        Select File
-                                                                    </Button>
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                        <Button
-                                                            onClick={() => setIsIdVerified(true)}
-                                                            className="w-full"
-                                                        >
-                                                            Submit for Verification
+                                        {profileData.agent && (
+                                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                                <div>
+                                                    <h3 className="font-medium">ID Card Verification</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        Verify your identity with a government-issued ID
+                                                    </p>
+                                                </div>
+                                                <Dialog onOpenChange={(open) => !open && resetForm()}>
+                                                    <DialogTrigger asChild>
+                                                        <Button className='cursor-pointer' variant="outline" size="sm">
+                                                            {isIdVerified ? (
+                                                                <>
+                                                                    <Check className="h-4 w-4 mr-1" />
+                                                                    Verified
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <CreditCard className="h-4 w-4 mr-1" />
+                                                                    Verify
+                                                                </>
+                                                            )}
                                                         </Button>
-                                                    </div>
-                                                </DialogContent>
-                                            </Dialog>
-                                        </div>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-lg">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Verify Your Identity</DialogTitle>
+                                                            <DialogDescription>
+                                                                Please provide the required documents for verification
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+
+                                                        {submitStatus && (
+                                                            <Alert variant={submitStatus === "success" ? "default" : "destructive"} className="mb-4">
+                                                                <AlertCircle className="h-4 w-4" />
+                                                                <AlertTitle>
+                                                                    {submitStatus === "success" ? "Success" : "Error"}
+                                                                </AlertTitle>
+                                                                <AlertDescription>{statusMessage}</AlertDescription>
+                                                            </Alert>
+                                                        )}
+
+                                                        <div className="space-y-4 py-4">
+                                                            {/* ID Card Upload */}
+                                                            <div className="space-y-2">
+                                                                <label className="text-sm font-medium">
+                                                                    ID Card <span className="text-red-500">*</span>
+                                                                </label>
+                                                                <div
+                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
+                                                                        ${isFileSelected('id_card') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                >
+                                                                    <div className="flex flex-col items-center">
+                                                                        <CreditCard className={`h-6 w-6 mb-2 ${isFileSelected('id_card') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                        <p className="text-sm text-gray-500 mb-2">
+                                                                            {isFileSelected('id_card')
+                                                                                ? files.id_card.name
+                                                                                : "Upload a photo of your government-issued ID"}
+                                                                        </p>
+                                                                        <input
+                                                                            type="file"
+                                                                            className="hidden"
+                                                                            id="id-card-upload"
+                                                                            ref={idCardInputRef}
+                                                                            accept="image/*"
+                                                                            onChange={handleFileSelect('id_card')}
+                                                                        />
+                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(idCardInputRef)}>
+                                                                            <Upload className="h-4 w-4 mr-1" />
+                                                                            {isFileSelected('id_card') ? "Change File" : "Select File"}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Photo Upload */}
+                                                            <div className="space-y-2">
+                                                                <label className="text-sm font-medium">
+                                                                    Your Photo <span className="text-red-500">*</span>
+                                                                </label>
+                                                                <div
+                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
+                  ${isFileSelected('photo') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                >
+                                                                    <div className="flex flex-col items-center">
+                                                                        <Camera className={`h-6 w-6 mb-2 ${isFileSelected('photo') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                        <p className="text-sm text-gray-500 mb-2">
+                                                                            {isFileSelected('photo')
+                                                                                ? files.photo.name
+                                                                                : "Upload a recent photo of yourself"}
+                                                                        </p>
+                                                                        <input
+                                                                            type="file"
+                                                                            className="hidden"
+                                                                            id="photo-upload"
+                                                                            ref={photoInputRef}
+                                                                            accept="image/*"
+                                                                            onChange={handleFileSelect('photo')}
+                                                                        />
+                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(photoInputRef)}>
+                                                                            <Upload className="h-4 w-4 mr-1" />
+                                                                            {isFileSelected('photo') ? "Change File" : "Select File"}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Business Registration Upload (Optional) */}
+                                                            <div className="space-y-2">
+                                                                <label className="text-sm font-medium">
+                                                                    Business Registration <span className="text-gray-400">(Optional)</span>
+                                                                </label>
+                                                                <div
+                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
+                  ${isFileSelected('business_registration') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                >
+                                                                    <div className="flex flex-col items-center">
+                                                                        <FileText className={`h-6 w-6 mb-2 ${isFileSelected('business_registration') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                        <p className="text-sm text-gray-500 mb-2">
+                                                                            {isFileSelected('business_registration')
+                                                                                ? files.business_registration.name
+                                                                                : "Upload business registration if applicable"}
+                                                                        </p>
+                                                                        <input
+                                                                            type="file"
+                                                                            className="hidden"
+                                                                            id="business-reg-upload"
+                                                                            ref={businessRegInputRef}
+                                                                            accept="image/*,application/pdf"
+                                                                            onChange={handleFileSelect('business_registration')}
+                                                                        />
+                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(businessRegInputRef)}>
+                                                                            <Upload className="h-4 w-4 mr-1" />
+                                                                            {isFileSelected('business_registration') ? "Change File" : "Select File"}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Submit Button */}
+                                                            <Button
+                                                                onClick={handleVerificationSubmit}
+                                                                className="w-full bg-teal-600 hover:bg-teal-700"
+                                                                disabled={isSubmitting || !files.id_card || !files.photo}
+                                                            >
+                                                                {isSubmitting ? "Submitting..." : "Submit for Verification"}
+                                                            </Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        )}
 
                                         {/* Delete Account - Confirmation Modal */}
-                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                        {/* <div className="flex items-center justify-between py-2 border-t border-gray-200">
                                             <div>
                                                 <h3 className="font-medium text-red-600">Delete Account</h3>
                                                 <p className="text-sm text-gray-500">
@@ -1710,14 +2162,159 @@ const Profile = () => {
                                                     </DialogFooter>
                                                 </DialogContent>
                                             </Dialog>
-                                        </div>
+                                        </div> */}
                                     </CardContent>
                                 </Card>
+                            </TabsContent>
+                            <TabsContent value="favorites" className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {favorites?.map((listing: any) => (
+                                        <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
+                                            <div className="relative h-48">
+                                                <img
+                                                    src={listing.image}
+                                                    alt={listing.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <Badge
+                                                    className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
+                                                        listing.status === 'Under Contract' ? 'bg-amber-500' :
+                                                            'bg-blue-500'
+                                                        }`}
+                                                >
+                                                    {listing.status}
+                                                </Badge>
+                                            </div>
+                                            <CardHeader className="pb-2">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <CardTitle>{listing.title}</CardTitle>
+                                                        <CardDescription className="flex items-center mt-1">
+                                                            <MapPin className="h-3 w-3 mr-1" /> {listing.address}
+                                                        </CardDescription>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
+                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                    </div>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="pt-2">
+                                                <div className="flex justify-between text-sm mb-4">
+                                                    <div className="flex items-center flex-wrap gap-1">
+                                                        <Badge variant="outline" className="mr-1">
+                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="mr-1">
+                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                        </Badge>
+                                                        <Badge variant="outline">
+                                                            {listing.area} sqft
+                                                        </Badge>
+                                                    </div>
+                                                    <Badge variant="secondary">{listing.type}</Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Views</p>
+                                                        <p className="font-semibold">{listing.views}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Inquiries</p>
+                                                        <p className="font-semibold">{listing.inquiries}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Favorites</p>
+                                                        <p className="font-semibold">{listing.favorites}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between mt-4">
+                                                    <div className="flex items-center">
+                                                        <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
+                                                            listing.performance?.trend === 'down' ? 'text-red-600' :
+                                                                'text-gray-600'
+                                                            }`}>
+                                                            {listing.performance?.trend === 'up' ? (
+                                                                <TrendingUp className="h-4 w-4 mr-1" />
+                                                            ) : listing.performance?.trend === 'down' ? (
+                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
+                                                            ) : (
+                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
+                                                            )}
+                                                            <span className="text-sm font-medium">
+                                                                {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                    </div>
+                                                    {/* <Button variant="outline" size="sm">
+                                                            <FileEdit className="h-4 w-4 mr-1" /> Edit
+                                                        </Button> */}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </div>
                 </div>
             </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Enter Referrer Code</DialogTitle>
+                        <DialogDescription>
+                            Enter someone's referral code to join their network
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmitReferrerCode}>
+                        <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="referrerCode">Referrer Code</Label>
+                                <Input
+                                    id="referrerCode"
+                                    placeholder="Enter code here"
+                                    value={referrerCode}
+                                    onChange={(e) => setReferrerCode(e.target.value)}
+                                    className={error ? "border-red-300 focus-visible:ring-red-500" : ""}
+                                />
+                                {error && (
+                                    <p className="text-sm text-red-500 flex items-center">
+                                        <X className="h-4 w-4 mr-1" /> {error}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsDialogOpen(false)}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className='bg-teal-600 hover:bg-teal-700'
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : 'Submit'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
