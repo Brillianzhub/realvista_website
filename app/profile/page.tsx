@@ -76,6 +76,8 @@ interface Profile {
     phone_number?: string;
     city?: string;
     state?: string;
+    is_phone_verified: string
+    is_email_verified: string
 }
 
 interface UserProfile {
@@ -86,12 +88,16 @@ interface UserProfile {
     profile?: Profile;
     agent?: Agent | null;
     is_active?: boolean;
+    is_phone_verified: string;
+    is_email_verified: string;
+    is_identity_verified: string;
     date_joined?: string;
     subscription?: {
         plan: string;
         status: string;
     };
     referral_code?: string;
+    referrer: string;
     referred_users_count?: number;
     total_referral_earnings?: number;
 }
@@ -119,6 +125,7 @@ const Profile = () => {
     const [loading, setLoading] = useState(false);
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
     const [isPhoneVerified, setIsPhoneVerified] = useState(false);
     const [isIdVerified, setIsIdVerified] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -131,11 +138,13 @@ const Profile = () => {
     const fileInputRef = useRef<any>(null);
     const [selectedImages, setSelectedImages] = useState<any>([]);
     const [favorites, setFavorites] = useState<any>(null)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const router = useRouter()
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [referrerCode, setReferrerCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [isListingDialogOpen, setIsListingDialogOpen] = useState(false)
 
 
 
@@ -280,6 +289,8 @@ const Profile = () => {
         ]
     });
 
+    console.log("profileData-->", profile)
+
     // State for forms
     const [isEditing, setIsEditing] = useState(false);
     const [editableProfile, setEditableProfile] = useState({ ...profileData });
@@ -324,122 +335,166 @@ const Profile = () => {
     };
 
 
-
+    console.log("editableProfile--->", editableProfile)
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get("/accounts/current-user/", {
-                    headers: {
-                        "Content-Type": "Application/json",
-                        Authorization: `Token ${token}`
-                    }
-                });
-                setProfile(response.data);
 
-                // Update profileData with fetched data
-                const userData = response.data;
-                setProfileData({
-                    id: userData.id,
-                    name: userData.name || "",
-                    first_name: userData.first_name || "",
-                    email: userData.email || "",
-                    photo: userData.profile?.avatar || "/api/placeholder/150/150",
-                    phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
-                    location: userData.profile?.city ?
-                        `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
-                        "Uyo, Nigeria",
-                    bio: userData.agent?.bio || "A nice agent that charges high fee.",
-                    verified: userData.is_active || false,
-                    agency_name: userData.agent?.agency_name || "Developer Agent",
-                    agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
-                    whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
-                    experience_years: userData.agent?.experience_years || 5,
-                    preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
-                    featured: userData.agent?.featured || false,
-                    specialties: [],
-                    languages: ["English"],
-                    certifications: [],
-                    socialMedia: {
-                        linkedin: "",
-                        twitter: "",
-                        instagram: ""
-                    },
-                    achievements: [],
-                    joinedDate: userData.date_joined || "",
-                    subscription: {
-                        plan: userData.subscription?.plan || "Free",
-                        status: userData.subscription?.status || "active"
-                    },
-                    referral_code: userData.referral_code || "",
-                    referred_users_count: userData.referred_users_count || 0,
-                    total_referral_earnings: userData.total_referral_earnings || 0,
-                    agent: userData.agent || null
-                });
-
-                setEditableProfile({
-                    id: userData.id,
-                    name: userData.name || "",
-                    first_name: userData.first_name || "",
-                    email: userData.email || "",
-                    photo: userData.profile?.avatar || "/api/placeholder/150/150",
-                    phone_number: userData.profile.phone_number,
-                    country_of_residence: userData.profile.country_of_residence || "Nigeria",
-                    state: userData.profile.state || "",
-                    city: userData.profile.city || "",
-                    street: userData.profile.street || "",
-                    house_number: userData.profile.house_number || "",
-                    postal_code: userData.profile.postal_code || "",
-                    birth_date: userData.profile.birth_date || "",
-                    location: userData.profile?.city ?
-                        `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
-                        "Uyo, Nigeria",
-                    bio: userData.agent?.bio || "A nice agent that charges high fee.",
-                    verified: userData.is_active || false,
-                    agency_name: userData.agent?.agency_name || "Developer Agent",
-                    agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
-                    whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
-                    experience_years: userData.agent?.experience_years || 5,
-                    preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
-                    featured: userData.agent?.featured || false,
-                    specialties: [],
-                    languages: ["English"],
-                    certifications: [],
-                    socialMedia: {
-                        linkedin: "",
-                        twitter: "",
-                        instagram: ""
-                    },
-                    achievements: [],
-                    joinedDate: userData.date_joined || ""
-                });
-
-                // Update analytics based on agent data if available
-                if (userData.agent) {
-                    setAnalytics({
-                        ...analytics,
-                        totalListings: userData.agent.total_listings || 0,
-                        totalFavorites: userData.agent.total_bookmarks || 0,
-                        totalViews: userData.agent.total_views || 0,
-                        totalInquiries: userData.agent.total_inquiries || 0
-                    });
-
-                    setListings(userData.agent?.properties)
-                    // setFavorites(userData.agent?.bookmarks)
+    const fetchProfile = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get("/accounts/current-user/", {
+                headers: {
+                    "Content-Type": "Application/json",
+                    Authorization: `Token ${token}`
                 }
+            });
+            setProfile(response.data);
 
+            // Update profileData with fetched data
+            const userData = response.data;
+            console.log("API response:", userData); // Debug: Log the full API response
 
-                setLoading(false);
-            } catch (err) {
-                console.error("Error fetching user data:", err);
-                setLoading(false);
-                toast.error("Failed to load profile data. Please try again later.");
+            // Set the main profileData state
+            setProfileData({
+                id: userData.id,
+                name: userData.name || "",
+                first_name: userData.first_name || "",
+                email: userData.email || "",
+                photo: userData.profile?.avatar || "/api/placeholder/150/150",
+                phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
+                location: userData.profile?.city ?
+                    `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
+                    "Uyo, Nigeria",
+                bio: userData.agent?.bio || "A nice agent that charges high fee.",
+                verified: userData.is_active || false,
+                agency_name: userData.agent?.agency_name || "Developer Agent",
+                agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
+                whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
+                experience_years: userData.agent?.experience_years || 5,
+                preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
+                featured: userData.agent?.featured || false,
+                specialties: [],
+                languages: ["English"],
+                certifications: [],
+                socialMedia: {
+                    linkedin: "",
+                    twitter: "",
+                    instagram: ""
+                },
+                achievements: [],
+                joinedDate: userData.date_joined || "",
+                subscription: {
+                    plan: userData.subscription?.plan || "Free",
+                    status: userData.subscription?.status || "active"
+                },
+                referral_code: userData.referral_code || "",
+                referred_users_count: userData.referred_users_count || 0,
+                total_referral_earnings: userData.total_referral_earnings || 0,
+                agent: userData.agent || null
+            });
+
+            // Extract profile data directly from the API response
+            const profile = userData.profile || {};
+
+            // Set the editable profile with values directly from the profile object
+            // This avoids relying on nested optional chaining that might miss fields
+            setEditableProfile({
+                id: userData.id,
+                name: userData.name || "",
+                first_name: userData.first_name || "",
+                email: userData.email || "",
+                photo: profile.avatar || "/api/placeholder/150/150",
+                // Handle phone numbers from both profile and agent
+                phone: userData.agent?.phone_number || profile.phone_number || "",
+                phone_number: userData.agent?.phone_number || profile.phone_number || "",
+                // Extract all address fields directly from profile
+                country_of_residence: profile.country_of_residence || "Nigeria",
+                state: profile.state || "",
+                city: profile.city || "",
+                street: profile.street || "",
+                house_number: profile.house_number || "",
+                postal_code: profile.postal_code || "",
+                birth_date: profile.birth_date || "",
+                // Create location string for display
+                location: profile.city && profile.state ?
+                    `${profile.city}, ${profile.state}` :
+                    "Uyo, Nigeria",
+                // Agent-specific fields
+                bio: userData.agent?.bio || "A nice agent that charges high fee.",
+                verified: userData.is_active || false,
+                agency_name: userData.agent?.agency_name || "Developer Agent",
+                agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
+                whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
+                experience_years: userData.agent?.experience_years || 5,
+                preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
+                featured: userData.agent?.featured || false,
+                // Additional fields
+                specialties: [],
+                languages: ["English"],
+                certifications: [],
+                socialMedia: {
+                    linkedin: "",
+                    twitter: "",
+                    instagram: ""
+                },
+                achievements: [],
+                joinedDate: userData.date_joined || ""
+            });
+
+            console.log("Editable profile after setting:", JSON.stringify(editableProfile, null, 2)); // Debug
+
+            // Update analytics data from the agent information
+            if (userData.agent) {
+                // Calculate active and sold listings (for demonstration - update with your actual logic)
+                const properties = userData.agent.properties || [];
+                const activeListings = properties.length; // Assuming all are active for now
+                const soldListings = 0; // You'll need to determine this based on your data structure
+                const underContractListings = 0; // You'll need to determine this based on your data structure
+
+                // Calculate average days to sell if you have the data
+                const averageDaysToSell = 0; // You'll need to calculate this based on your data
+
+                // Calculate conversion rate (inquiries to sales)
+                const conversionRate = userData.agent.total_inquiries > 0
+                    ? (soldListings / userData.agent.total_inquiries) * 100
+                    : 0;
+
+                // Generate performance by month (you may need to adjust this based on your actual data)
+                const currentMonth = new Date().getMonth();
+                const performanceByMonth = [
+                    { month: "Jan", sales: 0, value: 0 },
+                    { month: "Feb", sales: 0, value: 0 },
+                    { month: "Mar", sales: 0, value: 0 },
+                    { month: "Apr", sales: 0, value: 0 },
+                    { month: "May", sales: 0, value: 0 },
+                    { month: "Jun", sales: 0, value: 0 }
+                ];
+
+                setAnalytics({
+                    totalListings: userData.agent.total_listings || 0,
+                    totalFavorites: userData.agent.total_bookmarks || 0,
+                    activeListings,
+                    underContractListings,
+                    soldListings,
+                    totalViews: userData.agent.total_views || 0,
+                    totalInquiries: userData.agent.total_inquiries || 0,
+                    conversionRate,
+                    averageDaysToSell,
+                    performanceByMonth
+                });
             }
-        };
+            setListings(userData.agent?.properties)
+            setLoading(false);
+        } catch (err) {
+            console.error("Error fetching user data:", err);
+            setLoading(false);
+            toast.error("Failed to load profile data. Please try again later.");
+        }
+    };
 
+
+    useEffect(() => {
         fetchProfile();
     }, [token]);
 
@@ -481,6 +536,7 @@ const Profile = () => {
             }));
 
             setIsEditing(false);
+            setIsEditDialogOpen(false)
             setLoading(false);
             toast.success("Profile updated successfully!");
         } catch (err) {
@@ -495,7 +551,7 @@ const Profile = () => {
             setLoading(true);
 
             // Prepare the payload according to the required format
-            const payload = {
+            const payload: any = {
                 title: newListing.title,
                 description: newListing.description,
                 property_type: newListing.property_type,
@@ -512,10 +568,14 @@ const Profile = () => {
                 lot_size: newListing.lot_size,
                 year_built: newListing.year_built,
                 availability: newListing.availability,
-                // availability_date: newListing.availability !== "now" && newListing.availability_date
             };
 
-            console.log("checking token----->", token)
+            // Only add availability_date to the payload if availability is "date"
+            if (newListing.availability === "date" && newListing.availability_date) {
+                payload.availability_date = newListing.availability_date;
+            }
+
+            console.log("console.log----->", payload);
 
             // Make API call to list the property
             const response = await api.post("/market/list-property/", payload, {
@@ -527,26 +587,9 @@ const Profile = () => {
 
             // If successful, add to local state
             if (response.data) {
-                const newProperty: any = {
-                    ...response.data,
-                    id: response.data.id || (listings.length + 1).toString(),
-                    status: "Active",
-                    image: response.data.image || "/api/placeholder/300/200",
-                    listed_date: new Date().toISOString().split('T')[0],
-                    views: 0,
-                    inquiries: 0,
-                    favorites: 0,
-                    performance: {
-                        viewsPerDay: 0,
-                        trend: "neutral",
-                        percentageChange: 0
-                    }
-                };
-
-                setListings([newProperty, ...listings]);
                 setIsAddingListing(false);
 
-                // Reset the form
+                // Reset the form - notice we don't include availability_date when availability is "now"
                 setNewListing({
                     title: "",
                     description: "",
@@ -563,9 +606,11 @@ const Profile = () => {
                     square_feet: "",
                     lot_size: "",
                     year_built: "",
-                    availability: "now",
-                    availability_date: ""
+                    availability: "now"
                 });
+                setIsListingDialogOpen(false)
+
+                fetchProfile()
 
                 toast.success("New property listed successfully!");
             }
@@ -652,7 +697,7 @@ const Profile = () => {
     };
 
 
-    const handleSubmitReferrerCode = async (e:any) => {
+    const handleSubmitReferrerCode = async (e: any) => {
         e.preventDefault();
 
         if (!referrerCode.trim()) {
@@ -742,6 +787,9 @@ const Profile = () => {
 
             setSubmitStatus("error");
             setStatusMessage(errorMessage);
+            setTimeout(() => {
+                setIsDocDialogOpen(false);
+            }, 1500);
         } finally {
             setIsSubmitting(false);
         }
@@ -880,11 +928,18 @@ const Profile = () => {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-center pt-2">
-                                <Dialog>
+                                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm" className="text-teal-600 cursor-pointer" onClick={() => {
                                             setIsEditing(true);
-                                            setEditableProfile({ ...profileData });
+                                            setEditableProfile((prevEditableProfile: any) => ({
+                                                ...prevEditableProfile,
+
+                                                name: profileData.name,
+                                                email: profileData.email,
+                                                phone: profileData.phone,
+                                                photo: profileData.photo,
+                                            }));
                                         }}>
                                             <Edit className="h-4 w-4 mr-1" /> Edit Profile
                                         </Button>
@@ -1112,6 +1167,10 @@ const Profile = () => {
                                         </div>
                                     </div>
                                     <div>
+                                        <p className="text-sm text-gray-500">Referrer</p>
+                                        <p className="font-medium">{profileData.referrer || "No referrer"}</p>
+                                    </div>
+                                    <div>
                                         <p className="text-sm text-gray-500">Referred Users</p>
                                         <p className="font-medium">{profileData.referred_users_count}</p>
                                     </div>
@@ -1123,7 +1182,7 @@ const Profile = () => {
                                     {/* New button to enter referrer code */}
                                     <div className="pt-2 border-t border-gray-100">
                                         <Button
-                                          
+
                                             className="w-full flex items-center bg-teal-600 cursor-pointer hover:bg-teal-700 text-white justify-center hover:text-teal-70"
                                             onClick={() => setIsDialogOpen(true)}
                                         >
@@ -1228,7 +1287,7 @@ const Profile = () => {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {profileData?.agent?.top_performing_properties?.map((property: any, index:number) => (
+                                            {profileData?.agent?.top_performing_properties?.map((property: any, index: number) => (
                                                 <div key={index} className="flex items-start space-x-4">
                                                     <div className="bg-blue-100 p-2 rounded-full">
                                                         <Eye className="h-5 w-5 text-teal-600" />
@@ -1250,7 +1309,7 @@ const Profile = () => {
                             <TabsContent value="listings" className="space-y-6">
                                 <div className="flex justify-between items-center mb-6">
                                     <h2 className="text-2xl font-bold">My Properties</h2>
-                                    <Dialog>
+                                    <Dialog open={isListingDialogOpen} onOpenChange={setIsListingDialogOpen} >
                                         <DialogTrigger asChild>
                                             <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
                                                 <Plus className="h-4 w-4 mr-1" /> Add New Property
@@ -1453,7 +1512,20 @@ const Profile = () => {
                                                     <div className="space-y-2">
                                                         <Label htmlFor="availability">Availability</Label>
                                                         <Select
-                                                            onValueChange={(value) => setNewListing({ ...newListing, availability: value })}
+                                                            onValueChange={(value) => {
+                                                                if (value === "now") {
+                                                                    // Remove the availability_date field when "Available Now" is selected
+                                                                    const { availability_date, ...restOfNewListing } = newListing;
+                                                                    setNewListing({ ...restOfNewListing, availability: value });
+                                                                } else {
+                                                                    // Keep or initialize the availability_date when "Available From Date" is selected
+                                                                    setNewListing({
+                                                                        ...newListing,
+                                                                        availability: value,
+                                                                        availability_date: newListing.availability_date || new Date().toISOString().split('T')[0]
+                                                                    });
+                                                                }
+                                                            }}
                                                             defaultValue="now"
                                                         >
                                                             <SelectTrigger id="availability">
@@ -1787,7 +1859,7 @@ const Profile = () => {
                                     </CardHeader>
                                     <CardContent className="space-y-6">
                                         {/* Email Notifications - Toggle */}
-                                        <div className="flex items-center justify-between py-2">
+                                        {/* <div className="flex items-center justify-between py-2">
                                             <div>
                                                 <h3 className="font-medium">Email Notifications</h3>
                                                 <p className="text-sm text-gray-500">
@@ -1804,6 +1876,37 @@ const Profile = () => {
                                                 <Label htmlFor="email-notifications">
                                                     {emailNotifications ? "Active" : "Inactive"}
                                                 </Label>
+                                            </div>
+                                        </div> */}
+                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                            <div>
+                                                <h3 className="font-medium">Email Verification</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Verify your email address for account security
+                                                </p>
+                                            </div>
+                                            <div className='flex flex-col gap-4'>
+                                                <div className="flex items-center space-x-2">
+                                                    <Switch
+                                                        id="email-notifications"
+                                                        checked={emailNotifications}
+                                                        onCheckedChange={handleEmailNotificationToggle}
+                                                        disabled={loading}
+                                                    />
+                                                    <Label htmlFor="email-notifications">
+                                                        {emailNotifications ? "Active" : "Inactive"}
+                                                    </Label>
+                                                </div>
+                                                {profile?.is_email_verified && (<Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled
+                                                    className={profile?.is_email_verified ? "bg-green-50" : ""}
+                                                >
+
+                                                    <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                    Verified
+                                                </Button>)}
                                             </div>
                                         </div>
 
@@ -1930,10 +2033,23 @@ const Profile = () => {
                                                     Add an extra layer of security to your account
                                                 </p>
                                             </div>
-                                            <Link href="/verify-number" className='flex items-center gap-2'>
-                                                <Phone className="h-4 w-4 mr-1" />
-                                                {isPhoneVerified ? "Verified" : "Verify"}
-                                            </Link>
+                                            {profile?.is_phone_verified ? (
+                                                <Button variant="outline" size="sm" disabled className="bg-green-50">
+                                                    <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                    Verified
+                                                </Button>
+                                            ) : (
+                                                <Link href="/verify-number">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Phone className="h-4 w-4 mr-1" />
+                                                        Verify
+                                                    </Button>
+                                                </Link>
+                                            )}
                                             {/* <Dialog>
                                                 <DialogTrigger asChild>
                                                     <Button variant="outline" size="sm">
@@ -1977,10 +2093,13 @@ const Profile = () => {
                                                         Verify your identity with a government-issued ID
                                                     </p>
                                                 </div>
-                                                <Dialog onOpenChange={(open) => !open && resetForm()}>
+                                                <Dialog open={isDocDialogOpen} onOpenChange={(open) => {
+                                                    setIsDocDialogOpen(open);
+                                                    if (!open) resetForm();
+                                                }}>
                                                     <DialogTrigger asChild>
                                                         <Button className='cursor-pointer' variant="outline" size="sm">
-                                                            {isIdVerified ? (
+                                                            {profile?.is_identity_verified ? (
                                                                 <>
                                                                     <Check className="h-4 w-4 mr-1" />
                                                                     Verified
@@ -2111,7 +2230,7 @@ const Profile = () => {
                                                             {/* Submit Button */}
                                                             <Button
                                                                 onClick={handleVerificationSubmit}
-                                                                className="w-full bg-teal-600 hover:bg-teal-700"
+                                                                className="w-full cursor-pointer bg-teal-600 hover:bg-teal-700"
                                                                 disabled={isSubmitting || !files.id_card || !files.photo}
                                                             >
                                                                 {isSubmitting ? "Submitting..." : "Submit for Verification"}

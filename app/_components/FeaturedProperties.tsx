@@ -309,7 +309,7 @@ const FeaturedProperties = () => {
                     <div className="relative p-6">
                       <div className="absolute -top-10 right-6 bg-white rounded-lg shadow-lg py-2 px-3">
                         <div className="text-lg lg:text-xl font-bold text-[#348b8b]">
-                          <span className='mr-1'>{property.currency} </span>{property?.price.toLocaleString()}
+                          <span className='mr-1'>{property.currency} </span>{Number(property?.price).toLocaleString()}
                         </div>
                       </div>
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 mt-2 line-clamp-1">{property.title}</h3>

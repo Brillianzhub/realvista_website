@@ -94,7 +94,7 @@ const PricingPage: React.FC = () => {
         price: price
       }, {
         headers: {
-          Authorization: `Bearer ${token}` // Adjust based on your auth setup
+          Authorization: `Token ${token}` // Adjust based on your auth setup
         }
       });
 
@@ -163,40 +163,6 @@ const PricingPage: React.FC = () => {
     premium: "Go Premium",
     enterprise: "Contact Sales"
   };
-
-  // Boost options
-  // const boostOptions = [
-  //   {
-  //     title: 'Featured Listings',
-  //     options: [
-  //       {
-  //         price: 500,
-  //         duration: '48 hours',
-  //         description: 'Appear at the top of search results and on the website for increased visibility.'
-  //       },
-  //       {
-  //         price: 1000,
-  //         duration: '48 hours',
-  //         description: 'Appear at the top of search results, on our social media pages, and on the website for enhanced visibility.'
-  //       },
-  //       {
-  //         price: 5000,
-  //         duration: '1 month',
-  //         description: 'Appear at the top of search results, on our social media pages, our website, and partner websites for maximum visibility.'
-  //       }
-  //     ]
-  //   },
-  //   {
-  //     title: 'Agent Boosting',
-  //     options: [
-  //       {
-  //         price: 10000,
-  //         duration: '1 week',
-  //         description: 'Appear at the top of the agent search results and as a featured agent on the website for increased visibility.'
-  //       }
-  //     ]
-  //   }
-  // ];
 
   // Format price for display
   const formatPrice = (price: string): React.ReactNode => {

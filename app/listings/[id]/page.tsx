@@ -74,8 +74,12 @@ const PropertyDetailsPage = () => {
 
     // Update shareUrl when the component mounts and when listing changes
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setShareUrl(window.location.href);
+        if (typeof window !== 'undefined' && listing?.owner) {
+            // Construct agent profile URL with the pattern /agents/[id]
+            const baseUrl = window.location.origin;
+            // Assuming you're using the owner/agent ID
+            const agentId = listing.owner.id || 2; // Fallback to ID 2 if no ID is available
+            setShareUrl(`${baseUrl}/agents/${agentId}`);
         }
     }, [listing]);
 
@@ -363,6 +367,14 @@ const PropertyDetailsPage = () => {
                                     <span className="font-semibold">{listing.availability}</span>
                                     <span className="text-sm text-gray-500">Availability</span>
                                 </div>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>
+                            <div className='w-full flex gap-8 mb-4'>
+                                {listing.payment_plans && listing.payment_plans.map((plan: string, index:number) => (
+                                    <p key={index} className='text-base'>
+                                        {plan}
+                                    </p>
+                                ))}
                             </div>
 
                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Features & Amenities</h3>

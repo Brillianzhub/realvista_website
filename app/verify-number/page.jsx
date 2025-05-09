@@ -7,6 +7,8 @@ import {
     signInWithPhoneNumber,
     RecaptchaVerifier
 } from "firebase/auth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -29,6 +31,7 @@ const VerifyPhoneNumber = () => {
     const [error, setError] = useState("");
     const [isSend, setIsSend] = useState(false);
     const [loading, setLoading] = useState(false);
+    const router = useRouter()
     const recaptchaVerifier = useRef(null);
 
     useEffect(() => {
@@ -138,9 +141,10 @@ const VerifyPhoneNumber = () => {
 
             const result = await response.json();
             if (response.ok) {
-                alert("Phone verified successfully!");
+                toast("Phone verified successfully!");
+                router.push("/profile")
             } else {
-                setError(result.detail || "Verification failed.");
+                toast(result.detail || "Verification failed.");
             }
         } catch (err) {
             console.error("Error verifying code:", err);
@@ -179,7 +183,7 @@ const VerifyPhoneNumber = () => {
                                 value={phoneNumber}
                                 onChange={(e) => setPhoneNumber(e.target.value)}
                                 placeholder="+23470789012"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                                 required
                             />
                             <p className="mt-1 text-xs text-gray-500">
@@ -207,14 +211,14 @@ const VerifyPhoneNumber = () => {
                                 value={verificationCode}
                                 onChange={(e) => setVerificationCode(e.target.value)}
                                 placeholder="123456"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                                 required
                             />
                         </div>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {loading ? "Verifying..." : "Verify Code"}
                         </button>

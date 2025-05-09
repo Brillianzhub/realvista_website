@@ -112,7 +112,7 @@ export default function CookieConsent() {
             </button>
             <button 
               onClick={handleAcceptAll} 
-              className="text-sm bg-blue-600 hover:bg-teal-700 text-white px-3 py-2 rounded transition-colors"
+              className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded transition-colors"
             >
               Accept All
             </button>

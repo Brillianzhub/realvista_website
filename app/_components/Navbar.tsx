@@ -14,6 +14,7 @@ import {
   Heart,
   ClipboardList
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFilter, setSearchFilter] = useState('all');
   const [userData, setUserData] = useState<any>();
+  const router = useRouter()
 
   // Load user data from localStorage on component mount
   useEffect(() => {
@@ -127,14 +129,13 @@ export default function Navbar() {
   const handleLogout = () => {
     // Remove user data from localStorage
     localStorage.removeItem('userData');
-    localStorage.removeItem('token');
-    
+    localStorage.removeItem('token');  
     // Update state
     setUserData(null);
     
     // Close the dropdown
     setIsUserDropdownOpen(false);
-    
+    router.push("/")
     // Dispatch logout event
     window.dispatchEvent(new Event('userLogout'));
   };
@@ -406,7 +407,7 @@ export default function Navbar() {
           ) : (
             <div className="px-3 pt-2 flex flex-col space-y-2">
               <Link 
-                href="/login"
+                href="/sign-in"
                 className="w-full bg-white border border-[#348b8b] text-[#348b8b] px-4 py-2 rounded-full text-center font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
