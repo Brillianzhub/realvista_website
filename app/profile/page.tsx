@@ -830,7 +830,7 @@ const Profile = () => {
             const files = Array.from(e.dataTransfer.files);
 
             // Create previews for the dropped files
-            const newImages = files.map((file: any) => ({
+            const newImages = files?.map((file: any) => ({
                 file,
                 preview: URL.createObjectURL(file),
                 name: file.name
@@ -866,7 +866,7 @@ const Profile = () => {
     // Get user initials for avatar
     const getUserInitials = () => {
         if (!profileData.name) return "";
-        return profileData.name.split(' ').map((n: any) => n[0]).join('');
+        return profileData.name.split(' ')?.map((n: any) => n[0]).join('');
     };
 
     if (loading && !profile) {
@@ -1617,7 +1617,7 @@ const Profile = () => {
                                                         <div className="mt-4">
                                                             <Label>Selected Images ({selectedImages?.length})</Label>
                                                             <div className="grid grid-cols-3 gap-4 mt-2">
-                                                                {selectedImages.map((image: any, index: any) => (
+                                                                {selectedImages?.map((image: any, index: any) => (
                                                                     <div key={index} className="relative group">
                                                                         <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
                                                                             <img
@@ -1675,7 +1675,7 @@ const Profile = () => {
                                     <EmptyState />
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        {listings.map((listing: any) => (
+                                        {listings?.map((listing: any) => (
                                             <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
                                                 <div className="relative h-48">
                                                     <img
