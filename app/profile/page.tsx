@@ -340,6 +340,25 @@ const Profile = () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
 
+        const fetchUserFavorites = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get("/market/user-bookmarks/", {
+                    headers: {
+                        "Content-Type": "Application/json",
+                        Authorization: `Token ${token}`
+                    }
+                });
+                setFavorites(response.data)
+                setLoading(false)
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                setLoading(false)
+            }
+
+        }
+
+
     const fetchProfile = async () => {
         try {
             setLoading(true);
@@ -496,6 +515,7 @@ const Profile = () => {
 
     useEffect(() => {
         fetchProfile();
+        fetchUserFavorites()
     }, [token]);
 
     const handleProfileUpdate = async () => {
@@ -709,8 +729,13 @@ const Profile = () => {
         setError('');
 
         try {
-            const response = await api.post('/market/code', {
+            const response = await api.post('/accounts/submit-referral/', {
                 referrer_code: referrerCode.trim()
+            }, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
             });
 
             toast.success('Referrer code applied successfully!');
@@ -723,8 +748,8 @@ const Profile = () => {
         } catch (error: any) {
             console.error('Error submitting referrer code:', error);
 
-            if (error.response?.data?.message) {
-                setError(error.response.data.message);
+            if (error.response) {
+                setError(error.response.data.error);
             } else {
                 setError('Failed to apply referrer code. Please try again.');
             }
@@ -2101,8 +2126,10 @@ const Profile = () => {
                                                         <Button className='cursor-pointer' variant="outline" size="sm">
                                                             {profile?.is_identity_verified ? (
                                                                 <>
-                                                                    <Check className="h-4 w-4 mr-1" />
-                                                                    Verified
+                                                                    <Button variant="outline" size="sm" disabled className="bg-green-50">
+                                                                        <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                                        Verified
+                                                                    </Button>
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -2286,7 +2313,7 @@ const Profile = () => {
                                 </Card>
                             </TabsContent>
                             <TabsContent value="favorites" className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     {favorites?.map((listing: any) => (
                                         <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
                                             <div className="relative h-48">
@@ -2368,14 +2395,11 @@ const Profile = () => {
                                                         </div>
                                                         <span className="text-xs text-gray-500 ml-2">in views this week</span>
                                                     </div>
-                                                    {/* <Button variant="outline" size="sm">
-                                                            <FileEdit className="h-4 w-4 mr-1" /> Edit
-                                                        </Button> */}
                                                 </div>
                                             </CardContent>
                                         </Card>
                                     ))}
-                                </div>
+                                </div> */}
                             </TabsContent>
                         </Tabs>
                     </div>
@@ -2421,7 +2445,7 @@ const Profile = () => {
                             <Button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className='bg-teal-600 hover:bg-teal-700'
+                                className='bg-teal-600 hover:bg-teal-700 cursor-pointer'
                             >
                                 {isSubmitting ? (
                                     <>

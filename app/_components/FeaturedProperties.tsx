@@ -102,44 +102,39 @@ const FeaturedProperties = () => {
     // Get current favorite status
     const isFavorite = favorites[propertyId] || false;
 
-    console.log("token-->", token)
+    console.log("token-->", token);
 
     if (!token) {
       // Handle unauthenticated users
       console.error('Authentication required to manage favorites');
-      router.push("/sign-in")
+      router.push("/sign-in");
+      return; // Exit function early if not authenticated
     }
 
     try {
+      let response;
 
       // Determine which endpoint to use based on current status
-      let response;
       if (isFavorite) {
         // Remove from favorites if it's currently favorited
-        response = await api.delete(
-          `/market/remove-bookmark/${propertyId}/`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${token}`
-            }
+        response = await api.delete(`/market/remove-bookmark/${propertyId}/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`
           }
-        );
+        });
       } else {
         // Add to favorites if it's not currently favorited
-        response = await api.post(
-          `/market/bookmark-property/${propertyId}/`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${token}`
-            }
+        response = await api.post(`/market/bookmark-property/${propertyId}/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`
           }
-        );
+        });
       }
 
       // Check if the request was successful
-      if (response.status === 200 || response.status === 201) {
+      if (response && (response.status === 200 || response.status === 201)) {
         // Update local state to reflect the change
         setFavorites(prev => ({
           ...prev,
@@ -152,9 +147,9 @@ const FeaturedProperties = () => {
     } catch (error: any) {
       // Handle error scenarios
       console.error('Error toggling favorite status:', error);
+      toast.error('Failed to update favorites. Please try again.');
     }
   };
-
 
 
   // Number of cards to display at once based on screen size
