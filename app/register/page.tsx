@@ -674,7 +674,7 @@ const SignUpPage = () => {
                     </div>
                     <div className="ml-3 text-sm">
                         <label htmlFor="acceptTerms" className="font-medium text-gray-700">
-                            I agree to the <Link href="/terms" className="text-[#348b8b] hover:underline">Terms and Conditions</Link> and <Link href="/privacy" className="text-[#348b8b] hover:underline">Privacy Policy</Link>
+                            I agree to the <Link href="/terms" className="text-[#348b8b] hover:underline">Terms and Conditions</Link> and <Link href="/privacy-policy" className="text-[#348b8b] hover:underline">Privacy Policy</Link>
                         </label>
                         {formErrors.acceptTerms && (
                             <p className="text-red-500 text-sm mt-1">{formErrors.acceptTerms}</p>

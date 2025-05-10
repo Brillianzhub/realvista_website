@@ -469,7 +469,7 @@ const Profile = () => {
             if (userData.agent) {
                 // Calculate active and sold listings (for demonstration - update with your actual logic)
                 const properties = userData.agent.properties || [];
-                const activeListings = properties.length; // Assuming all are active for now
+                const activeListings = properties?.length; // Assuming all are active for now
                 const soldListings = 0; // You'll need to determine this based on your data structure
                 const underContractListings = 0; // You'll need to determine this based on your data structure
 
@@ -826,7 +826,7 @@ const Profile = () => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer.files && e.dataTransfer.files?.length > 0) {
             const files = Array.from(e.dataTransfer.files);
 
             // Create previews for the dropped files
@@ -839,15 +839,6 @@ const Profile = () => {
             // Update the selectedImages state
             setSelectedImages((prevImages: any) => [...prevImages, ...newImages]);
         }
-    };
-
-    // Format price with commas
-    const formatPrice = (price: any) => {
-        return price?.toLocaleString('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: 0
-        });
     };
 
     // Format date
@@ -1622,9 +1613,9 @@ const Profile = () => {
                                                     </div>
 
                                                     {/* Image Previews */}
-                                                    {selectedImages.length > 0 && (
+                                                    {selectedImages?.length > 0 && (
                                                         <div className="mt-4">
-                                                            <Label>Selected Images ({selectedImages.length})</Label>
+                                                            <Label>Selected Images ({selectedImages?.length})</Label>
                                                             <div className="grid grid-cols-3 gap-4 mt-2">
                                                                 {selectedImages.map((image: any, index: any) => (
                                                                     <div key={index} className="relative group">
@@ -1680,7 +1671,7 @@ const Profile = () => {
                                 </div>
 
                                 {/* Listing Cards */}
-                                {listings.length === 0 ? (
+                                {listings?.length === 0 ? (
                                     <EmptyState />
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1710,7 +1701,7 @@ const Profile = () => {
                                                             </CardDescription>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
+                                                            <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
                                                             <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
                                                         </div>
                                                     </div>
@@ -2134,7 +2125,7 @@ const Profile = () => {
                                                                     </Button>
                                                                 </>
                                                             ) : (
-                                                                <Button variant="outline" size="sm" className="">
+                                                                <Button variant="outline" size="sm" className="bg-green-50">
                                                                     <CreditCard className="h-4 w-4 mr-1" />
                                                                     Verify
                                                                 </Button>
@@ -2342,7 +2333,7 @@ const Profile = () => {
                                                         </CardDescription>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-bold text-lg">{formatPrice(listing.price)}</p>
+                                                        <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
                                                         <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
                                                     </div>
                                                 </div>

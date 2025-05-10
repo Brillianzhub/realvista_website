@@ -78,7 +78,7 @@ const PropertyDetailsPage = () => {
             // Construct agent profile URL with the pattern /agents/[id]
             const baseUrl = window.location.origin;
             // Assuming you're using the owner/agent ID
-            const agentId = listing.owner.id || 2; // Fallback to ID 2 if no ID is available
+            const agentId = listing.owner.id || 2; 
             setShareUrl(`${baseUrl}/agents/${agentId}`);
         }
     }, [listing]);
