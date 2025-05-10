@@ -90,7 +90,7 @@ const TestimonialSection = () => {
                             <Quote size={30} className="text-[#348b8b]" />
                         </div>
                         <h2 className="text-4xl font-bold mb-4 text-gray-800">What Our Clients Say</h2>
-                        <p className="text-gray-600 text-lg max-w-2xl mx-auto">Real experiences from real estate professionals who've transformed their business with RealVista</p>
+                        <p className="text-gray-600 text-lg max-w-2xl mx-auto">Real experiences from real estate professionals who've transformed their business with Realvista</p>
                         <div className="w-24 h-1 bg-[#348b8b] mx-auto mt-6"></div>
                     </motion.div>
                 </div>

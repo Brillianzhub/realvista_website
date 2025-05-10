@@ -1842,7 +1842,7 @@ const Profile = () => {
                                                 <div>
                                                     <h3 className="text-sm font-medium text-gray-500 mb-2">Verification Status</h3>
                                                     <div className="flex items-center">
-                                                        {profileData.verified ? (
+                                                        {profile?.is_phone_verified ? (
                                                             <>
                                                                 <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                                                                 <span className="text-green-600">Verified</span>
@@ -2125,7 +2125,7 @@ const Profile = () => {
                                                     if (!open) resetForm();
                                                 }}>
                                                     <DialogTrigger asChild>
-                                                        <Button className='cursor-pointer' variant="outline" size="sm">
+                                                        <div className='cursor-pointer'>
                                                             {profile?.is_identity_verified ? (
                                                                 <>
                                                                     <Button variant="outline" size="sm" disabled className="bg-green-50">
@@ -2134,12 +2134,12 @@ const Profile = () => {
                                                                     </Button>
                                                                 </>
                                                             ) : (
-                                                                <>
+                                                                <Button variant="outline" size="sm" className="">
                                                                     <CreditCard className="h-4 w-4 mr-1" />
                                                                     Verify
-                                                                </>
+                                                                </Button>
                                                             )}
-                                                        </Button>
+                                                        </div>
                                                     </DialogTrigger>
                                                     <DialogContent className="sm:max-w-lg">
                                                         <DialogHeader>
