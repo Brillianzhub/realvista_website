@@ -1186,7 +1186,7 @@ const Profile = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Referrer</p>
-                                        <p className="font-medium">{profileData.referrer || "No referrer"}</p>
+                                        <p className="font-medium">{profileData.referrer}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Referred Users</p>
