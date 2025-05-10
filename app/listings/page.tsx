@@ -138,7 +138,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
       } else {
         // Add to favorites if it's not currently favorited
         response = await api.post(
-          `/market/bookmark-property/${propertyId}/`,
+          `/market/bookmark-property/${propertyId}/`, {},
           {
             headers: {
               'Content-Type': 'application/json',

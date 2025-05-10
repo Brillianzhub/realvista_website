@@ -358,6 +358,8 @@ const Profile = () => {
 
         }
 
+        console.log("favorites--->", favorites)
+
 
     const fetchProfile = async () => {
         try {
@@ -2313,9 +2315,9 @@ const Profile = () => {
                                 </Card>
                             </TabsContent>
                             <TabsContent value="favorites" className="space-y-6">
-                                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {favorites?.map((listing: any) => (
-                                        <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {favorites?.map((listing: any, index:number) => (
+                                        <Card key={index} onClick={() => handleCardClick(listing.property_id)} className="h-full cursor-pointer">
                                             <div className="relative h-48">
                                                 <img
                                                     src={listing.image}
@@ -2399,7 +2401,7 @@ const Profile = () => {
                                             </CardContent>
                                         </Card>
                                     ))}
-                                </div> */}
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </div>

@@ -117,7 +117,7 @@ const FeaturedProperties = () => {
       // Determine which endpoint to use based on current status
       if (isFavorite) {
         // Remove from favorites if it's currently favorited
-        response = await api.delete(`/market/remove-bookmark/${propertyId}/`, {
+        response = await api.post(`/market/remove-bookmark/${propertyId}/`, {}, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`
@@ -125,7 +125,7 @@ const FeaturedProperties = () => {
         });
       } else {
         // Add to favorites if it's not currently favorited
-        response = await api.post(`/market/bookmark-property/${propertyId}/`, {
+        response = await api.post(`/market/bookmark-property/${propertyId}/`, {}, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`
@@ -291,7 +291,7 @@ const FeaturedProperties = () => {
                         aria-label="Add to favorites"
                       >
                         <Heart
-                          className={`w-5 h-5 ${favorites[property.id] ? 'text-red-500 fill-red-500' : 'text-gray-600'}`}
+                          className={`w-5 h-5 ${favorites[property.id] ? 'text-teal-600 fill-teal-600' : 'text-gray-600'}`}
                         />
                       </button>
                       {property.featured && (
