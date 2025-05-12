@@ -37,17 +37,17 @@ export default function Navbar() {
         console.error('Error loading user data from localStorage:', error);
       }
     };
-    
+
     // Load user data initially
     loadUserData();
-    
+
     // Set up event listener for login/logout events
     const handleUserLogin = () => loadUserData();
     const handleUserLogout = () => setUserData(null);
-    
+
     window.addEventListener('userLogin', handleUserLogin);
     window.addEventListener('userLogout', handleUserLogout);
-    
+
     // Clean up event listeners
     return () => {
       window.removeEventListener('userLogin', handleUserLogin);
@@ -99,7 +99,7 @@ export default function Navbar() {
     { label: 'My Profile', icon: <User className="w-4 h-4 mr-2" />, href: '/profile' },
   ];
 
-  const scrollToSection = (sectionId:any) => {
+  const scrollToSection = (sectionId: any) => {
     const element = document.querySelector(sectionId);
 
     // Close mobile menu if open
@@ -120,7 +120,7 @@ export default function Navbar() {
     }
   };
 
-  const handleSearch = (e:any) => {
+  const handleSearch = (e: any) => {
     e.preventDefault();
     // Implement search logic here
     console.log('Searching:', searchQuery, 'Filter:', searchFilter);
@@ -129,10 +129,10 @@ export default function Navbar() {
   const handleLogout = () => {
     // Remove user data from localStorage
     localStorage.removeItem('userData');
-    localStorage.removeItem('token');  
+    localStorage.removeItem('token');
     // Update state
     setUserData(null);
-    
+
     // Close the dropdown
     setIsUserDropdownOpen(false);
     router.push("/")
@@ -186,22 +186,22 @@ export default function Navbar() {
                 </Link>
               )
             ))}
-            
+
             {/* User Profile or Auth Buttons based on login status */}
             {userData ? (
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                   className="flex items-center space-x-2 focus:outline-none"
                 >
                   <div className="w-9 h-9 rounded-full bg-[#348b8b] flex items-center justify-center text-white overflow-hidden">
                     {userData.avatar ? (
-                      <Image 
-                        src={userData.avatar} 
-                        width={36} 
-                        height={36} 
+                      <Image
+                        src={userData.avatar}
+                        width={36}
+                        height={36}
                         alt={userData.name}
-                        className="object-cover" 
+                        className="object-cover"
                       />
                     ) : (
                       <span className="font-medium text-sm">
@@ -211,7 +211,7 @@ export default function Navbar() {
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
-                
+
                 {/* User Dropdown Menu */}
                 {isUserDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border py-2 z-50">
@@ -219,10 +219,10 @@ export default function Navbar() {
                       <p className="text-sm font-medium">{userData.name}</p>
                       <p className="text-xs text-gray-500 truncate">{userData.email}</p>
                     </div>
-                    
+
                     <div className="py-1">
                       {userMenuItems.map((item) => (
-                        <Link 
+                        <Link
                           key={item.label}
                           href={item.href}
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -233,7 +233,7 @@ export default function Navbar() {
                         </Link>
                       ))}
                     </div>
-                    
+
                     <div className="border-t py-1">
                       <button
                         onClick={handleLogout}
@@ -359,6 +359,7 @@ export default function Navbar() {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               >
                 {item.label}
@@ -373,12 +374,12 @@ export default function Navbar() {
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-[#348b8b] flex items-center justify-center text-white">
                     {userData.avatar ? (
-                      <Image 
-                        src={userData.avatar} 
-                        width={40} 
-                        height={40} 
+                      <Image
+                        src={userData.avatar}
+                        width={40}
+                        height={40}
                         alt={userData.name}
-                        className="rounded-full object-cover" 
+                        className="rounded-full object-cover"
                       />
                     ) : (
                       <span className="font-medium">
@@ -391,7 +392,19 @@ export default function Navbar() {
                     <p className="text-xs text-gray-500 truncate">{userData.email}</p>
                   </div>
                 </div>
-                
+                <div className="py-1">
+                  {userMenuItems.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => { setIsUserDropdownOpen(false); setIsMobileMenuOpen(false) }}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
                 <button
                   onClick={() => {
                     handleLogout();
@@ -406,14 +419,14 @@ export default function Navbar() {
             </>
           ) : (
             <div className="px-3 pt-2 flex flex-col space-y-2">
-              <Link 
+              <Link
                 href="/sign-in"
                 className="w-full bg-white border border-[#348b8b] text-[#348b8b] px-4 py-2 rounded-full text-center font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Login
               </Link>
-              <Link 
+              <Link
                 href="/register"
                 className="w-full bg-[#FB902D] text-white px-4 py-2 rounded-full text-center font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
