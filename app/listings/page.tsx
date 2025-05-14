@@ -91,10 +91,101 @@ interface ActiveFilter {
 // Property Card Component
 const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [favorites, setFavorites] = useState<any>({});
+  const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const router = useRouter()
+
+
+  useEffect(() => {
+    const fetchUserBookmarks = async () => {
+      if (!token) return;
+
+      try {
+        const response = await api.get('/market/user-bookmarks/', {
+          headers: {
+            Authorization: `Token ${token}`
+          }
+        });
+
+        if (response.status === 200) {
+          // Create a mapping of property_id to bookmark_id for efficient lookup
+          const bookmarkMap: Record<number, number> = {};
+          response.data.forEach((bookmark: any) => {
+            bookmarkMap[bookmark.property_id] = bookmark.bookmark_id;
+          });
+          setBookmarks(bookmarkMap);
+        }
+      } catch (error) {
+        console.error('Error fetching bookmarks:', error);
+      }
+    };
+
+    fetchUserBookmarks();
+  }, [token]);
+
+
+  const isBookmarked = (propertyId: any) => {
+    return propertyId in bookmarks;
+  };
+
+  const toggleFavorite = async (propertyId: any) => {
+    if (!token) {
+      console.error('Authentication required to manage favorites');
+      router.push("/sign-in");
+      return;
+    }
+
+    try {
+      let response;
+      const isFavorite = isBookmarked(propertyId);
+
+      if (isFavorite) {
+        // Use bookmark_id for removal
+        const bookmarkId = bookmarks[propertyId];
+        response = await api.post(`/market/remove-bookmark/${bookmarkId}/`, {}, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`
+          }
+        });
+
+        // If removal was successful, update the state
+        if (response.status === 200) {
+          setBookmarks(prev => {
+            const updated = { ...prev };
+            delete updated[propertyId];
+            return updated;
+          });
+        }
+      } else {
+        // Add to favorites using property_id
+        response = await api.post(`/market/bookmark-property/${propertyId}/`, {}, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`
+          }
+        });
+
+        // If successful, update the bookmarks map with the new bookmark_id
+        if (response.status === 201) {
+          const newBookmarkId = response.data.bookmark_id;
+          // This is the key fix - immediately update the state with the new bookmark ID
+          setBookmarks(prev => ({
+            ...prev,
+            [propertyId]: newBookmarkId
+          }));
+        }
+        window.location.reload();
+      }
+
+      if (response && (response.status === 200 || response.status === 201)) {
+        toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite status:', error);
+      toast.error('Failed to update favorites. Please try again.');
+    }
+  };
 
   // Format property price
   const formatPrice = (price: string) => {
@@ -109,61 +200,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
     return "/default-property.jpg"; // Default image if none available
   };
 
-  const toggleFavorite = async (propertyId: any) => {
-    // Get current favorite status
-    const isFavorite = favorites[propertyId] || false;
-
-    console.log("token-->", token)
-
-    if (!token) {
-      // Handle unauthenticated users
-      console.error('Authentication required to manage favorites');
-      router.push("/sign-in")
-    }
-
-    try {
-      // Determine which endpoint to use based on current status
-      let response;
-      if (isFavorite) {
-        // Remove from favorites if it's currently favorited
-        response = await api.delete(
-          `/market/remove-bookmark/${propertyId}/`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${token}`
-            }
-          }
-        );
-      } else {
-        // Add to favorites if it's not currently favorited
-        response = await api.post(
-          `/market/bookmark-property/${propertyId}/`, {},
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${token}`
-            }
-          }
-        );
-      }
-
-      // Check if the request was successful
-      if (response.status === 200 || response.status === 201) {
-        // Update local state to reflect the change
-        setFavorites((prev: any) => ({
-          ...prev,
-          [propertyId]: !isFavorite
-        }));
-
-        // Optionally show a success message
-        toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
-      }
-    } catch (error: any) {
-      // Handle error scenarios
-      console.error('Error toggling favorite status:', error);
-    }
-  };
 
   return (
     <motion.div
@@ -195,30 +231,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
               </div>
             )}
           </div>
-
           <div className="absolute top-4 right-4 flex space-x-2">
             <button
-              onClick={(e) => {
-                e.preventDefault(); // Prevent navigation
-                toggleFavorite(property.id);
-              }}
-              disabled={isLoading}
-              className={`bg-white/90 p-2 rounded-full hover:bg-white transition-colors ${isLoading ? 'opacity-70' : ''}`}
+              onClick={(e) => { toggleFavorite(property.id); e.preventDefault(); }}
+              className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors z-10"
+              aria-label={isBookmarked(property.id) ? "Remove from favorites" : "Add to favorites"}
             >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-[#348b8b] rounded-full animate-spin"></div>
-              ) : (
-                <Heart
-                  className={`w-5 h-5 ${favorites[property.id] ? 'text-[#348b8b] fill-[#348b8b]' : 'text-gray-700'}`}
-                />
-              )}
+              <Heart
+                className={`w-5 h-5 ${isBookmarked(property.id) ? 'text-teal-600 fill-teal-600' : 'text-gray-600'}`}
+              />
             </button>
-            {/* <button
-              onClick={(e) => e.preventDefault()}
-              className="bg-white/90 p-2 rounded-full hover:bg-white transition-colors"
-            >
-              <Share2 className="w-5 h-5 text-gray-700" />
-            </button> */}
           </div>
         </div>
       </Link>
@@ -793,7 +815,7 @@ const ListingsPage: React.FC = () => {
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#348b8b]"></div>
           </div>
-        ) : paginatedProperties.length === 0 ? (
+        ) : !loading && paginatedProperties.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

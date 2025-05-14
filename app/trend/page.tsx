@@ -168,24 +168,27 @@ const TrendsPage: React.FC = () => {
 
       <div className="container mx-auto px-4 pb-20">
         {/* Category Filter */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white rounded-full shadow-md inline-flex p-1 border border-gray-100">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`
-                  px-6 py-3 rounded-full transition-all font-medium text-sm
-                  ${selectedCategory === category
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'bg-white text-gray-700 hover:text-teal-600'}
-                `}
-              >
-                {category}
-              </button>
-            ))}
+        <div className="flex justify-center mb-8 md:mb-12 px-4">
+          <div className="bg-white rounded-2xl shadow-md p-1.5 border border-gray-100 w-full max-w-md overflow-x-auto">
+            <div className="flex flex-nowrap min-w-max">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`
+            px-4 sm:px-6 py-2 sm:py-3 rounded-xl whitespace-nowrap transition-all font-medium text-xs sm:text-sm mx-0.5
+            ${selectedCategory === category
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-teal-600'}
+          `}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
 
         {/* Trends Grid */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
@@ -230,7 +233,7 @@ const TrendsPage: React.FC = () => {
               {error}
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {reports.map(report => (
                 <div
                   key={report.id}
@@ -312,9 +315,9 @@ const TrendsPage: React.FC = () => {
                         : 'from-gray-50 to-gray-100'
                       } rounded-lg p-4`}
                   >
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">{data.name}</span>
-                      <div className="flex space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between">
+                      <span className="font-medium text-gray-700 mb-2 sm:mb-0">{data.name}</span>
+                      <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
                         <div className="flex items-center">
                           <span className="text-gray-600 mr-2">Median:</span>
                           <span className="font-semibold">${data.Median.toLocaleString()}</span>
@@ -328,14 +331,14 @@ const TrendsPage: React.FC = () => {
 
                     {/* Growth indicators for non-first years */}
                     {index > 0 && (
-                      <div className="flex justify-end mt-2 text-sm">
-                        <div className="flex items-center mr-4">
+                      <div className="flex justify-end mt-2 text-sm flex-wrap">
+                        <div className="flex items-center mr-4 mt-1">
                           <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
                           <span className="text-green-600">
                             +{(((data.Median - marketData[index - 1].Median) / marketData[index - 1].Median) * 100).toFixed(1)}%
                           </span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center mt-1">
                           <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
                           <span className="text-green-600">
                             +{(((data.Average - marketData[index - 1].Average) / marketData[index - 1].Average) * 100).toFixed(1)}%
@@ -354,8 +357,8 @@ const TrendsPage: React.FC = () => {
                 Key Market Insights
               </h3>
               <ul className="space-y-4">
-                <li className="flex items-start bg-gradient-to-r from-teal-50 to-teal-100 p-5 rounded-lg border-l-4 border-teal-500">
-                  <div className="bg-white p-2 rounded-lg shadow-sm mr-4 flex-shrink-0">
+                <li className="flex flex-col sm:flex-row items-start bg-gradient-to-r from-teal-50 to-teal-100 p-4 sm:p-5 rounded-lg border-l-4 border-teal-500">
+                  <div className="bg-white p-2 rounded-lg shadow-sm mb-3 sm:mb-0 sm:mr-4 flex-shrink-0">
                     <MapPin className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
@@ -365,8 +368,8 @@ const TrendsPage: React.FC = () => {
                     </p>
                   </div>
                 </li>
-                <li className="flex items-start bg-gradient-to-r from-gray-50 to-gray-100 p-5 rounded-lg">
-                  <div className="bg-white p-2 rounded-lg shadow-sm mr-4 flex-shrink-0">
+                <li className="flex flex-col sm:flex-row items-start bg-gradient-to-r from-gray-50 to-gray-100 p-4 sm:p-5 rounded-lg">
+                  <div className="bg-white p-2 rounded-lg shadow-sm mb-3 sm:mb-0 sm:mr-4 flex-shrink-0">
                     <Home className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
@@ -376,8 +379,8 @@ const TrendsPage: React.FC = () => {
                     </p>
                   </div>
                 </li>
-                <li className="flex items-start bg-gradient-to-r from-gray-50 to-gray-100 p-5 rounded-lg">
-                  <div className="bg-white p-2 rounded-lg shadow-sm mr-4 flex-shrink-0">
+                <li className="flex flex-col sm:flex-row items-start bg-gradient-to-r from-gray-50 to-gray-100 p-4 sm:p-5 rounded-lg">
+                  <div className="bg-white p-2 rounded-lg shadow-sm mb-3 sm:mb-0 sm:mr-4 flex-shrink-0">
                     <Globe className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>

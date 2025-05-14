@@ -22,6 +22,7 @@ import {
 import api from '@/config/apiClient';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 
 // TypeScript interfaces
 interface Report {
@@ -44,6 +45,9 @@ const ReportDetailPage: React.FC = () => {
     const [report, setReport] = useState<Report | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState('idle'); // idle, loading, success, error
+    const [errorMessage, setErrorMessage] = useState('');
     const params = useParams()
 
     const reportId = params.id;
@@ -68,6 +72,45 @@ const ReportDetailPage: React.FC = () => {
 
         fetchReportDetails();
     }, [reportId]);
+
+    const handleSubscribe = async () => {
+        // Basic email validation
+        if (!email || !email.includes('@') || !email.includes('.')) {
+            setStatus('error');
+            setErrorMessage('Please enter a valid email address');
+            return;
+        }
+
+        setStatus('loading');
+        try {
+            // Send the POST request to the API endpoint using axios
+            const response = await api.post('/notifications/email-notifications/subscribe/',
+                { email },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }
+            );
+            // Handle successful subscription
+            setStatus('success');
+            toast.success("Subscribed to email notifications.")
+            setEmail('');
+        } catch (error) {
+            // Handle error
+            setStatus('error');
+            setErrorMessage('Something went wrong. Please try again later.');
+            console.error('Subscription error:', error);
+        }
+    };
+
+    const handleKeyDown = (e: any) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSubscribe();
+        }
+    };
+
 
 
     // Format date function
@@ -234,9 +277,9 @@ const ReportDetailPage: React.FC = () => {
                                         <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
                                             <ThumbsUp className="w-4 h-4 mr-2" /> Helpful (23)
                                         </button>
-                                        <button className="inline-flex items-center bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
+                                        {/* <button className="inline-flex items-center bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
                                             <MessageCircle className="w-4 h-4 mr-2" /> Comment (8)
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </div>
                             </div>
@@ -337,17 +380,41 @@ const ReportDetailPage: React.FC = () => {
                             <h3 className="text-lg font-bold mb-3">Stay Informed</h3>
                             <p className="text-teal-100 mb-4">Get the latest market reports and trends analysis directly to your inbox.</p>
 
-                            <div className="mb-4">
-                                <input
-                                    type="email"
-                                    placeholder="Your email address"
-                                    className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-2 text-white placeholder:text-teal-100 focus:outline-none focus:ring-2 focus:ring-white"
-                                />
-                            </div>
+                            {status === 'success' ? (
+                                <div className="bg-white/10 rounded-lg p-4 text-center">
+                                    <p className="text-white font-medium">
+                                        Thanks for subscribing!
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="mb-4">
+                                        <input
+                                            type="email"
+                                            placeholder="Your email address"
+                                            className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-2 text-white placeholder:text-teal-100 focus:outline-none focus:ring-2 focus:ring-white"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            disabled={status === 'loading'}
+                                        />
+                                        {status === 'error' && (
+                                            <p className="mt-2 text-red-200 text-sm">{errorMessage}</p>
+                                        )}
+                                    </div>
 
-                            <button className="w-full bg-white text-teal-700 font-medium py-2 rounded-lg hover:bg-teal-100 transition-colors">
-                                Subscribe to Updates
-                            </button>
+                                    <button
+                                        onClick={handleSubscribe}
+                                        className={`w-full font-medium py-2 cursor-pointer rounded-lg transition-colors ${status === 'loading'
+                                            ? 'bg-teal-200 text-teal-700 cursor-wait'
+                                            : 'bg-white text-teal-700 hover:bg-teal-100'
+                                            }`}
+                                        disabled={status === 'loading'}
+                                    >
+                                        {status === 'loading' ? 'Subscribing...' : 'Subscribe to Updates'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

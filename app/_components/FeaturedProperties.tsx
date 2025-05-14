@@ -12,6 +12,25 @@ interface PropertyImage {
   id?: string;
 }
 
+interface Bookmark {
+  bookmark_id: number;
+  property_id: number;
+  title: string;
+  property_type: string;
+  listing_purpose: string;
+  address: string;
+  city: string;
+  state: string;
+  currency: string;
+  price: number;
+  bookmarked_at: string;
+}
+
+interface PropertyCardProps {
+  properties: any[];
+  token: string | null;
+}
+
 interface Property {
   id: string;
   title: string;
@@ -35,6 +54,7 @@ const FeaturedProperties = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const slideIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter()
@@ -60,88 +80,94 @@ const FeaturedProperties = () => {
     getListings();
   }, []);
 
-  // Initialize favorites when component mounts
   useEffect(() => {
-    initializeFavorites();
-  }, []);
+    const fetchUserBookmarks = async () => {
+      if (!token) return;
+
+      try {
+        const response = await api.get('/market/user-bookmarks/', {
+          headers: {
+            Authorization: `Token ${token}`
+          }
+        });
+
+        if (response.status === 200) {
+          // Create a mapping of property_id to bookmark_id for efficient lookup
+          const bookmarkMap: Record<number, number> = {};
+          response.data.forEach((bookmark: Bookmark) => {
+            bookmarkMap[bookmark.property_id] = bookmark.bookmark_id;
+          });
+          setBookmarks(bookmarkMap);
+        }
+      } catch (error) {
+        console.error('Error fetching bookmarks:', error);
+      }
+    };
+
+    fetchUserBookmarks();
+  }, [token]);
 
   // Function to fetch user's favorites when component loads
-  const initializeFavorites = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const response = await api.get("/market/user-bookmarks/", {
-        headers: {
-          "Content-Type": "Application/json",
-          Authorization: `Token ${token}`
-        }
-      });
-
-      if (response.data && Array.isArray(response.data)) {
-        // Convert the array of favorite property IDs to an object for easier lookup
-        const favoritesObject = response.data.reduce((acc: any, propertyId: string) => {
-          acc[propertyId] = true;
-          return acc;
-        }, {});
-
-        setFavorites(favoritesObject);
-      }
-    } catch (error) {
-      console.error('Error fetching user favorites:', error);
-    }
-  };
-
 
   console.log("favorites--->", favorites)
 
-  // Function to toggle favorite status
+  const isBookmarked = (propertyId: any) => {
+    return propertyId in bookmarks;
+  };
+
   const toggleFavorite = async (propertyId: any) => {
-    // Get current favorite status
-    const isFavorite = favorites[propertyId] || false;
-
-    console.log("token-->", token);
-
     if (!token) {
-      // Handle unauthenticated users
       console.error('Authentication required to manage favorites');
       router.push("/sign-in");
-      return; // Exit function early if not authenticated
+      return;
     }
 
     try {
       let response;
+      const isFavorite = isBookmarked(propertyId);
 
-      // Determine which endpoint to use based on current status
       if (isFavorite) {
-        // Remove from favorites if it's currently favorited
-        response = await api.post(`/market/remove-bookmark/${propertyId}/`, {}, {
+        // Use bookmark_id for removal
+        const bookmarkId = bookmarks[propertyId];
+        response = await api.post(`/market/remove-bookmark/${bookmarkId}/`, {}, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`
           }
         });
       } else {
-        // Add to favorites if it's not currently favorited
+        // Add to favorites using property_id
         response = await api.post(`/market/bookmark-property/${propertyId}/`, {}, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`
           }
         });
+
+        // If successful, update the bookmarks map with the new bookmark_id
+        if (response.status === 201) {
+          const newBookmarkId = response.data.bookmark_id;
+          setBookmarks(prev => ({
+            ...prev,
+            [propertyId]: newBookmarkId
+          }));
+        }
+        window.location.reload();
       }
 
-      // Check if the request was successful
       if (response && (response.status === 200 || response.status === 201)) {
-        // Update local state to reflect the change
-        setFavorites(prev => ({
-          ...prev,
-          [propertyId]: !isFavorite
-        }));
+        if (isFavorite) {
+          // Remove from bookmarks map if it was favorited
+          setBookmarks(prev => {
+            const updated = { ...prev };
+            delete updated[propertyId];
+            return updated;
+          });
+        }
 
-        // Optionally show a success message
         toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
       }
     } catch (error: any) {
-      // Handle error scenarios
       console.error('Error toggling favorite status:', error);
       toast.error('Failed to update favorites. Please try again.');
     }
@@ -284,10 +310,10 @@ const FeaturedProperties = () => {
                       <button
                         onClick={() => toggleFavorite(property.id)}
                         className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors z-10"
-                        aria-label="Add to favorites"
+                        aria-label={isBookmarked(property.id) ? "Remove from favorites" : "Add to favorites"}
                       >
                         <Heart
-                          className={`w-5 h-5 ${favorites[property.id] ? 'text-teal-600 fill-teal-600' : 'text-gray-600'}`}
+                          className={`w-5 h-5 ${isBookmarked(property.id) ? 'text-teal-600 fill-teal-600' : 'text-gray-600'}`}
                         />
                       </button>
                       {property.featured && (

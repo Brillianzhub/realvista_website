@@ -16,6 +16,7 @@ import {
     Facebook,
     Twitter,
     Linkedin,
+    Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
@@ -24,8 +25,31 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
 
 // Define types
+interface AgentRating {
+    id: number;
+    agent: number;
+    rating: number;
+    review: string;
+    created_at: string;
+    updated_at: string;
+    user_name: string;
+}
+
 interface AgentWithListings {
     id: string;
     agency_name: string;
@@ -41,6 +65,8 @@ interface AgentWithListings {
     experience_years: number;
     preferred_contact_mode: string;
     properties: any[];
+    ratings: AgentRating[];
+    average_rating: number;
 }
 
 const AgentProfilePage = () => {
@@ -54,6 +80,17 @@ const AgentProfilePage = () => {
     const [isShareDialogOpen, setIsShareDialogOpen] = useState<boolean>(false);
     const [shareUrl, setShareUrl] = useState<string>("");
 
+    // Rating and review states
+    const [ratingDistribution, setRatingDistribution] = useState<{ [key: number]: number }>({
+        1: 0, 2: 0, 3: 0, 4: 0, 5: 0
+    });
+    const [isRatingDialogOpen, setIsRatingDialogOpen] = useState<boolean>(false);
+    const [newRating, setNewRating] = useState<number>(5);
+    const [reviewText, setReviewText] = useState<string>("");
+    const [userName, setUserName] = useState<string>("");
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
     useEffect(() => {
         const fetchAgentDetails = async () => {
             setLoading(true);
@@ -61,6 +98,7 @@ const AgentProfilePage = () => {
                 const response = await api.get(`/agents/${agentId}/`);
                 setAgent(response.data);
                 setAgentListings(response.data.properties || []);
+                calculateRatingDistribution(response.data.ratings || []);
             } catch (error) {
                 console.error("Error fetching agent details:", error);
             } finally {
@@ -72,6 +110,20 @@ const AgentProfilePage = () => {
             fetchAgentDetails();
         }
     }, [agentId]);
+
+    const calculateRatingDistribution = (ratings: AgentRating[]) => {
+        if (!ratings || ratings.length === 0) return;
+
+        const distribution: any = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        ratings.forEach(rating => {
+            if (rating.rating >= 1 && rating.rating <= 5) {
+                distribution[rating.rating]++;
+            }
+        });
+
+        setRatingDistribution(distribution);
+    };
 
     const getInitials = (name: string) => {
         return name
@@ -86,26 +138,59 @@ const AgentProfilePage = () => {
         router.back();
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
-                    style={{ borderColor: `${primaryColor} transparent ${primaryColor} ${primaryColor}` }}></div>
-            </div>
-        );
-    }
+    const handleOpenRatingDialog = () => {
+        setIsRatingDialogOpen(true);
+    };
 
-    if (!agent) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-4">Agent Not Found</h2>
-                <Button onClick={handleGoBack} variant="outline" className="flex items-center gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    Go Back
-                </Button>
-            </div>
-        );
-    }
+    const handleRatingChange = (rating: number) => {
+        setNewRating(rating);
+    };
+
+    const handleSubmitReview = async () => {
+        if (!reviewText.trim()) {
+            toast.error("Please enter a review comment");
+            return;
+        }
+
+        if (!userName.trim()) {
+            toast.error("Please enter your name");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            await api.post("/agents/rate-agent/", {
+                agent: Number(agentId),
+                rating: newRating,
+                review: reviewText,
+                user_name: userName
+            }, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            toast.success("Your review has been submitted successfully!");
+            setIsRatingDialogOpen(false);
+
+            // Refresh agent data
+            const response = await api.get(`/agents/${agentId}/`);
+            setAgent(response.data);
+            calculateRatingDistribution(response.data.ratings || []);
+
+            // Reset form
+            setReviewText("");
+            setNewRating(5);
+            setUserName("");
+        } catch (error) {
+            console.error("Error submitting review:", error);
+            toast.error("Failed to submit your review. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const generateShareUrl = () => {
         // Use window.location to get the current URL
@@ -155,6 +240,36 @@ const AgentProfilePage = () => {
         toast("Link copied!, The agent's profile link has been copied to your clipboard.");
     };
 
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
+                    style={{ borderColor: `${primaryColor} transparent ${primaryColor} ${primaryColor}` }}></div>
+            </div>
+        );
+    }
+
+    if (!agent) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col">
+                <h2 className="text-2xl font-semibold text-gray-700 mb-4">Agent Not Found</h2>
+                <Button onClick={handleGoBack} variant="outline" className="flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Go Back
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header/Hero Section */}
@@ -198,6 +313,22 @@ const AgentProfilePage = () => {
                                         </Badge>
                                     )}
                                 </div>
+                            </div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="flex items-center">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                            key={star}
+                                            className={`h-5 w-5 ${star <= Math.round(agent.average_rating || 0) ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                                        />
+                                    ))}
+                                </div>
+                                <span className="text-white font-medium">
+                                    {agent.average_rating?.toFixed(1) || "0.0"}
+                                </span>
+                                <span className="text-white/80">
+                                    ({agent.ratings?.length || 0} {agent.ratings?.length === 1 ? "review" : "reviews"})
+                                </span>
                             </div>
                             <p className="text-lg text-white/90 mb-4">
                                 Professional real estate agent with {agent.experience_years} {agent.experience_years === 1 ? 'year' : 'years'} of experience
@@ -289,7 +420,16 @@ const AgentProfilePage = () => {
                                 </Badge>
                             </div>
 
-                            <div className="mt-8">
+                            <div className="mt-8 space-y-3">
+                                <Button
+                                    className="w-full flex cursor-pointer items-center justify-center gap-2 h-11"
+                                    style={{ backgroundColor: primaryColor }}
+                                    onClick={handleOpenRatingDialog}
+                                >
+                                    <Star className="h-4 w-4" />
+                                    Rate This Agent
+                                </Button>
+
                                 <Button
                                     variant="outline"
                                     className="w-full flex items-center justify-center gap-2 border h-11"
@@ -316,6 +456,16 @@ const AgentProfilePage = () => {
                                         } as React.CSSProperties}
                                     >
                                         About
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="reviews"
+                                        className="flex-1 h-full rounded-none border-b-2 data-[state=active]:border-teal-600 data-[state=active]:text-teal-600 data-[state=active]:bg-transparent bg-transparent text-base"
+                                        style={{
+                                            "--accent-foreground": primaryColor,
+                                            "--accent": "transparent"
+                                        } as React.CSSProperties}
+                                    >
+                                        Reviews ({agent.ratings?.length || 0})
                                     </TabsTrigger>
                                     <TabsTrigger
                                         value="listings"
@@ -381,6 +531,126 @@ const AgentProfilePage = () => {
                                     </div>
                                 </TabsContent>
 
+                                {/* New Reviews Tab */}
+                                <TabsContent value="reviews" className="p-6 md:p-8">
+                                    <div className="flex flex-col lg:flex-row gap-8">
+                                        {/* Rating summary */}
+                                        <div className="lg:w-1/3">
+                                            <div className="bg-gray-50 p-6 rounded-lg">
+                                                <h3 className="text-xl font-semibold mb-4" style={{ color: primaryColor }}>
+                                                    Customer Ratings
+                                                </h3>
+
+                                                <div className="flex flex-col items-center mb-6">
+                                                    <div className="text-5xl font-bold mb-2" style={{ color: primaryColor }}>
+                                                        {agent.average_rating?.toFixed(1) || "0.0"}
+                                                    </div>
+                                                    <div className="flex items-center mb-1">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <Star
+                                                                key={star}
+                                                                className={`h-5 w-5 ${star <= Math.round(agent.average_rating || 0) ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <div className="text-gray-500 text-sm">
+                                                        Based on {agent.ratings?.length || 0} {agent.ratings?.length === 1 ? "review" : "reviews"}
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {[5, 4, 3, 2, 1].map((rating) => {
+                                                        const count = ratingDistribution[rating] || 0;
+                                                        const percentage = agent.ratings && agent.ratings.length > 0
+                                                            ? (count / agent.ratings.length) * 100
+                                                            : 0;
+
+                                                        return (
+                                                            <div key={rating} className="flex items-center gap-3">
+                                                                <div className="flex items-center w-12 justify-end">
+                                                                    <span className="font-medium">{rating}</span>
+                                                                    <Star className="h-4 w-4 ml-1 text-gray-400" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <Progress value={percentage} className="h-2" />
+                                                                </div>
+                                                                <div className="w-10 text-right text-gray-500 text-sm">
+                                                                    {count}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                <div className="mt-6">
+                                                    <Button
+                                                        className="w-full mt-4 cursor-pointer"
+                                                        style={{ backgroundColor: primaryColor }}
+                                                        onClick={handleOpenRatingDialog}
+                                                    >
+                                                        Write a Review
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Reviews list */}
+                                        <div className="lg:w-2/3">
+                                            <h3 className="text-xl font-semibold mb-4" style={{ color: primaryColor }}>
+                                                Client Reviews
+                                            </h3>
+
+                                            {agent.ratings && agent.ratings.length > 0 ? (
+                                                <div className="space-y-6">
+                                                    {agent.ratings.map((rating) => (
+                                                        <div key={rating.id} className="bg-white border p-6 rounded-lg shadow-sm">
+                                                            <div className="flex justify-between mb-3">
+                                                                <div className="flex items-center gap-4">
+                                                                    <Avatar className="h-10 w-10 border">
+                                                                        <AvatarFallback className="bg-gray-100 text-gray-800">
+                                                                            {rating.user_name ? getInitials(rating.user_name) : "??"}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div>
+                                                                        <div className="font-medium">{rating.user_name}</div>
+                                                                        <div className="text-sm text-gray-500">
+                                                                            {formatDate(rating.created_at)}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex">
+                                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                                        <Star
+                                                                            key={star}
+                                                                            className={`h-4 w-4 ${star <= rating.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-gray-700">{rating.review}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-gray-50 p-8 rounded-lg text-center">
+                                                    <div className="mb-3 mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-gray-100">
+                                                        <MessageCircle className="h-6 w-6 text-gray-400" />
+                                                    </div>
+                                                    <h4 className="text-lg font-medium text-gray-700 mb-2">No Reviews Yet</h4>
+                                                    <p className="text-gray-500 mb-6">Be the first to leave a review for {agent.agency_name}</p>
+                                                    <Button
+                                                        className="mx-auto cursor-pointer"
+                                                        style={{ backgroundColor: primaryColor }}
+                                                        onClick={handleOpenRatingDialog}
+                                                    >
+                                                        Write a Review
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
                                 <TabsContent value="listings" className="p-6 md:p-8">
                                     <h2 className="text-2xl font-bold mb-6" style={{ color: primaryColor }}>Agent Properties</h2>
 
@@ -392,70 +662,58 @@ const AgentProfilePage = () => {
                                             ></div>
                                         </div>
                                     ) : agentListings.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                                            {agentListings.map(listing => (
-                                                <Card key={listing.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all">
-                                                    <div className="h-52 bg-gray-200 relative">
-                                                        {listing.images && listing.images.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {agentListings.map((property) => (
+                                                <Card key={property.id} className="overflow-hidden">
+                                                    <div className="relative aspect-video bg-gray-100">
+                                                        {property.image ? (
                                                             <img
-                                                                src={listing.images[0]}
-                                                                alt={listing.title}
-                                                                className="w-full h-full object-cover"
+                                                                src={property.image}
+                                                                alt={property.title}
+                                                                className="object-cover w-full h-full"
                                                             />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                                                <Building className="h-12 w-12 text-gray-400" />
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <Building className="w-12 h-12 text-gray-300" />
                                                             </div>
                                                         )}
-                                                        <Badge
-                                                            className="absolute top-3 right-3 text-white"
-                                                            style={{ backgroundColor: primaryColor }}
-                                                        >
-                                                            {listing.property_type}
-                                                        </Badge>
-                                                        <div className="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1.5 rounded-md font-medium">
-                                                            {listing.currency} {parseFloat(listing.price).toLocaleString()}
+                                                        <div className="absolute bottom-3 left-3">
+                                                            <Badge className="bg-white text-teal-700 hover:bg-white/90">
+                                                                {property.property_type}
+                                                            </Badge>
                                                         </div>
                                                     </div>
-                                                    <CardContent className="p-5">
-                                                        <h5 className="font-medium text-lg mb-2">{listing.title}</h5>
-                                                        <div className="flex items-center gap-1 text-gray-500 text-sm mb-3">
-                                                            <MapPin className="h-3.5 w-3.5" />
-                                                            <span className="capitalize">{listing.city}, {listing.state}</span>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="font-semibold">{listing.bedrooms}</span> Beds
-                                                            </div>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="font-semibold">{listing.bathrooms}</span> Baths
-                                                            </div>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="font-semibold">{listing.area}</span> {listing.area_unit}
-                                                            </div>
-                                                        </div>
+                                                    <CardContent className="p-4">
+                                                        <h3 className="font-bold text-lg mb-1 truncate">{property.title}</h3>
+                                                        <p className="text-gray-500 flex items-center gap-1 mb-2">
+                                                            <MapPin className="h-3 w-3" />
+                                                            <span className="truncate">{property.location}</span>
+                                                        </p>
                                                         <div className="flex justify-between items-center">
-                                                            <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 capitalize">
-                                                                {listing.listing_type}
-                                                            </Badge>
-                                                            <Button
-                                                                size="sm"
-                                                                className="h-9"
-                                                                style={{ backgroundColor: primaryColor }}
-                                                                onClick={() => window.location.href = `/listings/${listing.id}`}
+                                                            <div className="font-bold text-xl" style={{ color: primaryColor }}>
+                                                                ${property.price.toLocaleString()}
+                                                            </div>
+                                                            <Link
+                                                                href={`/listings/${property.id}`}
+                                                                className="text-xs h-8 rounded-full"
+                                                                style={{ borderColor: primaryColor, color: primaryColor }}
                                                             >
                                                                 View Details
-                                                            </Button>
+                                                            </Link>
                                                         </div>
                                                     </CardContent>
                                                 </Card>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="text-center py-16 bg-gray-50 rounded-lg">
-                                            <Building className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                                            <h3 className="text-xl font-medium text-gray-700 mb-2">No Listings Available</h3>
-                                            <p className="text-gray-500 max-w-md mx-auto">This agent doesn't have any active property listings at the moment. Check back later for updates.</p>
+                                        <div className="bg-gray-50 p-8 rounded-lg text-center">
+                                            <div className="mb-3 mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-gray-100">
+                                                <Building className="h-6 w-6 text-gray-400" />
+                                            </div>
+                                            <h4 className="text-lg font-medium text-gray-700 mb-2">No Properties Listed</h4>
+                                            <p className="text-gray-500">
+                                                {agent.agency_name} doesn't have any active property listings at the moment.
+                                            </p>
                                         </div>
                                     )}
                                 </TabsContent>
@@ -465,90 +723,157 @@ const AgentProfilePage = () => {
                 </div>
             </div>
 
-            {/* Share Dialog */}
-            {isShareDialogOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in fade-in">
-                        <h2 className="text-xl font-semibold mb-2">Share Agent Profile</h2>
-                        <p className="text-gray-500 mb-6">Choose a platform to share this agent's profile</p>
+            {/* Rating Dialog */}
+            <Dialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Rate {agent.agency_name}</DialogTitle>
+                        <DialogDescription>
+                            Share your experience working with this agent.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        <div className="flex justify-center gap-6 mb-8">
-                            <button
-                                onClick={() => handleShare('facebook')}
-                                className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on Facebook"
-                            >
-                                <Facebook className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('twitter')}
-                                className="p-3 rounded-full bg-sky-500 text-white hover:bg-sky-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on Twitter"
-                            >
-                                <Twitter className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('linkedin')}
-                                className="p-3 rounded-full bg-blue-700 text-white hover:bg-blue-800 transition-colors flex items-center justify-center"
-                                aria-label="Share on LinkedIn"
-                            >
-                                <Linkedin className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('whatsapp')}
-                                className="p-3 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on WhatsApp"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                    <path d="M17.6 6.32A7.85 7.85 0 0 0 12.04 4c-4.32 0-7.83 3.5-7.83 7.8a7.82 7.82 0 0 0 1.04 3.9l-1.1 4.02 4.13-1.08a7.88 7.88 0 0 0 3.76.96h.01c4.32 0 7.83-3.5 7.83-7.8a7.74 7.74 0 0 0-2.27-5.48zm-5.56 12a6.55 6.55 0 0 1-3.33-.91l-.25-.14-2.5.66.67-2.44-.16-.25a6.5 6.5 0 0 1-1-3.45c0-3.6 2.94-6.52 6.54-6.52a6.54 6.54 0 0 1 6.54 6.52c0 3.58-2.93 6.52-6.54 6.53zm3.59-4.88c-.2-.1-1.17-.58-1.35-.64-.18-.07-.32-.1-.45.1-.13.19-.5.63-.62.76-.11.13-.23.15-.43.05a5.5 5.5 0 0 1-2.7-2.35c-.2-.35.2-.33.58-1.1.06-.13.03-.25-.02-.34-.05-.1-.45-1.08-.62-1.47-.17-.4-.33-.34-.45-.34-.11 0-.25-.01-.38-.01-.13 0-.33.04-.5.23-.18.19-.67.65-.67 1.58s.68 1.84.78 1.96c.1.13 1.35 2.07 3.3 2.9.45.2.81.32 1.09.42.46.14.87.12 1.2.07.37-.05 1.13-.46 1.29-.9.16-.45.16-.83.11-.91-.04-.1-.18-.15-.38-.25z" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="flex flex-col gap-2 mb-6">
-                            <label htmlFor="share-url" className="text-sm font-medium">
-                                Or copy this link
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="share-url"
-                                    type="text"
-                                    value={shareUrl}
-                                    readOnly
-                                    className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-                                />
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={handleCopyLink}
-                                    className="shrink-0"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                </Button>
+                    <div className="space-y-6 py-4">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="flex items-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => handleRatingChange(star)}
+                                        className="p-1 focus:outline-none focus:ring-0"
+                                    >
+                                        <Star
+                                            className={`h-8 w-8 ${star <= newRating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="text-lg font-medium">
+                                {newRating === 1 && "Poor"}
+                                {newRating === 2 && "Fair"}
+                                {newRating === 3 && "Good"}
+                                {newRating === 4 && "Very Good"}
+                                {newRating === 5 && "Excellent"}
                             </div>
                         </div>
 
-                        <div className="flex justify-end">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsShareDialogOpen(false)}
-                                className="px-6"
-                            >
-                                Close
-                            </Button>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="user-name">Your Name</Label>
+                                <Input
+                                    id="user-name"
+                                    placeholder="Enter your name"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="review">Review</Label>
+                                <Textarea
+                                    id="review"
+                                    placeholder="Share your experience with this agent"
+                                    className="min-h-32"
+                                    value={reviewText}
+                                    onChange={(e) => setReviewText(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {/* Footer */}
-            <footer className="bg-gray-100 border-t mt-12">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="text-center text-gray-500 text-sm">
-                        © {new Date().getFullYear()} Real Estate Platform. All rights reserved.
+                    <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsRatingDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSubmitReview}
+                            disabled={isSubmitting}
+                            style={{ backgroundColor: primaryColor }}
+                            className="cursor-pointer"
+                        >
+                            {isSubmitting ? "Submitting..." : "Submit Review"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Share Dialog */}
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Share Agent Profile</DialogTitle>
+                        <DialogDescription>
+                            Share {agent.agency_name}'s profile with others.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-4 gap-4 py-4">
+                        <Button
+                            variant="outline"
+                            className="flex flex-col items-center justify-center h-24 rounded-lg"
+                            onClick={() => handleShare('facebook')}
+                        >
+                            <Facebook className="h-8 w-8 mb-2 text-blue-600" />
+                            <span className="text-xs">Facebook</span>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            className="flex flex-col items-center justify-center h-24 rounded-lg"
+                            onClick={() => handleShare('twitter')}
+                        >
+                            <Twitter className="h-8 w-8 mb-2 text-blue-400" />
+                            <span className="text-xs">Twitter</span>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            className="flex flex-col items-center justify-center h-24 rounded-lg"
+                            onClick={() => handleShare('linkedin')}
+                        >
+                            <Linkedin className="h-8 w-8 mb-2 text-blue-700" />
+                            <span className="text-xs">LinkedIn</span>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            className="flex flex-col items-center justify-center h-24 rounded-lg"
+                            onClick={() => handleShare('whatsapp')}
+                        >
+                            <Send className="h-8 w-8 mb-2 text-green-500" />
+                            <span className="text-xs">WhatsApp</span>
+                        </Button>
                     </div>
-                </div>
-            </footer>
+
+                    <div className="flex items-center space-x-2">
+                        <div className="grid flex-1 gap-2">
+                            <Label htmlFor="share-link" className="sr-only">
+                                Link
+                            </Label>
+                            <Input
+                                id="share-link"
+                                defaultValue={shareUrl}
+                                readOnly
+                                className="h-9"
+                            />
+                        </div>
+                        <Button
+                            type="submit"
+                            size="sm"
+                            className="px-3"
+                            onClick={handleCopyLink}
+                            style={{ backgroundColor: primaryColor }}
+                        >
+                            <span className="sr-only">Copy</span>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

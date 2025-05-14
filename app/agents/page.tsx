@@ -31,6 +31,7 @@ import api from '@/config/apiClient';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FaWhatsapp } from 'react-icons/fa';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 // Define TypeScript interfaces based on API response
 interface Agent {
@@ -50,6 +51,7 @@ interface Agent {
   updated_at: string;
   rating?: number;
   total_reviews?: number;
+  average_rating: number
   services?: string[];
 }
 
@@ -116,7 +118,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onDetailsClick }) => {
           </div>
           <div className="flex items-center">
             <Star className="text-yellow-500 mr-1" />
-            <span className="font-semibold">{agent.rating || 5.0}</span>
+            <span className="font-semibold">{agent?.average_rating || 5.0}</span>
             <span className="text-gray-500 ml-1">({agent.total_reviews || 0})</span>
           </div>
         </div>
@@ -203,6 +205,7 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
   const primaryColor = "#348b8b"; // Default primary color
   const [isShareDialogOpen, setIsShareDialogOpen] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>("");
+  const router = useRouter()
 
   useEffect(() => {
     const fetchAgentDetails = async () => {
@@ -379,6 +382,14 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
                     >
                       <Share2 className="h-4 w-4" />
                       Share Profile
+                    </Button>
+                    <Button
+                      className="w-full flex mt-4 cursor-pointer items-center justify-center gap-2 h-11"
+                      style={{ backgroundColor: primaryColor }}
+                      onClick={() => router.push(`/agents/${selectedAgent.id}`)}
+                    >
+                      <Star className="h-4 w-4" />
+                      Rate This Agent
                     </Button>
                   </div>
                   <div className="mt-6 w-full">

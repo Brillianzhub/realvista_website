@@ -278,38 +278,45 @@ const PricingPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Billing Cycle Selector */}
-          <div className="flex justify-center mb-16">
-            <div className="flex items-center space-x-4 bg-white p-2 rounded-full shadow-md">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-4 py-2 rounded-full font-medium transition-all duration-300
-                  ${billingCycle === 'monthly'
-                    ? 'bg-[#348b8b] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                Monthly
-              </button>
+          <div className="flex justify-center mb-8 px-4 sm:px-6 md:mb-16">
+            <div className="bg-gray-100 p-1.5 rounded-xl shadow-sm w-full max-w-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`relative py-3 rounded-lg font-medium transition-all duration-300 text-center
+          ${billingCycle === 'monthly'
+                      ? 'bg-white text-[#348b8b] shadow-md'
+                      : 'text-gray-600 hover:bg-gray-200'}`}
+                >
+                  Monthly
+                </button>
 
-              <button
-                onClick={() => setBillingCycle('six_months')}
-                className={`px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center
-                  ${billingCycle === 'six_months'
-                    ? 'bg-[#348b8b] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                6 Months {getDiscountBadge('six_months')}
-              </button>
+                <button
+                  onClick={() => setBillingCycle('six_months')}
+                  className={`relative py-3 rounded-lg font-medium transition-all duration-300 text-center
+          ${billingCycle === 'six_months'
+                      ? 'bg-white text-[#348b8b] shadow-md'
+                      : 'text-gray-600 hover:bg-gray-200'}`}
+                >
+                  <span>6 Months</span>
+                  <div className="absolute -top-2 -right-2">
+                    {getDiscountBadge('six_months')}
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setBillingCycle('yearly')}
-                className={`px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center
-                  ${billingCycle === 'yearly'
-                    ? 'bg-[#348b8b] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                Yearly {getDiscountBadge('yearly')}
-              </button>
+                <button
+                  onClick={() => setBillingCycle('yearly')}
+                  className={`relative py-3 rounded-lg font-medium transition-all duration-300 text-center
+          ${billingCycle === 'yearly'
+                      ? 'bg-white text-[#348b8b] shadow-md'
+                      : 'text-gray-600 hover:bg-gray-200'}`}
+                >
+                  <span>Yearly</span>
+                  <div className="absolute -top-2 -right-2">
+                    {getDiscountBadge('yearly')}
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -431,7 +438,7 @@ const PricingPage: React.FC = () => {
                   </h3>
 
                   <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {boostOptions.map((option:any) => (
+                    {boostOptions.map((option: any) => (
                       <Card key={option.id} className="border border-gray-200 transition-all duration-300 hover:shadow-lg">
                         <CardHeader>
                           <div className="flex justify-between items-center mb-2">

@@ -25,7 +25,8 @@ import {
     Copy,
     Facebook,
     Twitter,
-    Linkedin
+    Linkedin,
+    Star
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -42,7 +43,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import api from '@/config/apiClient';
 
 // Import shadcn components
@@ -69,6 +70,7 @@ const PropertyDetailsPage = () => {
     const [vendorListings, setVendorListings] = useState<any[]>([]);
     const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
     const params = useParams();
+    const router = useRouter()
     const id = params.id;
     const [shareUrl, setShareUrl] = useState('');
 
@@ -78,7 +80,7 @@ const PropertyDetailsPage = () => {
             // Construct agent profile URL with the pattern /agents/[id]
             const baseUrl = window.location.origin;
             // Assuming you're using the owner/agent ID
-            const agentId = listing.owner.id || 2; 
+            const agentId = listing.owner.id || 2;
             setShareUrl(`${baseUrl}/agents/${agentId}`);
         }
     }, [listing]);
@@ -368,9 +370,10 @@ const PropertyDetailsPage = () => {
                                     <span className="text-sm text-gray-500">Availability</span>
                                 </div>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>
+                            {listing.payment_plans.length > 0 && (<h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>)}
+
                             <div className='w-full flex gap-8 mb-4'>
-                                {listing.payment_plans && listing.payment_plans.map((plan: string, index:number) => (
+                                {listing.payment_plans && listing.payment_plans.map((plan: string, index: number) => (
                                     <p key={index} className='text-base'>
                                         {plan}
                                     </p>
@@ -459,7 +462,7 @@ const PropertyDetailsPage = () => {
                                 <span>Listed on: {formatDate(listing.listed_date)}</span>
                             </div>
                         </div>
-                        <div className='mt-8'>
+                        {listing?.market_coordinates?.length > 0 && (<div className='mt-8'>
                             <div className="h-96 w-full bg-gray-100 rounded-lg overflow-hidden">
                                 <iframe
                                     title="Property Location"
@@ -485,7 +488,8 @@ const PropertyDetailsPage = () => {
                                     <ChevronLeft className="rotate-180 ml-1 w-4 h-4" />
                                 </a>
                             </div>
-                        </div>
+                        </div>)}
+
                     </div>
 
                     {/* Right Sidebar */}
@@ -510,9 +514,9 @@ const PropertyDetailsPage = () => {
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Location</h2>
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <button className="flex cursor-pointer items-center justify-center w-full bg-teal-500 text-white py-3 px-4 rounded-lg hover:bg-teal-600 transition-colors">
+                                        {listing?.market_coordinates?.length > 0 && (<button className="flex cursor-pointer items-center justify-center w-full bg-teal-500 text-white py-3 px-4 rounded-lg hover:bg-teal-600 transition-colors">
                                             <MapPin className="mr-2 w-5 h-5" /> View on Map
-                                        </button>
+                                        </button>)}
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-4xl max-h-[85vh]">
                                         <DialogHeader>
@@ -656,6 +660,13 @@ const PropertyDetailsPage = () => {
                                                             <Share2 className="h-4 w-4" />
                                                             Share Profile
                                                         </Button>
+                                                        <Button
+                                                            className="w-full bg-teal-500 hover:bg-teal-700 flex mt-4 cursor-pointer items-center justify-center gap-2 h-11"
+                                                            onClick={() => router.push(`/agents/${listing.owner.id}`)}
+                                                        >
+                                                            <Star className="h-4 w-4" />
+                                                            Rate This Agent
+                                                        </Button>
                                                     </div>
                                                     <div className="mt-6 w-full">
                                                         <h4 className="font-medium mb-2">Preferred Contact Method</h4>
@@ -683,19 +694,15 @@ const PropertyDetailsPage = () => {
                                                                     color: "#0F766E"
                                                                 }}
                                                             >
-                                                                About the Vendor
+                                                                About the Agent
                                                             </TabsTrigger>
                                                         </TabsList>
 
                                                         <TabsContent value="about" className="mt-6">
                                                             <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                                                                <h4 className="font-medium mb-3 text-lg text-teal-600">Vendor Bio</h4>
+                                                                <h4 className="font-medium mb-3 text-lg text-teal-600">Agent Bio</h4>
                                                                 <p className="text-gray-700 mb-4 leading-relaxed">
-                                                                    {listing.owner.bio ||
-                                                                        `${listing.owner.owner_name} is a trusted real estate vendor based in ${listing.owner.base_city}, ${listing.owner.base_state}. 
-                      With years of industry experience since ${new Date(listing.owner.active_since).getFullYear()}, 
-                      they have established a reputation for reliability and professionalism in the local market.`
-                                                                    }
+                                                                    {listing.owner.bio || "No agent bio at the moment"}
                                                                 </p>
                                                             </div>
 

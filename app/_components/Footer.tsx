@@ -116,7 +116,7 @@ export default function Footer() {
         </div>
 
         {/* QR Code and Download Column */}
-        <div className="flex flex-col items-center space-y-6">
+        <div className="flex flex-col items-start md:items-center space-y-6">
           <div className="bg-white p-2 rounded-xl shadow-lg">
             <div className="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-lg">
               <img src="/qrcode.jpeg" alt="code" />

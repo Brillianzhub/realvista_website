@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import api from '@/config/apiClient';
 import { FaWhatsapp } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 // Define types
 interface Agent {
@@ -45,6 +46,7 @@ interface Agent {
   bio: string | null;
   created_at: string;
   updated_at: string;
+  average_rating: string;
 }
 
 interface Listing {
@@ -69,7 +71,7 @@ const FeaturedAgents: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>("");
-
+  const router = useRouter()
   // Brand color
   const primaryColor = "#348b8b";
 
@@ -286,7 +288,15 @@ const FeaturedAgents: React.FC = () => {
                   </div>
                 </div>
                 <DialogDescription>
-                  Professional real estate agent with {selectedAgent.experience_years} {selectedAgent.experience_years === 1 ? 'year' : 'years'} of experience
+                  {/* Professional real estate agent with {selectedAgent.experience_years} {selectedAgent.experience_years === 1 ? 'year' : 'years'} of experience */}
+                  <div className='flex items-center gap-1'>
+                    <p className="text-sm text-gray-600">
+                      {selectedAgent.agency_address},
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Active since {new Date(selectedAgent.created_at).getFullYear()}
+                    </p>
+                  </div>
                 </DialogDescription>
               </DialogHeader>
 
@@ -301,6 +311,14 @@ const FeaturedAgents: React.FC = () => {
                       </AvatarFallback>
                     )}
                   </Avatar>
+
+                  <div className="w-full p-4 flex items-center justify-center mt-[-10px] gap-2 rounded-lg">
+                    <h2>Ratings:</h2>
+                    <div className="flex items-center">
+                      <Star className="text-yellow-500 mr-1" />
+                      <span className="font-semibold">{selectedAgent?.average_rating || 5.0}</span>
+                    </div>
+                  </div>
 
                   <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2 text-center" style={{ color: primaryColor }}>Contact Information</h4>
@@ -348,6 +366,14 @@ const FeaturedAgents: React.FC = () => {
                     >
                       <Share2 className="h-4 w-4" />
                       Share Profile
+                    </Button>
+                    <Button
+                      className="w-full flex mt-4 cursor-pointer items-center justify-center gap-2 h-11"
+                      style={{ backgroundColor: primaryColor }}
+                      onClick={() => router.push(`/agents/${selectedAgent.id}`)}
+                    >
+                      <Star className="h-4 w-4" />
+                      Rate This Agent
                     </Button>
                   </div>
                   <div className="mt-6 w-full">

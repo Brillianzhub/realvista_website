@@ -34,8 +34,20 @@ import {
     FileText,
     Camera,
     PlusCircle,
-    Loader2
+    Loader2,
+    Trash2
 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +65,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import CancellationModal from './SubscriptionCancelModal';
 
 interface Agent {
     id: string | null;
@@ -95,6 +108,7 @@ interface UserProfile {
     subscription?: {
         plan: string;
         status: string;
+        subscription_code: string
     };
     referral_code?: string;
     referrer: string;
@@ -145,8 +159,10 @@ const Profile = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [isListingDialogOpen, setIsListingDialogOpen] = useState(false)
-
-
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handlePasswordChange = async () => {
         // Validation
@@ -202,6 +218,35 @@ const Profile = () => {
         // Account deletion logic would go here
         alert("Account scheduled for deletion in 30 days");
         setIsDeleteConfirmOpen(false);
+    };
+
+    const handleDeleteClick = (e: any, id: any) => {
+        e.stopPropagation(); // Prevent card click event
+        setPendingDeleteId(id);
+        setIsAlertOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!pendingDeleteId) return;
+
+        setIsDeleting(true);
+        try {
+            await api.delete(`/market/delete-property/${pendingDeleteId}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+            setIsAlertOpen(false);
+            setIsDeleting(false);
+
+            // Notify parent component to refresh the listing data
+            toast.success("Property deleted successfully")
+        } catch (error) {
+            console.error("Failed to delete property:", error);
+            setIsDeleting(false);
+        }
+        fetchProfile()
     };
 
     const [profileData, setProfileData] = useState<any>({
@@ -340,25 +385,25 @@ const Profile = () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
 
-        const fetchUserFavorites = async () => {
-            setLoading(true);
-            try {
-                const response = await api.get("/market/user-bookmarks/", {
-                    headers: {
-                        "Content-Type": "Application/json",
-                        Authorization: `Token ${token}`
-                    }
-                });
-                setFavorites(response.data)
-                setLoading(false)
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-                setLoading(false)
-            }
-
+    const fetchUserFavorites = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get("/market/user-bookmarks/", {
+                headers: {
+                    "Content-Type": "Application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+            setFavorites(response.data)
+            setLoading(false)
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+            setLoading(false)
         }
 
-        console.log("favorites--->", favorites)
+    }
+
+    console.log("favorites--->", favorites)
 
 
     const fetchProfile = async () => {
@@ -387,10 +432,10 @@ const Profile = () => {
                 location: userData.profile?.city ?
                     `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
                     "Uyo, Nigeria",
-                bio: userData.agent?.bio || "A nice agent that charges high fee.",
+                bio: userData.agent?.bio,
                 verified: userData.is_active || false,
-                agency_name: userData.agent?.agency_name || "Developer Agent",
-                agency_address: userData.agent?.agency_address || "Umuahia Road 5, Uyo.",
+                agency_name: userData.agent?.agency_name,
+                agency_address: userData.agent?.agency_address,
                 whatsapp_number: userData.agent?.whatsapp_number || "+23470641230",
                 experience_years: userData.agent?.experience_years || 5,
                 preferred_contact_mode: userData.agent?.preferred_contact_mode || "phone",
@@ -841,11 +886,19 @@ const Profile = () => {
         }
     };
 
-    // Format date
     const formatDate = (dateString: any) => {
-        if (!dateString) return "";
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('en-US', options as any);
+        const options: any = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'Active': return 'bg-emerald-500 hover:bg-emerald-600';
+            case 'Under Contract': return 'bg-amber-500 hover:bg-amber-600';
+            case 'Sold': return 'bg-blue-500 hover:bg-blue-600';
+            case 'Coming Soon': return 'bg-purple-500 hover:bg-purple-600';
+            default: return 'bg-gray-500 hover:bg-gray-600';
+        }
     };
 
     // Calculate years of experience
@@ -859,9 +912,76 @@ const Profile = () => {
         if (!profileData.subscription) return { plan: "Free", status: "inactive" };
         return {
             plan: profileData.subscription.plan || "Free",
-            status: profileData.subscription.status || "inactive"
+            status: profileData.subscription.status || "inactive",
+            subscription_code: profileData.subscription_code
         };
     };
+
+    const subscriptionInfo = getSubscriptionInfo();
+    const hasPlan = subscriptionInfo.plan !== "Free" && subscriptionInfo.status === "active";
+
+    const handleOpenCancelModal = () => {
+        if (!hasPlan) return;
+        setIsModalOpen(true);
+    };
+
+    const handleCloseCancelModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleCancelPlan = async (cancellationReason: string) => {
+        if (!hasPlan) return;
+
+        try {
+            setLoading(true);
+
+            const payload = {
+                subscription_code: profile?.subscription?.subscription_code,
+                cancellationReason: cancellationReason
+            };
+
+            console.log("Cancellation payload:", payload);
+
+            // Verify we have a valid subscription code before proceeding
+            if (!profile?.subscription?.subscription_code) {
+                toast("Subscription information not found. Please try again later.");
+                return;
+            }
+
+            const response = await api.post("subscriptions/cancel-subscription/", payload, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            if (response.data) {
+                toast("Your subscription has been cancelled successfully");
+                handleCloseCancelModal();
+                fetchProfile()
+            } else {
+                throw new Error("Failed to cancel subscription");
+            }
+        } catch (error) {
+            console.error("Cancellation error:", error);
+            toast("Failed to cancel your subscription. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getCancellationReasonText = (type: any) => {
+        const reasons: any = {
+            too_expensive: "Too expensive for my budget",
+            not_using: "Not using the service enough",
+            missing_features: "Missing features I need",
+            switching: "Switching to another service",
+            technical_issues: "Technical issues/bugs",
+            other: "Other reason"
+        };
+        return reasons[type] || type;
+    };
+
 
     // Get user initials for avatar
     const getUserInitials = () => {
@@ -910,17 +1030,17 @@ const Profile = () => {
                                 </div>
                                 <CardTitle>{profileData.name}</CardTitle>
                                 <div className="flex items-center justify-center space-x-2 mt-1">
-                                    <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
-                                        {calculateExperience(profileData.joinedDate)} yrs Experience
+                                    <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">
+                                        Active since {new Date(profileData.joinedDate).getFullYear()}
                                     </Badge>
-                                    {profileData.verified && (
+                                    {/* {profileData.verified === true && (
                                         <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                                             <Check className="h-3 w-3 mr-1" /> Verified
                                         </Badge>
-                                    )}
+                                    )} */}
                                 </div>
                             </CardHeader>
-                            <CardContent className="text-center space-y-2 pt-2">
+                            <CardContent className="text-center space-y-2">
                                 {profileData.location && (
                                     <div className="flex items-center justify-center text-gray-600">
                                         <MapPin className="h-4 w-4 mr-1" /> {profileData.location}
@@ -943,6 +1063,26 @@ const Profile = () => {
                                     <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
                                         {getSubscriptionInfo().plan} Plan
                                     </Badge>
+                                </div>
+                                <div className="flex flex-col gap-3 mt-3">
+                                    <Button
+                                        onClick={() => router.push("/pricing")}
+                                        variant="default"
+                                        className="w-full bg-teal-600 hover:bg-teal-700 cursor-pointer"
+                                    >
+                                        {hasPlan ? "Upgrade Plan" : "Choose Plan"}
+                                    </Button>
+
+                                    {hasPlan && (
+                                        <Button
+                                            onClick={handleOpenCancelModal}
+                                            variant="outline"
+                                            className="w-full text-red-500 hover:text-red-600 cursor-pointer"
+                                            disabled={loading}
+                                        >
+                                            {loading ? "Cancelling..." : "Cancel Plan"}
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-center pt-2">
@@ -1217,8 +1357,8 @@ const Profile = () => {
                     <div className="w-full md:w-3/4 mb-10">
                         <Tabs defaultValue="dashboard">
                             <TabsList className="grid grid-cols-4 gap-8 mb-8">
-                                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                                <TabsTrigger value="listings">My Listings</TabsTrigger>
+                                {profileData?.agent && (<TabsTrigger value="dashboard">Dashboard</TabsTrigger>)}
+                                {profileData?.agent && (<TabsTrigger value="listings">My Listings</TabsTrigger>)}
                                 <TabsTrigger value="profile">Profile</TabsTrigger>
                                 <TabsTrigger value="favorites">Favorites</TabsTrigger>
                             </TabsList>
@@ -1227,7 +1367,7 @@ const Profile = () => {
                             <TabsContent value="dashboard" className="space-y-6">
                                 {/* Stats Cards */}
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <Card className="bg-white">
+                                    {profileData?.agent && (<Card className="bg-white">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-sm font-medium text-gray-500">Total Listings</CardTitle>
                                         </CardHeader>
@@ -1235,8 +1375,7 @@ const Profile = () => {
                                             <div className="text-2xl font-bold">{analytics.totalListings}</div>
                                             <p className="text-xs text-gray-500 mt-1">Properties in your portfolio</p>
                                         </CardContent>
-                                    </Card>
-
+                                    </Card>)}
                                     <Card className="bg-white">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-sm font-medium text-gray-500">Total Favorites</CardTitle>
@@ -1674,72 +1813,97 @@ const Profile = () => {
                                 {listings?.length === 0 ? (
                                     <EmptyState />
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                                         {listings?.map((listing: any) => (
-                                            <Card onClick={() => handleCardClick(listing.id)} key={listing.id} className="h-full cursor-pointer">
-                                                <div className="relative h-48">
+                                            <Card
+                                                key={listing.id}
+                                                className="h-full cursor-pointer overflow-hidden border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300 group"
+                                            >
+                                                <div
+                                                    className="relative h-56 overflow-hidden"
+                                                    onClick={() => handleCardClick(listing.id)}
+                                                >
                                                     <img
                                                         src={listing.image}
                                                         alt={listing.title}
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                     />
                                                     <Badge
-                                                        className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
-                                                            listing.status === 'Under Contract' ? 'bg-amber-500' :
-                                                                'bg-blue-500'
-                                                            }`}
+                                                        className={`absolute top-3 right-3 ${getStatusColor(listing.status)} text-white px-3 py-1 text-xs font-medium transition-all`}
                                                     >
                                                         {listing.status}
                                                     </Badge>
+                                                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-16 opacity-60 group-hover:opacity-90 transition-opacity"></div>
                                                 </div>
-                                                <CardHeader className="pb-2">
-                                                    <div className="flex justify-between items-start">
+
+                                                <CardHeader className="pb-2 relative">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="absolute cursor-pointer right-2 top-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                        onClick={(e) => handleDeleteClick(e, listing.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+
+                                                    <div className="flex justify-between items-start pr-8">
                                                         <div>
-                                                            <CardTitle>{listing.title}</CardTitle>
-                                                            <CardDescription className="flex items-center mt-1">
-                                                                <MapPin className="h-3 w-3 mr-1" /> {listing.address}
+                                                            <CardTitle className="text-lg font-bold text-gray-800 line-clamp-1">{listing.title}</CardTitle>
+                                                            <CardDescription className="flex items-center mt-1 text-gray-600">
+                                                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                                                                <span className="line-clamp-1">{listing.address}</span>
                                                             </CardDescription>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
-                                                            <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                        </div>
+                                                    </div>
+                                                    <div className="mt-1">
+                                                        <p className="font-bold text-xl text-gray-900">{listing.currency} {listing.price.toLocaleString()}</p>
+                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
                                                     </div>
                                                 </CardHeader>
-                                                <CardContent className="pt-2">
-                                                    <div className="flex justify-between text-sm mb-4">
-                                                        <div className="flex items-center flex-wrap gap-1">
-                                                            <Badge variant="outline" className="mr-1">
-                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                            </Badge>
-                                                            <Badge variant="outline" className="mr-1">
-                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                            </Badge>
-                                                            <Badge variant="outline">
-                                                                {listing.area} sqft
-                                                            </Badge>
-                                                        </div>
-                                                        <Badge variant="secondary">{listing.type}</Badge>
+
+                                                <CardContent className="pt-0">
+                                                    <div className="flex flex-wrap gap-1 mb-4">
+                                                        <Badge variant="outline" className="bg-gray-50">
+                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="bg-gray-50">
+                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                        </Badge>
+                                                        <Badge variant="outline" className="bg-gray-50">
+                                                            {listing.area} sqft
+                                                        </Badge>
+                                                        <Badge variant="secondary" className="ml-auto">
+                                                            {listing.type}
+                                                        </Badge>
                                                     </div>
 
-                                                    <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
-                                                        <div>
-                                                            <p className="text-xs text-gray-500">Views</p>
+                                                    <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-b border-gray-100">
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="flex items-center text-gray-600 mb-1">
+                                                                <Eye className="h-3 w-3 mr-1" />
+                                                                <p className="text-xs">Views</p>
+                                                            </div>
                                                             <p className="font-semibold">{listing.views}</p>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs text-gray-500">Inquiries</p>
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="flex items-center text-gray-600 mb-1">
+                                                                <MessageSquare className="h-3 w-3 mr-1" />
+                                                                <p className="text-xs">Inquiries</p>
+                                                            </div>
                                                             <p className="font-semibold">{listing.inquiries}</p>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs text-gray-500">Favorites</p>
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="flex items-center text-gray-600 mb-1">
+                                                                <Heart className="h-3 w-3 mr-1" />
+                                                                <p className="text-xs">Favorites</p>
+                                                            </div>
                                                             <p className="font-semibold">{listing.favorites}</p>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex items-center justify-between mt-4">
                                                         <div className="flex items-center">
-                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
+                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-emerald-600' :
                                                                 listing.performance?.trend === 'down' ? 'text-red-600' :
                                                                     'text-gray-600'
                                                                 }`}>
@@ -1751,14 +1915,13 @@ const Profile = () => {
                                                                     <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
                                                                 )}
                                                                 <span className="text-sm font-medium">
-                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
+                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (
+                                                                        listing.performance?.trend === 'up' ? 'increase' : 'decrease'
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                             <span className="text-xs text-gray-500 ml-2">in views this week</span>
                                                         </div>
-                                                        {/* <Button variant="outline" size="sm">
-                                                            <FileEdit className="h-4 w-4 mr-1" /> Edit
-                                                        </Button> */}
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -2307,7 +2470,7 @@ const Profile = () => {
                             </TabsContent>
                             <TabsContent value="favorites" className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {favorites?.map((listing: any, index:number) => (
+                                    {favorites?.map((listing: any, index: number) => (
                                         <Card key={index} onClick={() => handleCardClick(listing.property_id)} className="h-full cursor-pointer">
                                             <div className="relative h-48">
                                                 <img
@@ -2393,6 +2556,26 @@ const Profile = () => {
                                         </Card>
                                     ))}
                                 </div>
+                                {favorites?.length === 0 && (
+                                    <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+                                        <svg
+                                            className="w-16 h-16 text-gray-300 mb-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth="2"
+                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                            />
+                                        </svg>
+                                        <h2 className="text-lg font-medium text-gray-700 mb-1">No favorites found</h2>
+                                        <p className="text-gray-500 text-center">This user hasn't added any items to their favorites yet.</p>
+                                    </div>
+                                )}
                             </TabsContent>
                         </Tabs>
                     </div>
@@ -2451,6 +2634,32 @@ const Profile = () => {
                     </form>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this property? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            disabled={isDeleting}
+                            className="bg-red-600 cursor-pointer hover:bg-red-700 focus:ring-red-600"
+                        >
+                            {isDeleting ? "Deleting..." : "Delete Property"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <CancellationModal
+                isOpen={isModalOpen}
+                onClose={handleCloseCancelModal}
+                onSubmit={handleCancelPlan}
+                loading={loading}
+            />
         </div>
     );
 };

@@ -300,8 +300,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
         <div className="px-2 pt-2 pb-3 space-y-1">
-          {/* Mobile Search */}
-          <div className="px-3 pb-4">
+          {/* <div className="px-3 pb-4">
             <div className="relative">
               <input
                 type="text"
@@ -311,8 +310,6 @@ export default function Navbar() {
                 className="w-full pl-10 pr-24 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#348b8b]"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-
-              {/* Mobile Search Filter */}
               <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
                 <button
                   type="button"
@@ -343,7 +340,7 @@ export default function Navbar() {
                 )}
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Navigation Items */}
           {navItems.map((item) => (
