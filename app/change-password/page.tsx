@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/config/apiClient";
 
@@ -231,4 +231,11 @@ const ChangePassword = () => {
         </div>
     );
 }
-export default ChangePassword
+
+export default function ChangePasswordPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ChangePassword />
+        </Suspense>
+    );
+}

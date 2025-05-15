@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import axios from "axios";
 import api from "@/config/apiClient";
 
-export default function VerifyOTP() {
+const VerifyOTP = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get("email");
@@ -243,5 +242,13 @@ export default function VerifyOTP() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VerifyOTPComponent() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <VerifyOTP />
+        </Suspense>
     );
 }
