@@ -621,7 +621,7 @@ const PropertyDetailsPage = () => {
                                                             </AvatarFallback>
                                                         )}
                                                     </Avatar>
-
+                                        
                                                     <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
                                                         <h4 className="font-medium mb-2 text-center text-teal-600">Contact Information</h4>
                                                         <div className="flex items-center gap-3">

@@ -139,7 +139,11 @@ const AgentProfilePage = () => {
     };
 
     const handleOpenRatingDialog = () => {
-        setIsRatingDialogOpen(true);
+        if (!token) {
+            router.push("/sign-in")
+        } else {
+            setIsRatingDialogOpen(true);
+        }
     };
 
     const handleRatingChange = (rating: number) => {

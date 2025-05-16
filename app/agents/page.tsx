@@ -335,7 +335,13 @@ const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agentId, onClose })
                       </AvatarFallback>
                     )}
                   </Avatar>
-
+                  <div className="w-full p-4 flex items-center justify-center mt-[-10px] gap-2 rounded-lg">
+                    <h2>Ratings:</h2>
+                    <div className="flex items-center">
+                      <Star className="text-yellow-500 mr-1" />
+                      <span className="font-semibold">{selectedAgent?.average_rating || 5.0}</span>
+                    </div>
+                  </div>
                   <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2 text-center" style={{ color: primaryColor }}>Contact Information</h4>
                     <div className="flex items-center gap-3">

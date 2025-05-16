@@ -257,13 +257,13 @@ const FeaturedAgents: React.FC = () => {
         )}
 
         {/* Scroll to top button */}
-        <button
+        {/* <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 p-3 rounded-full shadow-lg z-50 text-white transition-all hover:shadow-xl"
           style={{ backgroundColor: primaryColor }}
         >
           <ChevronUp className="w-5 h-5" />
-        </button>
+        </button> */}
       </div>
 
       {/* Agent Details Dialog */}

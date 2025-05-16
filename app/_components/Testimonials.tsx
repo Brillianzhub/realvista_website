@@ -156,7 +156,7 @@ const TestimonialSection = () => {
             </div>
 
             {/* Scroll to top button */}
-            {isVisible && (
+            {/* {isVisible && (
                 <div className="fixed bottom-6 right-6">
                     <button
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -166,7 +166,7 @@ const TestimonialSection = () => {
                         <ArrowUp size={20} />
                     </button>
                 </div>
-            )}
+            )} */}
         </div>
     );
 };

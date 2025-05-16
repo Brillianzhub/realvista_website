@@ -387,7 +387,7 @@ export default function PrivacyPolicy() {
         </div>
       </main>
       {/* Scroll to top button */}
-      {showScrollButton && (
+      {/* {showScrollButton && (
         <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 bg-[#348b8b] text-white p-3 rounded-full shadow-lg hover:bg-[#2a7070] transition-colors duration-300 focus:outline-none"
@@ -395,7 +395,7 @@ export default function PrivacyPolicy() {
         >
           <ChevronUp className="h-6 w-6" />
         </button>
-      )}
+      )} */}
     </div>
   );
 }
