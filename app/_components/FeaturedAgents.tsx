@@ -169,6 +169,14 @@ const FeaturedAgents: React.FC = () => {
     });
   };
 
+  const isPhonePreferred = selectedAgent?.preferred_contact_mode === 'phone';
+
+  const handlePhoneClick = () => {
+    if (isPhonePreferred && selectedAgent?.phone_number) {
+      window.location.href = `tel:${selectedAgent?.phone_number}`;
+    }
+  };
+
   return (
     <section className="py-20 relative" style={{ background: `linear-gradient(to bottom, ${primaryColor}05, ${primaryColor}15)` }}>
       {/* Decorative elements */}
@@ -378,10 +386,21 @@ const FeaturedAgents: React.FC = () => {
                   </div>
                   <div className="mt-6 w-full">
                     <h4 className="font-medium mb-2">Preferred Contact Method</h4>
-                    <Badge className="w-full justify-center py-2 capitalize" style={{ backgroundColor: primaryColor }}>
+                    <Badge
+                      className={`w-full justify-center py-2 capitalize flex items-center gap-2 ${isPhonePreferred ? 'cursor-pointer' : ''}`}
+                      style={{ backgroundColor: primaryColor }}
+                      onClick={isPhonePreferred ? handlePhoneClick : undefined}
+                    >
+                      {isPhonePreferred && <Phone size={16} className="mr-1" />}
                       {selectedAgent.preferred_contact_mode}
                     </Badge>
                   </div>
+                  {/* <div className="mt-6 w-full">
+                    <h4 className="font-medium mb-2">Preferred Contact Method</h4>
+                    <Badge className="w-full justify-center py-2 capitalize" style={{ backgroundColor: primaryColor }}>
+                      {selectedAgent.preferred_contact_mode}
+                    </Badge>
+                  </div> */}
                 </div>
 
                 <div className="md:w-2/3">

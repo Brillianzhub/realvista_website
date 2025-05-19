@@ -55,6 +55,9 @@ export default function Navbar() {
     };
   }, []);
 
+
+  console.log("userData--->", userData)
+
   const navItems = [
     {
       label: 'ABOUT',

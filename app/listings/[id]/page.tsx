@@ -621,7 +621,7 @@ const PropertyDetailsPage = () => {
                                                             </AvatarFallback>
                                                         )}
                                                     </Avatar>
-                                        
+
                                                     <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
                                                         <h4 className="font-medium mb-2 text-center text-teal-600">Contact Information</h4>
                                                         <div className="flex items-center gap-3">
@@ -670,16 +670,24 @@ const PropertyDetailsPage = () => {
                                                     </div>
                                                     <div className="mt-6 w-full">
                                                         <h4 className="font-medium mb-2">Preferred Contact Method</h4>
-                                                        <div className="flex space-x-2 text-sm justify-center">
-                                                            <Badge className={`py-2 ${listing.owner.contact_by_phone ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
+                                                        <div className="flex space-x-2 text-sm justify-start">
+                                                            {listing.owner.contact_by_phone && (<Badge className={`py-2 ${listing.owner.contact_by_phone ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
                                                                 <Phone className="h-3 w-3 mr-1" /> Phone
-                                                            </Badge>
-                                                            <Badge className={`py-2 ${listing.owner.contact_by_whatsapp ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
+                                                            </Badge>)
+
+                                                            }
+                                                            {listing.owner.contact_by_whatsapp && (<Badge className={`py-2 ${listing.owner.contact_by_whatsapp ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
                                                                 <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                                                            </Badge>
-                                                            <Badge className={`py-2 ${listing.owner.contact_by_email ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
+                                                            </Badge>)
+
+                                                            }
+                                                            {listing.owner.contact_by_email && (<Badge className={`py-2 ${listing.owner.contact_by_email ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
                                                                 <Mail className="h-3 w-3 mr-1" /> Email
-                                                            </Badge>
+                                                            </Badge>)
+
+                                                            }
+
+
                                                         </div>
                                                     </div>
                                                 </div>
