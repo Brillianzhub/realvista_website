@@ -383,6 +383,13 @@ const Profile = () => {
     console.log("editableProfile--->", editableProfile)
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const [activeTab, setActiveTab] = useState("");
+
+    useEffect(() => {
+        if (profileData) {
+            setActiveTab(profileData.agent ? "dashboard" : "profile");
+        }
+    }, [profileData]);
 
 
     const fetchUserFavorites = async () => {
@@ -455,6 +462,7 @@ const Profile = () => {
                     status: userData.subscription?.status || "active"
                 },
                 referral_code: userData.referral_code || "",
+                referrer: userData.referrer || "",
                 referred_users_count: userData.referred_users_count || 0,
                 total_referral_earnings: userData.total_referral_earnings || 0,
                 agent: userData.agent || null
@@ -1064,26 +1072,6 @@ const Profile = () => {
                                         {getSubscriptionInfo().plan} Plan
                                     </Badge>
                                 </div>
-                                <div className="flex flex-col gap-3 mt-3">
-                                    <Button
-                                        onClick={() => router.push("/pricing")}
-                                        variant="default"
-                                        className="w-full bg-teal-600 hover:bg-teal-700 cursor-pointer"
-                                    >
-                                        {hasPlan ? "Upgrade Plan" : "Choose Plan"}
-                                    </Button>
-
-                                    {hasPlan && (
-                                        <Button
-                                            onClick={handleOpenCancelModal}
-                                            variant="outline"
-                                            className="w-full text-red-500 hover:text-red-600 cursor-pointer"
-                                            disabled={loading}
-                                        >
-                                            {loading ? "Cancelling..." : "Cancel Plan"}
-                                        </Button>
-                                    )}
-                                </div>
                             </CardContent>
                             <CardFooter className="flex justify-center pt-2">
                                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1294,14 +1282,26 @@ const Profile = () => {
                                         {getSubscriptionInfo().status}
                                     </Badge>
                                 </div>
+                                <div className="flex flex-col gap-3 mt-3">
+                                    <Button
+                                        onClick={() => router.push("/pricing")}
+                                        variant="default"
+                                        className="w-full bg-teal-600 hover:bg-teal-700 cursor-pointer"
+                                    >
+                                        {hasPlan ? "Upgrade Plan" : "Choose Plan"}
+                                    </Button>
 
-                                {/* {getSubscriptionInfo().plan === "Free" && (
-                                    <div className="pt-2">
-                                        <Button variant="outline" className="w-full" size="sm">
-                                            Upgrade Plan
+                                    {hasPlan && (
+                                        <Button
+                                            onClick={handleOpenCancelModal}
+                                            variant="outline"
+                                            className="w-full text-red-500 hover:text-red-600 cursor-pointer"
+                                            disabled={loading}
+                                        >
+                                            {loading ? "Cancelling..." : "Cancel Plan"}
                                         </Button>
-                                    </div>
-                                )} */}
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -1324,10 +1324,11 @@ const Profile = () => {
                                             </Button>
                                         </div>
                                     </div>
-                                    <div>
+                                    {profileData.referrer && (<div>
                                         <p className="text-sm text-gray-500">Referrer</p>
                                         <p className="font-medium">{profileData.referrer}</p>
-                                    </div>
+                                    </div>)}
+
                                     <div>
                                         <p className="text-sm text-gray-500">Referred Users</p>
                                         <p className="font-medium">{profileData.referred_users_count}</p>
@@ -1338,7 +1339,7 @@ const Profile = () => {
                                     </div>
 
                                     {/* New button to enter referrer code */}
-                                    <div className="pt-2 border-t border-gray-100">
+                                    {!profileData.referrer && (<div className="pt-2 border-t border-gray-100">
                                         <Button
 
                                             className="w-full flex items-center bg-teal-600 cursor-pointer hover:bg-teal-700 text-white justify-center hover:text-teal-70"
@@ -1347,7 +1348,8 @@ const Profile = () => {
                                             <PlusCircle className="mr-2 h-4 w-4" />
                                             Enter Referrer Code
                                         </Button>
-                                    </div>
+                                    </div>)}
+
                                 </CardContent>
                             </Card>
                         )}
@@ -1355,692 +1357,695 @@ const Profile = () => {
 
                     {/* Main Content Area */}
                     <div className="w-full md:w-3/4 mb-10">
-                        <Tabs defaultValue="dashboard">
-                            <TabsList className="grid grid-cols-4 gap-8 mb-8">
-                                {profileData?.agent && (<TabsTrigger value="dashboard">Dashboard</TabsTrigger>)}
-                                {profileData?.agent && (<TabsTrigger value="listings">My Listings</TabsTrigger>)}
-                                <TabsTrigger value="profile">Profile</TabsTrigger>
-                                <TabsTrigger value="favorites">Favorites</TabsTrigger>
-                            </TabsList>
+                        {profileData &&
+                            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                                <TabsList className={`grid gap-8 mb-8 ${profileData?.agent ? 'grid-cols-4' : 'grid-cols-2'}`}>
+                                    {profileData?.agent && (<TabsTrigger value="dashboard">Dashboard</TabsTrigger>)}
+                                    {profileData?.agent && (<TabsTrigger value="listings">My Listings</TabsTrigger>)}
+                                    <TabsTrigger value="profile">Profile</TabsTrigger>
+                                    <TabsTrigger value="favorites">Favorites</TabsTrigger>
+                                </TabsList>
 
-                            {/* Dashboard Tab */}
-                            <TabsContent value="dashboard" className="space-y-6">
-                                {/* Stats Cards */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    {profileData?.agent && (<Card className="bg-white">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Total Listings</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-0">
-                                            <div className="text-2xl font-bold">{analytics.totalListings}</div>
-                                            <p className="text-xs text-gray-500 mt-1">Properties in your portfolio</p>
-                                        </CardContent>
-                                    </Card>)}
-                                    <Card className="bg-white">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Total Favorites</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-0">
-                                            <div className="text-2xl font-bold">{analytics?.totalFavorites}</div>
-                                            <p className="text-xs text-gray-500 mt-1">Currently on the market</p>
-                                        </CardContent>
-                                    </Card>
+                                {/* Dashboard Tab */}
+                                {profileData?.agent &&
+                                    <TabsContent value="dashboard" className="space-y-6">
+                                        {/* Stats Cards */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                            {profileData?.agent && (<Card className="bg-white">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-sm font-medium text-gray-500">Total Listings</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="pt-0">
+                                                    <div className="text-2xl font-bold">{analytics.totalListings}</div>
+                                                    <p className="text-xs text-gray-500 mt-1">Properties in your portfolio</p>
+                                                </CardContent>
+                                            </Card>)}
+                                            <Card className="bg-white">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-sm font-medium text-gray-500">Total Favorites</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="pt-0">
+                                                    <div className="text-2xl font-bold">{favorites?.length}</div>
+                                                    <p className="text-xs text-gray-500 mt-1">Currently on the market</p>
+                                                </CardContent>
+                                            </Card>
 
-                                    <Card className="bg-white">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Total Views</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-0">
-                                            <div className="text-2xl font-bold">{analytics.totalViews}</div>
-                                            <p className="text-xs text-gray-500 mt-1">Across all properties</p>
-                                        </CardContent>
-                                    </Card>
+                                            <Card className="bg-white">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-sm font-medium text-gray-500">Total Views</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="pt-0">
+                                                    <div className="text-2xl font-bold">{analytics.totalViews}</div>
+                                                    <p className="text-xs text-gray-500 mt-1">Across all properties</p>
+                                                </CardContent>
+                                            </Card>
 
-                                    <Card className="bg-white">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-gray-500">Total Inquiries</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-0">
-                                            <div className="text-2xl font-bold">{analytics.totalInquiries}</div>
-                                            <p className="text-xs text-gray-500 mt-1">From potential buyers</p>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Performance Charts */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Property Views Trend</CardTitle>
-                                            <CardDescription>Last 30 days performance</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="h-[300px] flex items-center justify-center">
-                                                <BarChart className="h-10 w-10 text-gray-300" />
-                                                <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Inquiries Conversion</CardTitle>
-                                            <CardDescription>Views to inquiries ratio</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="h-[300px] flex items-center justify-center">
-                                                <PieChart className="h-10 w-10 text-gray-300" />
-                                                <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Recent Activities */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Top Performing Properties</CardTitle>
-                                        <CardDescription>Below are the top performing properties</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-4">
-                                            {profileData?.agent?.top_performing_properties?.map((property: any, index: number) => (
-                                                <div key={index} className="flex items-start space-x-4">
-                                                    <div className="bg-blue-100 p-2 rounded-full">
-                                                        <Eye className="h-5 w-5 text-teal-600" />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-medium">{property?.title}</p>
-                                                        <p className="text-teal-600 text-sm"><span className='text-gray-800 mr-1'>{property.currency}</span>
-                                                            {(property?.price)?.toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                            <Card className="bg-white">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-sm font-medium text-gray-500">Total Inquiries</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="pt-0">
+                                                    <div className="text-2xl font-bold">{analytics.totalInquiries}</div>
+                                                    <p className="text-xs text-gray-500 mt-1">From potential buyers</p>
+                                                </CardContent>
+                                            </Card>
                                         </div>
 
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-
-                            {/* Listings Tab */}
-                            <TabsContent value="listings" className="space-y-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold">My Properties</h2>
-                                    <Dialog open={isListingDialogOpen} onOpenChange={setIsListingDialogOpen} >
-                                        <DialogTrigger asChild>
-                                            <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
-                                                <Plus className="h-4 w-4 mr-1" /> Add New Property
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
-                                            <DialogHeader>
-                                                <DialogTitle>Add New Property</DialogTitle>
-                                                <DialogDescription>
-                                                    Enter details for your new property listing.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="grid gap-4 py-4">
-                                                {/* Basic Property Information */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="title">Property Title*</Label>
-                                                    <Input
-                                                        id="title"
-                                                        value={newListing.title}
-                                                        onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
-                                                        placeholder="e.g. Modern 3 Bedroom Apartment"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2 w-full">
-                                                        <Label htmlFor="property_type">Property Type*</Label>
-                                                        <Select
-                                                            onValueChange={(value) => setNewListing({ ...newListing, property_type: value })}
-                                                            value={newListing.property_type}
-
-                                                        >
-                                                            <SelectTrigger id="property_type" className="w-full">
-                                                                <SelectValue placeholder="Select type" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="apartment">Apartment</SelectItem>
-                                                                <SelectItem value="house">House</SelectItem>
-                                                                <SelectItem value="villa">Villa</SelectItem>
-                                                                <SelectItem value="commercial">Commercial</SelectItem>
-                                                                <SelectItem value="land">Land</SelectItem>
-                                                                <SelectItem value="condo">Condo</SelectItem>
-                                                                <SelectItem value="townhouse">Townhouse</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="space-y-2 w-full">
-                                                        <Label htmlFor="listing_purpose">Listing Purpose*</Label>
-                                                        <Select
-                                                            onValueChange={(value) => setNewListing({ ...newListing, listing_purpose: value })}
-                                                            defaultValue="sale"
-                                                        >
-                                                            <SelectTrigger id="listing_purpose" className='w-full'>
-                                                                <SelectValue placeholder="Select purpose" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="sale">For Sale</SelectItem>
-                                                                <SelectItem value="rent">For Rent</SelectItem>
-                                                                <SelectItem value="lease">For Lease</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="price">Price*</Label>
-                                                        <Input
-                                                            id="price"
-                                                            type="number"
-                                                            value={newListing.price}
-                                                            onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
-                                                            placeholder="e.g. 250000"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="currency">Currency</Label>
-                                                        <Select
-                                                            onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
-                                                            defaultValue="USD"
-                                                        >
-                                                            <SelectTrigger id="currency" className='w-full'>
-                                                                <SelectValue placeholder="Select currency" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="USD">USD ($)</SelectItem>
-                                                                <SelectItem value="NGN">NGN (₦)</SelectItem>
-                                                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                                                <SelectItem value="GBP">GBP (£)</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                {/* Location Information */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="address">Street Address*</Label>
-                                                    <Input
-                                                        id="address"
-                                                        value={newListing.address}
-                                                        onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
-                                                        placeholder="e.g. 123 Main Street"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="city">City*</Label>
-                                                        <Input
-                                                            id="city"
-                                                            value={newListing.city}
-                                                            onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
-                                                            placeholder="e.g. San Francisco"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="state">State*</Label>
-                                                        <Input
-                                                            id="state"
-                                                            value={newListing.state}
-                                                            onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
-                                                            placeholder="e.g. California"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="zip_code">ZIP Code</Label>
-                                                        <Input
-                                                            id="zip_code"
-                                                            value={newListing.zip_code}
-                                                            onChange={(e) => setNewListing({ ...newListing, zip_code: e.target.value })}
-                                                            placeholder="e.g. 94103"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Property Details */}
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="bedrooms">Bedrooms</Label>
-                                                        <Input
-                                                            id="bedrooms"
-                                                            type="number"
-                                                            value={newListing.bedrooms}
-                                                            onChange={(e) => setNewListing({ ...newListing, bedrooms: e.target.value })}
-                                                            placeholder="e.g. 3"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="bathrooms">Bathrooms</Label>
-                                                        <Input
-                                                            id="bathrooms"
-                                                            type="number"
-                                                            value={newListing.bathrooms}
-                                                            onChange={(e) => setNewListing({ ...newListing, bathrooms: e.target.value })}
-                                                            placeholder="e.g. 2"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="year_built">Year Built</Label>
-                                                        <Input
-                                                            id="year_built"
-                                                            type="number"
-                                                            value={newListing.year_built}
-                                                            onChange={(e) => setNewListing({ ...newListing, year_built: e.target.value })}
-                                                            placeholder="e.g. 2015"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="square_feet">Square Feet (Interior)</Label>
-                                                        <Input
-                                                            id="square_feet"
-                                                            type="number"
-                                                            value={newListing.square_feet}
-                                                            onChange={(e) => setNewListing({ ...newListing, square_feet: e.target.value })}
-                                                            placeholder="e.g. 1200"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="lot_size">Lot Size (sq ft)</Label>
-                                                        <Input
-                                                            id="lot_size"
-                                                            type="number"
-                                                            value={newListing.lot_size}
-                                                            onChange={(e) => setNewListing({ ...newListing, lot_size: e.target.value })}
-                                                            placeholder="e.g. 1500"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Availability */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="availability">Availability</Label>
-                                                        <Select
-                                                            onValueChange={(value) => {
-                                                                if (value === "now") {
-                                                                    // Remove the availability_date field when "Available Now" is selected
-                                                                    const { availability_date, ...restOfNewListing } = newListing;
-                                                                    setNewListing({ ...restOfNewListing, availability: value });
-                                                                } else {
-                                                                    // Keep or initialize the availability_date when "Available From Date" is selected
-                                                                    setNewListing({
-                                                                        ...newListing,
-                                                                        availability: value,
-                                                                        availability_date: newListing.availability_date || new Date().toISOString().split('T')[0]
-                                                                    });
-                                                                }
-                                                            }}
-                                                            defaultValue="now"
-                                                        >
-                                                            <SelectTrigger id="availability">
-                                                                <SelectValue placeholder="Select availability" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="now">Available Now</SelectItem>
-                                                                <SelectItem value="date">Available From Date</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    {newListing.availability === "date" && (
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="availability_date">Available From</Label>
-                                                            <Input
-                                                                id="availability_date"
-                                                                type="date"
-                                                                value={newListing.availability_date}
-                                                                onChange={(e) => setNewListing({ ...newListing, availability_date: e.target.value })}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Description */}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="description">Description*</Label>
-                                                    <Textarea
-                                                        id="description"
-                                                        rows={4}
-                                                        value={newListing.description}
-                                                        onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
-                                                        placeholder="Describe the property features and highlights"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="images">Upload Images</Label>
-                                                    <div
-                                                        className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                                                        onClick={() => fileInputRef.current.click()}
-                                                        onDragOver={handleDragOver}
-                                                        onDrop={handleDrop}
-                                                    >
-                                                        <Upload className="h-8 w-8 mx-auto text-gray-400" />
-                                                        <p className="mt-2 text-sm text-gray-500">Drag and drop images here or click to browse</p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="mt-4"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                fileInputRef.current.click();
-                                                            }}
-                                                        >
-                                                            Choose Files
-                                                        </Button>
-                                                        <input
-                                                            type="file"
-                                                            ref={fileInputRef}
-                                                            multiple
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleFileSelect('business_registration')}
-                                                        />
-                                                    </div>
-
-                                                    {/* Image Previews */}
-                                                    {selectedImages?.length > 0 && (
-                                                        <div className="mt-4">
-                                                            <Label>Selected Images ({selectedImages?.length})</Label>
-                                                            <div className="grid grid-cols-3 gap-4 mt-2">
-                                                                {selectedImages?.map((image: any, index: any) => (
-                                                                    <div key={index} className="relative group">
-                                                                        <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
-                                                                            <img
-                                                                                src={image.preview}
-                                                                                alt={`Property image ${index + 1}`}
-                                                                                className="h-full w-full object-cover"
-                                                                            />
-                                                                        </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation(); // Prevent triggering the parent click handler
-                                                                                removeImage(index);
-                                                                            }}
-                                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        >
-                                                                            <X className="h-4 w-4" />
-                                                                        </button>
-                                                                        <p className="text-xs text-gray-500 truncate mt-1">{image.name}</p>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                            </div>
-                                            <DialogFooter>
-                                                <Button variant="outline" onClick={() => setIsAddingListing(false)}>Cancel</Button>
-                                                <Button
-                                                    onClick={handleAddListing}
-                                                    disabled={loading || !newListing.title || !newListing.description || !newListing.property_type || !newListing.price}
-                                                >
-                                                    {loading ? (
-                                                        <>
-                                                            <span className="mr-2">
-                                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                </svg>
-                                                            </span>
-                                                            Adding Property...
-                                                        </>
-                                                    ) : (
-                                                        "Add Property"
-                                                    )}
-                                                </Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-
-                                {/* Listing Cards */}
-                                {listings?.length === 0 ? (
-                                    <EmptyState />
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                                        {listings?.map((listing: any) => (
-                                            <Card
-                                                key={listing.id}
-                                                className="h-full cursor-pointer overflow-hidden border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300 group"
-                                            >
-                                                <div
-                                                    className="relative h-56 overflow-hidden"
-                                                    onClick={() => handleCardClick(listing.id)}
-                                                >
-                                                    <img
-                                                        src={listing.image}
-                                                        alt={listing.title}
-                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                    />
-                                                    <Badge
-                                                        className={`absolute top-3 right-3 ${getStatusColor(listing.status)} text-white px-3 py-1 text-xs font-medium transition-all`}
-                                                    >
-                                                        {listing.status}
-                                                    </Badge>
-                                                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-16 opacity-60 group-hover:opacity-90 transition-opacity"></div>
-                                                </div>
-
-                                                <CardHeader className="pb-2 relative">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute cursor-pointer right-2 top-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                        onClick={(e) => handleDeleteClick(e, listing.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-
-                                                    <div className="flex justify-between items-start pr-8">
-                                                        <div>
-                                                            <CardTitle className="text-lg font-bold text-gray-800 line-clamp-1">{listing.title}</CardTitle>
-                                                            <CardDescription className="flex items-center mt-1 text-gray-600">
-                                                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                                                                <span className="line-clamp-1">{listing.address}</span>
-                                                            </CardDescription>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-1">
-                                                        <p className="font-bold text-xl text-gray-900">{listing.currency} {listing.price.toLocaleString()}</p>
-                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                    </div>
+                                        {/* Performance Charts */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Property Views Trend</CardTitle>
+                                                    <CardDescription>Last 30 days performance</CardDescription>
                                                 </CardHeader>
-
-                                                <CardContent className="pt-0">
-                                                    <div className="flex flex-wrap gap-1 mb-4">
-                                                        <Badge variant="outline" className="bg-gray-50">
-                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                        </Badge>
-                                                        <Badge variant="outline" className="bg-gray-50">
-                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                        </Badge>
-                                                        <Badge variant="outline" className="bg-gray-50">
-                                                            {listing.area} sqft
-                                                        </Badge>
-                                                        <Badge variant="secondary" className="ml-auto">
-                                                            {listing.type}
-                                                        </Badge>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-b border-gray-100">
-                                                        <div className="flex flex-col items-center">
-                                                            <div className="flex items-center text-gray-600 mb-1">
-                                                                <Eye className="h-3 w-3 mr-1" />
-                                                                <p className="text-xs">Views</p>
-                                                            </div>
-                                                            <p className="font-semibold">{listing.views}</p>
-                                                        </div>
-                                                        <div className="flex flex-col items-center">
-                                                            <div className="flex items-center text-gray-600 mb-1">
-                                                                <MessageSquare className="h-3 w-3 mr-1" />
-                                                                <p className="text-xs">Inquiries</p>
-                                                            </div>
-                                                            <p className="font-semibold">{listing.inquiries}</p>
-                                                        </div>
-                                                        <div className="flex flex-col items-center">
-                                                            <div className="flex items-center text-gray-600 mb-1">
-                                                                <Heart className="h-3 w-3 mr-1" />
-                                                                <p className="text-xs">Favorites</p>
-                                                            </div>
-                                                            <p className="font-semibold">{listing.favorites}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between mt-4">
-                                                        <div className="flex items-center">
-                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-emerald-600' :
-                                                                listing.performance?.trend === 'down' ? 'text-red-600' :
-                                                                    'text-gray-600'
-                                                                }`}>
-                                                                {listing.performance?.trend === 'up' ? (
-                                                                    <TrendingUp className="h-4 w-4 mr-1" />
-                                                                ) : listing.performance?.trend === 'down' ? (
-                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
-                                                                ) : (
-                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
-                                                                )}
-                                                                <span className="text-sm font-medium">
-                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (
-                                                                        listing.performance?.trend === 'up' ? 'increase' : 'decrease'
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-xs text-gray-500 ml-2">in views this week</span>
-                                                        </div>
+                                                <CardContent>
+                                                    <div className="h-[300px] flex items-center justify-center">
+                                                        <BarChart className="h-10 w-10 text-gray-300" />
+                                                        <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        ))}
+
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Inquiries Conversion</CardTitle>
+                                                    <CardDescription>Views to inquiries ratio</CardDescription>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="h-[300px] flex items-center justify-center">
+                                                        <PieChart className="h-10 w-10 text-gray-300" />
+                                                        <p className="text-gray-500 ml-2">Chart visualization will appear here</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+
+                                        {/* Recent Activities */}
+                                        {profileData?.agent?.top_performing_properties?.length > 0 && (<Card>
+                                            <CardHeader>
+                                                <CardTitle>Top Performing Properties</CardTitle>
+                                                <CardDescription>Below are the top performing properties</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-4">
+                                                    {profileData?.agent?.top_performing_properties?.map((property: any, index: number) => (
+                                                        <div key={index} className="flex items-start space-x-4">
+                                                            <div className="bg-blue-100 p-2 rounded-full">
+                                                                <Eye className="h-5 w-5 text-teal-600" />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium">{property?.title}</p>
+                                                                <p className="text-teal-600 text-sm"><span className='text-gray-800 mr-1'>{property.currency}</span>
+                                                                    {(property?.price)?.toLocaleString()}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                            </CardContent>
+                                        </Card>)}
+
+                                    </TabsContent>
+                                }
+                                {/* Listings Tab */}
+                                <TabsContent value="listings" className="space-y-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-2xl font-bold">My Properties</h2>
+                                        <Dialog open={isListingDialogOpen} onOpenChange={setIsListingDialogOpen} >
+                                            <DialogTrigger asChild>
+                                                <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
+                                                    <Plus className="h-4 w-4 mr-1" /> Add New Property
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
+                                                <DialogHeader>
+                                                    <DialogTitle>Add New Property</DialogTitle>
+                                                    <DialogDescription>
+                                                        Enter details for your new property listing.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="grid gap-4 py-4">
+                                                    {/* Basic Property Information */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="title">Property Title*</Label>
+                                                        <Input
+                                                            id="title"
+                                                            value={newListing.title}
+                                                            onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
+                                                            placeholder="e.g. Modern 3 Bedroom Apartment"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2 w-full">
+                                                            <Label htmlFor="property_type">Property Type*</Label>
+                                                            <Select
+                                                                onValueChange={(value) => setNewListing({ ...newListing, property_type: value })}
+                                                                value={newListing.property_type}
+
+                                                            >
+                                                                <SelectTrigger id="property_type" className="w-full">
+                                                                    <SelectValue placeholder="Select type" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="apartment">Apartment</SelectItem>
+                                                                    <SelectItem value="house">House</SelectItem>
+                                                                    <SelectItem value="villa">Villa</SelectItem>
+                                                                    <SelectItem value="commercial">Commercial</SelectItem>
+                                                                    <SelectItem value="land">Land</SelectItem>
+                                                                    <SelectItem value="condo">Condo</SelectItem>
+                                                                    <SelectItem value="townhouse">Townhouse</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="space-y-2 w-full">
+                                                            <Label htmlFor="listing_purpose">Listing Purpose*</Label>
+                                                            <Select
+                                                                onValueChange={(value) => setNewListing({ ...newListing, listing_purpose: value })}
+                                                                defaultValue="sale"
+                                                            >
+                                                                <SelectTrigger id="listing_purpose" className='w-full'>
+                                                                    <SelectValue placeholder="Select purpose" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="sale">For Sale</SelectItem>
+                                                                    <SelectItem value="rent">For Rent</SelectItem>
+                                                                    <SelectItem value="lease">For Lease</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="price">Price*</Label>
+                                                            <Input
+                                                                id="price"
+                                                                type="number"
+                                                                value={newListing.price}
+                                                                onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                                                                placeholder="e.g. 250000"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="currency">Currency</Label>
+                                                            <Select
+                                                                onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
+                                                                defaultValue="USD"
+                                                            >
+                                                                <SelectTrigger id="currency" className='w-full'>
+                                                                    <SelectValue placeholder="Select currency" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="USD">USD ($)</SelectItem>
+                                                                    <SelectItem value="NGN">NGN (₦)</SelectItem>
+                                                                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                                                                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Location Information */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="address">Street Address*</Label>
+                                                        <Input
+                                                            id="address"
+                                                            value={newListing.address}
+                                                            onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
+                                                            placeholder="e.g. 123 Main Street"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div className="grid grid-cols-3 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="city">City*</Label>
+                                                            <Input
+                                                                id="city"
+                                                                value={newListing.city}
+                                                                onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
+                                                                placeholder="e.g. San Francisco"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="state">State*</Label>
+                                                            <Input
+                                                                id="state"
+                                                                value={newListing.state}
+                                                                onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
+                                                                placeholder="e.g. California"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="zip_code">ZIP Code</Label>
+                                                            <Input
+                                                                id="zip_code"
+                                                                value={newListing.zip_code}
+                                                                onChange={(e) => setNewListing({ ...newListing, zip_code: e.target.value })}
+                                                                placeholder="e.g. 94103"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Property Details */}
+                                                    <div className="grid grid-cols-3 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="bedrooms">Bedrooms</Label>
+                                                            <Input
+                                                                id="bedrooms"
+                                                                type="number"
+                                                                value={newListing.bedrooms}
+                                                                onChange={(e) => setNewListing({ ...newListing, bedrooms: e.target.value })}
+                                                                placeholder="e.g. 3"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="bathrooms">Bathrooms</Label>
+                                                            <Input
+                                                                id="bathrooms"
+                                                                type="number"
+                                                                value={newListing.bathrooms}
+                                                                onChange={(e) => setNewListing({ ...newListing, bathrooms: e.target.value })}
+                                                                placeholder="e.g. 2"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="year_built">Year Built</Label>
+                                                            <Input
+                                                                id="year_built"
+                                                                type="number"
+                                                                value={newListing.year_built}
+                                                                onChange={(e) => setNewListing({ ...newListing, year_built: e.target.value })}
+                                                                placeholder="e.g. 2015"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="square_feet">Square Feet (Interior)</Label>
+                                                            <Input
+                                                                id="square_feet"
+                                                                type="number"
+                                                                value={newListing.square_feet}
+                                                                onChange={(e) => setNewListing({ ...newListing, square_feet: e.target.value })}
+                                                                placeholder="e.g. 1200"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="lot_size">Lot Size (sq ft)</Label>
+                                                            <Input
+                                                                id="lot_size"
+                                                                type="number"
+                                                                value={newListing.lot_size}
+                                                                onChange={(e) => setNewListing({ ...newListing, lot_size: e.target.value })}
+                                                                placeholder="e.g. 1500"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Availability */}
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="availability">Availability</Label>
+                                                            <Select
+                                                                onValueChange={(value) => {
+                                                                    if (value === "now") {
+                                                                        // Remove the availability_date field when "Available Now" is selected
+                                                                        const { availability_date, ...restOfNewListing } = newListing;
+                                                                        setNewListing({ ...restOfNewListing, availability: value });
+                                                                    } else {
+                                                                        // Keep or initialize the availability_date when "Available From Date" is selected
+                                                                        setNewListing({
+                                                                            ...newListing,
+                                                                            availability: value,
+                                                                            availability_date: newListing.availability_date || new Date().toISOString().split('T')[0]
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                defaultValue="now"
+                                                            >
+                                                                <SelectTrigger id="availability">
+                                                                    <SelectValue placeholder="Select availability" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="now">Available Now</SelectItem>
+                                                                    <SelectItem value="date">Available From Date</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        {newListing.availability === "date" && (
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="availability_date">Available From</Label>
+                                                                <Input
+                                                                    id="availability_date"
+                                                                    type="date"
+                                                                    value={newListing.availability_date}
+                                                                    onChange={(e) => setNewListing({ ...newListing, availability_date: e.target.value })}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Description */}
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="description">Description*</Label>
+                                                        <Textarea
+                                                            id="description"
+                                                            rows={4}
+                                                            value={newListing.description}
+                                                            onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                                                            placeholder="Describe the property features and highlights"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="images">Upload Images</Label>
+                                                        <div
+                                                            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                                            onClick={() => fileInputRef.current.click()}
+                                                            onDragOver={handleDragOver}
+                                                            onDrop={handleDrop}
+                                                        >
+                                                            <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                                                            <p className="mt-2 text-sm text-gray-500">Drag and drop images here or click to browse</p>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="mt-4"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    fileInputRef.current.click();
+                                                                }}
+                                                            >
+                                                                Choose Files
+                                                            </Button>
+                                                            <input
+                                                                type="file"
+                                                                ref={fileInputRef}
+                                                                multiple
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={handleFileSelect('business_registration')}
+                                                            />
+                                                        </div>
+
+                                                        {/* Image Previews */}
+                                                        {selectedImages?.length > 0 && (
+                                                            <div className="mt-4">
+                                                                <Label>Selected Images ({selectedImages?.length})</Label>
+                                                                <div className="grid grid-cols-3 gap-4 mt-2">
+                                                                    {selectedImages?.map((image: any, index: any) => (
+                                                                        <div key={index} className="relative group">
+                                                                            <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
+                                                                                <img
+                                                                                    src={image.preview}
+                                                                                    alt={`Property image ${index + 1}`}
+                                                                                    className="h-full w-full object-cover"
+                                                                                />
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation(); // Prevent triggering the parent click handler
+                                                                                    removeImage(index);
+                                                                                }}
+                                                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <X className="h-4 w-4" />
+                                                                            </button>
+                                                                            <p className="text-xs text-gray-500 truncate mt-1">{image.name}</p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button variant="outline" onClick={() => setIsAddingListing(false)}>Cancel</Button>
+                                                    <Button
+                                                        onClick={handleAddListing}
+                                                        disabled={loading || !newListing.title || !newListing.description || !newListing.property_type || !newListing.price}
+                                                    >
+                                                        {loading ? (
+                                                            <>
+                                                                <span className="mr-2">
+                                                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                </span>
+                                                                Adding Property...
+                                                            </>
+                                                        ) : (
+                                                            "Add Property"
+                                                        )}
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
                                     </div>
-                                )}
-                            </TabsContent>
 
-                            {/* Profile Tab */}
-                            <TabsContent value="profile" className="space-y-6">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Personal Information</CardTitle>
-                                        <CardDescription>Review and update your personal details</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Full Name</h3>
-                                                <p>{profileData.name}</p>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Email Address</h3>
-                                                <p>{profileData.email}</p>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Phone Number</h3>
-                                                <p>{profileData.phone}</p>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Location</h3>
-                                                <p>{profileData.location}</p>
-                                            </div>
+                                    {/* Listing Cards */}
+                                    {listings?.length === 0 ? (
+                                        <EmptyState />
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                            {listings?.map((listing: any) => (
+                                                <Card
+                                                    key={listing.id}
+                                                    className="h-full cursor-pointer overflow-hidden border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300 group"
+                                                >
+                                                    <div
+                                                        className="relative h-56 overflow-hidden"
+                                                        onClick={() => handleCardClick(listing.id)}
+                                                    >
+                                                        <img
+                                                            src={listing.image}
+                                                            alt={listing.title}
+                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                        />
+                                                        <Badge
+                                                            className={`absolute top-3 right-3 ${getStatusColor(listing.status)} text-white px-3 py-1 text-xs font-medium transition-all`}
+                                                        >
+                                                            {listing.status}
+                                                        </Badge>
+                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-16 opacity-60 group-hover:opacity-90 transition-opacity"></div>
+                                                    </div>
+
+                                                    <CardHeader className="pb-2 relative">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="absolute cursor-pointer right-2 top-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                            onClick={(e) => handleDeleteClick(e, listing.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+
+                                                        <div className="flex justify-between items-start pr-8">
+                                                            <div>
+                                                                <CardTitle className="text-lg font-bold text-gray-800 line-clamp-1">{listing.title}</CardTitle>
+                                                                <CardDescription className="flex items-center mt-1 text-gray-600">
+                                                                    <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                                                                    <span className="line-clamp-1">{listing.address}</span>
+                                                                </CardDescription>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-1">
+                                                            <p className="font-bold text-xl text-gray-900">{listing.currency} {listing.price.toLocaleString()}</p>
+                                                            <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                        </div>
+                                                    </CardHeader>
+
+                                                    <CardContent className="pt-0">
+                                                        <div className="flex flex-wrap gap-1 mb-4">
+                                                            <Badge variant="outline" className="bg-gray-50">
+                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="bg-gray-50">
+                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="bg-gray-50">
+                                                                {listing.area} sqft
+                                                            </Badge>
+                                                            <Badge variant="secondary" className="ml-auto">
+                                                                {listing.type}
+                                                            </Badge>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-b border-gray-100">
+                                                            <div className="flex flex-col items-center">
+                                                                <div className="flex items-center text-gray-600 mb-1">
+                                                                    <Eye className="h-3 w-3 mr-1" />
+                                                                    <p className="text-xs">Views</p>
+                                                                </div>
+                                                                <p className="font-semibold">{listing.views}</p>
+                                                            </div>
+                                                            <div className="flex flex-col items-center">
+                                                                <div className="flex items-center text-gray-600 mb-1">
+                                                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                                                    <p className="text-xs">Inquiries</p>
+                                                                </div>
+                                                                <p className="font-semibold">{listing.inquiries}</p>
+                                                            </div>
+                                                            <div className="flex flex-col items-center">
+                                                                <div className="flex items-center text-gray-600 mb-1">
+                                                                    <Heart className="h-3 w-3 mr-1" />
+                                                                    <p className="text-xs">Favorites</p>
+                                                                </div>
+                                                                <p className="font-semibold">{listing.favorites}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between mt-4">
+                                                            <div className="flex items-center">
+                                                                <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-emerald-600' :
+                                                                    listing.performance?.trend === 'down' ? 'text-red-600' :
+                                                                        'text-gray-600'
+                                                                    }`}>
+                                                                    {listing.performance?.trend === 'up' ? (
+                                                                        <TrendingUp className="h-4 w-4 mr-1" />
+                                                                    ) : listing.performance?.trend === 'down' ? (
+                                                                        <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
+                                                                    ) : (
+                                                                        <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
+                                                                    )}
+                                                                    <span className="text-sm font-medium">
+                                                                        {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (
+                                                                            listing.performance?.trend === 'up' ? 'increase' : 'decrease'
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
                                         </div>
+                                    )}
+                                </TabsContent>
 
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <h3 className="text-sm font-medium text-gray-500 mb-2">Bio</h3>
-                                            <p className="text-gray-700">{profileData.bio}</p>
-                                        </div>
-
-                                    </CardContent>
-                                </Card>
-
-                                {profileData.agent && (
+                                {/* Profile Tab */}
+                                <TabsContent value="profile" className="space-y-6">
                                     <Card>
                                         <CardHeader>
-                                            <CardTitle>Agency Information</CardTitle>
-                                            <CardDescription>Your real estate business details</CardDescription>
+                                            <CardTitle>Personal Information</CardTitle>
+                                            <CardDescription>Review and update your personal details</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-6">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Name</h3>
-                                                    <p>{profileData.agency_name}</p>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Full Name</h3>
+                                                    <p>{profileData.name}</p>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Experience</h3>
-                                                    <p>{profileData.experience_years} years</p>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Email Address</h3>
+                                                    <p>{profileData.email}</p>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Address</h3>
-                                                    <p>{profileData.agency_address}</p>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Phone Number</h3>
+                                                    <p>{profileData.phone}</p>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">WhatsApp</h3>
-                                                    <p>{profileData.whatsapp_number}</p>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Preferred Contact Method</h3>
-                                                    <p className="capitalize">{profileData.preferred_contact_mode}</p>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Verification Status</h3>
-                                                    <div className="flex items-center">
-                                                        {profile?.is_phone_verified ? (
-                                                            <>
-                                                                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                                                                <span className="text-green-600">Verified</span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-amber-600">Pending Verification</span>
-                                                        )}
-                                                    </div>
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-2">Location</h3>
+                                                    <p>{profileData.location}</p>
                                                 </div>
                                             </div>
 
                                             <div className="pt-4 border-t border-gray-200">
-                                                <h3 className="text-sm font-medium text-gray-500 mb-3">Account Statistics</h3>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                                                        <p className="text-sm text-gray-500">Total Views</p>
-                                                        <p className="text-xl font-bold">{profileData.agent.total_views}</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                                                        <p className="text-sm text-gray-500">Total Inquiries</p>
-                                                        <p className="text-xl font-bold">{profileData.agent.total_inquiries}</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                                                        <p className="text-sm text-gray-500">Bookmarks</p>
-                                                        <p className="text-xl font-bold">{profileData.agent.total_bookmarks}</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                                                        <p className="text-sm text-gray-500">Total Listings</p>
-                                                        <p className="text-xl font-bold">{profileData.agent.total_listings}</p>
-                                                    </div>
-                                                </div>
+                                                <h3 className="text-sm font-medium text-gray-500 mb-2">Bio</h3>
+                                                <p className="text-gray-700">{profileData.bio}</p>
                                             </div>
+
                                         </CardContent>
                                     </Card>
-                                )}
 
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Account Settings</CardTitle>
-                                        <CardDescription>Manage your account preferences</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        {/* Email Notifications - Toggle */}
-                                        {/* <div className="flex items-center justify-between py-2">
+                                    {profileData.agent && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Agency Information</CardTitle>
+                                                <CardDescription>Your real estate business details</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="space-y-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Name</h3>
+                                                        <p>{profileData.agency_name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Experience</h3>
+                                                        <p>{profileData.experience_years} years</p>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Agency Address</h3>
+                                                        <p>{profileData.agency_address}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">WhatsApp</h3>
+                                                        <p>{profileData.whatsapp_number}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Preferred Contact Method</h3>
+                                                        <p className="capitalize">{profileData.preferred_contact_mode}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Verification Status</h3>
+                                                        <div className="flex items-center">
+                                                            {profile?.is_phone_verified ? (
+                                                                <>
+                                                                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                                                                    <span className="text-green-600">Verified</span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-amber-600">Pending Verification</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-4 border-t border-gray-200">
+                                                    <h3 className="text-sm font-medium text-gray-500 mb-3">Account Statistics</h3>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                        <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                            <p className="text-sm text-gray-500">Total Views</p>
+                                                            <p className="text-xl font-bold">{profileData.agent.total_views}</p>
+                                                        </div>
+                                                        <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                            <p className="text-sm text-gray-500">Total Inquiries</p>
+                                                            <p className="text-xl font-bold">{profileData.agent.total_inquiries}</p>
+                                                        </div>
+                                                        <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                            <p className="text-sm text-gray-500">Bookmarks</p>
+                                                            <p className="text-xl font-bold">{profileData.agent.total_bookmarks}</p>
+                                                        </div>
+                                                        <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                            <p className="text-sm text-gray-500">Total Listings</p>
+                                                            <p className="text-xl font-bold">{profileData.agent.total_listings}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Account Settings</CardTitle>
+                                            <CardDescription>Manage your account preferences</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            {/* Email Notifications - Toggle */}
+                                            {/* <div className="flex items-center justify-between py-2">
                                             <div>
                                                 <h3 className="font-medium">Email Notifications</h3>
                                                 <p className="text-sm text-gray-500">
@@ -2059,179 +2064,179 @@ const Profile = () => {
                                                 </Label>
                                             </div>
                                         </div> */}
-                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                            <div>
-                                                <h3 className="font-medium">Email Verification</h3>
-                                                <p className="text-sm text-gray-500">
-                                                    Verify your email address for account security
-                                                </p>
-                                            </div>
-                                            <div className='flex flex-col gap-4'>
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch
-                                                        id="email-notifications"
-                                                        checked={emailNotifications}
-                                                        onCheckedChange={handleEmailNotificationToggle}
-                                                        disabled={loading}
-                                                    />
-                                                    <Label htmlFor="email-notifications">
-                                                        {emailNotifications ? "Active" : "Inactive"}
-                                                    </Label>
+                                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                                <div>
+                                                    <h3 className="font-medium">Email Verification</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        Verify your email address for account security
+                                                    </p>
                                                 </div>
-                                                {profile?.is_email_verified && (<Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled
-                                                    className={profile?.is_email_verified ? "bg-green-50" : ""}
-                                                >
-
-                                                    <Check className="h-4 w-4 mr-1 text-green-500" />
-                                                    Verified
-                                                </Button>)}
-                                            </div>
-                                        </div>
-
-                                        {/* Change Password - Dialog Modal */}
-                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                            <div>
-                                                <h3 className="font-medium">Change Password</h3>
-                                                <p className="text-sm text-gray-500">Update your account password</p>
-                                            </div>
-                                            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="outline" size="sm">
-                                                        Update Password
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="sm:max-w-md">
-                                                    <DialogHeader>
-                                                        <DialogTitle>Change Password</DialogTitle>
-                                                        <DialogDescription>
-                                                            Enter your old password and a new password to update
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="space-y-4 py-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="current-password">Current Password</Label>
-                                                            <div className="relative">
-                                                                <Input
-                                                                    id="current-password"
-                                                                    type={showCurrentPassword ? "text" : "password"}
-                                                                    placeholder="Enter current password"
-                                                                    value={currentPassword}
-                                                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                                >
-                                                                    {showCurrentPassword ? (
-                                                                        <EyeOff className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <Eye className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="new-password">New Password</Label>
-                                                            <div className="relative">
-                                                                <Input
-                                                                    id="new-password"
-                                                                    type={showNewPassword ? "text" : "password"}
-                                                                    placeholder="Enter new password"
-                                                                    value={newPassword}
-                                                                    onChange={(e) => setNewPassword(e.target.value)}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowNewPassword(!showNewPassword)}
-                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                                >
-                                                                    {showNewPassword ? (
-                                                                        <EyeOff className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <Eye className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                                            <div className="relative">
-                                                                <Input
-                                                                    id="confirm-password"
-                                                                    type={showConfirmPassword ? "text" : "password"}
-                                                                    placeholder="Confirm new password"
-                                                                    value={confirmPassword}
-                                                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                                >
-                                                                    {showConfirmPassword ? (
-                                                                        <EyeOff className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <Eye className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => {
-                                                                setPasswordDialogOpen(false);
-                                                                setCurrentPassword("");
-                                                                setNewPassword("");
-                                                                setConfirmPassword("");
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            className='bg-teal-600 hover:bg-teal-700 cursor-pointer'
-                                                            onClick={handlePasswordChange}
+                                                <div className='flex flex-col gap-4'>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Switch
+                                                            id="email-notifications"
+                                                            checked={emailNotifications}
+                                                            onCheckedChange={handleEmailNotificationToggle}
                                                             disabled={loading}
-                                                        >
-                                                            {loading ? "Updating..." : "Save Changes"}
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        </div>
-
-                                        {/* Phone Verification */}
-                                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                            <div>
-                                                <h3 className="font-medium">Phone Verification</h3>
-                                                <p className="text-sm text-gray-500">
-                                                    Add an extra layer of security to your account
-                                                </p>
-                                            </div>
-                                            {profile?.is_phone_verified ? (
-                                                <Button variant="outline" size="sm" disabled className="bg-green-50">
-                                                    <Check className="h-4 w-4 mr-1 text-green-500" />
-                                                    Verified
-                                                </Button>
-                                            ) : (
-                                                <Link href="/verify-number">
-                                                    <Button
+                                                        />
+                                                        <Label htmlFor="email-notifications">
+                                                            {emailNotifications ? "Active" : "Inactive"}
+                                                        </Label>
+                                                    </div>
+                                                    {profile?.is_email_verified && (<Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="cursor-pointer"
+                                                        disabled
+                                                        className={profile?.is_email_verified ? "bg-green-50" : ""}
                                                     >
-                                                        <Phone className="h-4 w-4 mr-1" />
-                                                        Verify
+
+                                                        <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                        Verified
+                                                    </Button>)}
+                                                </div>
+                                            </div>
+
+                                            {/* Change Password - Dialog Modal */}
+                                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                                <div>
+                                                    <h3 className="font-medium">Change Password</h3>
+                                                    <p className="text-sm text-gray-500">Update your account password</p>
+                                                </div>
+                                                <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm">
+                                                            Update Password
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Change Password</DialogTitle>
+                                                            <DialogDescription>
+                                                                Enter your old password and a new password to update
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="space-y-4 py-4">
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="current-password">Current Password</Label>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        id="current-password"
+                                                                        type={showCurrentPassword ? "text" : "password"}
+                                                                        placeholder="Enter current password"
+                                                                        value={currentPassword}
+                                                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                    >
+                                                                        {showCurrentPassword ? (
+                                                                            <EyeOff className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4" />
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-password">New Password</Label>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        id="new-password"
+                                                                        type={showNewPassword ? "text" : "password"}
+                                                                        placeholder="Enter new password"
+                                                                        value={newPassword}
+                                                                        onChange={(e) => setNewPassword(e.target.value)}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                    >
+                                                                        {showNewPassword ? (
+                                                                            <EyeOff className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4" />
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        id="confirm-password"
+                                                                        type={showConfirmPassword ? "text" : "password"}
+                                                                        placeholder="Confirm new password"
+                                                                        value={confirmPassword}
+                                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                                    >
+                                                                        {showConfirmPassword ? (
+                                                                            <EyeOff className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4" />
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setPasswordDialogOpen(false);
+                                                                    setCurrentPassword("");
+                                                                    setNewPassword("");
+                                                                    setConfirmPassword("");
+                                                                }}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                className='bg-teal-600 hover:bg-teal-700 cursor-pointer'
+                                                                onClick={handlePasswordChange}
+                                                                disabled={loading}
+                                                            >
+                                                                {loading ? "Updating..." : "Save Changes"}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+
+                                            {/* Phone Verification */}
+                                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                                <div>
+                                                    <h3 className="font-medium">Phone Verification</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        Add an extra layer of security to your account
+                                                    </p>
+                                                </div>
+                                                {profile?.is_phone_verified ? (
+                                                    <Button variant="outline" size="sm" disabled className="bg-green-50">
+                                                        <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                        Verified
                                                     </Button>
-                                                </Link>
-                                            )}
-                                            {/* <Dialog>
+                                                ) : (
+                                                    <Link href="/verify-number">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <Phone className="h-4 w-4 mr-1" />
+                                                            Verify
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                                {/* <Dialog>
                                                 <DialogTrigger asChild>
                                                     <Button variant="outline" size="sm">
                                                         <Phone className="h-4 w-4 mr-1" />
@@ -2263,169 +2268,169 @@ const Profile = () => {
                                                     </div>
                                                 </DialogContent>
                                             </Dialog> */}
-                                        </div>
-
-                                        {/* ID Card Verification */}
-                                        {profileData.agent && (
-                                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                                <div>
-                                                    <h3 className="font-medium">ID Card Verification</h3>
-                                                    <p className="text-sm text-gray-500">
-                                                        Verify your identity with a government-issued ID
-                                                    </p>
-                                                </div>
-                                                <Dialog open={isDocDialogOpen} onOpenChange={(open) => {
-                                                    setIsDocDialogOpen(open);
-                                                    if (!open) resetForm();
-                                                }}>
-                                                    <DialogTrigger asChild>
-                                                        <div className='cursor-pointer'>
-                                                            {profile?.is_identity_verified ? (
-                                                                <>
-                                                                    <Button variant="outline" size="sm" disabled className="bg-green-50">
-                                                                        <Check className="h-4 w-4 mr-1 text-green-500" />
-                                                                        Verified
-                                                                    </Button>
-                                                                </>
-                                                            ) : (
-                                                                <Button variant="outline" size="sm" className="bg-green-50">
-                                                                    <CreditCard className="h-4 w-4 mr-1" />
-                                                                    Verify
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-lg">
-                                                        <DialogHeader>
-                                                            <DialogTitle>Verify Your Identity</DialogTitle>
-                                                            <DialogDescription>
-                                                                Please provide the required documents for verification
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-
-                                                        {submitStatus && (
-                                                            <Alert variant={submitStatus === "success" ? "default" : "destructive"} className="mb-4">
-                                                                <AlertCircle className="h-4 w-4" />
-                                                                <AlertTitle>
-                                                                    {submitStatus === "success" ? "Success" : "Error"}
-                                                                </AlertTitle>
-                                                                <AlertDescription>{statusMessage}</AlertDescription>
-                                                            </Alert>
-                                                        )}
-
-                                                        <div className="space-y-4 py-4">
-                                                            {/* ID Card Upload */}
-                                                            <div className="space-y-2">
-                                                                <label className="text-sm font-medium">
-                                                                    ID Card <span className="text-red-500">*</span>
-                                                                </label>
-                                                                <div
-                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
-                                                                        ${isFileSelected('id_card') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
-                                                                >
-                                                                    <div className="flex flex-col items-center">
-                                                                        <CreditCard className={`h-6 w-6 mb-2 ${isFileSelected('id_card') ? 'text-green-500' : 'text-gray-400'}`} />
-                                                                        <p className="text-sm text-gray-500 mb-2">
-                                                                            {isFileSelected('id_card')
-                                                                                ? files.id_card.name
-                                                                                : "Upload a photo of your government-issued ID"}
-                                                                        </p>
-                                                                        <input
-                                                                            type="file"
-                                                                            className="hidden"
-                                                                            id="id-card-upload"
-                                                                            ref={idCardInputRef}
-                                                                            accept="image/*"
-                                                                            onChange={handleFileSelect('id_card')}
-                                                                        />
-                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(idCardInputRef)}>
-                                                                            <Upload className="h-4 w-4 mr-1" />
-                                                                            {isFileSelected('id_card') ? "Change File" : "Select File"}
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Photo Upload */}
-                                                            <div className="space-y-2">
-                                                                <label className="text-sm font-medium">
-                                                                    Your Photo <span className="text-red-500">*</span>
-                                                                </label>
-                                                                <div
-                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
-                  ${isFileSelected('photo') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
-                                                                >
-                                                                    <div className="flex flex-col items-center">
-                                                                        <Camera className={`h-6 w-6 mb-2 ${isFileSelected('photo') ? 'text-green-500' : 'text-gray-400'}`} />
-                                                                        <p className="text-sm text-gray-500 mb-2">
-                                                                            {isFileSelected('photo')
-                                                                                ? files.photo.name
-                                                                                : "Upload a recent photo of yourself"}
-                                                                        </p>
-                                                                        <input
-                                                                            type="file"
-                                                                            className="hidden"
-                                                                            id="photo-upload"
-                                                                            ref={photoInputRef}
-                                                                            accept="image/*"
-                                                                            onChange={handleFileSelect('photo')}
-                                                                        />
-                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(photoInputRef)}>
-                                                                            <Upload className="h-4 w-4 mr-1" />
-                                                                            {isFileSelected('photo') ? "Change File" : "Select File"}
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Business Registration Upload (Optional) */}
-                                                            <div className="space-y-2">
-                                                                <label className="text-sm font-medium">
-                                                                    Business Registration <span className="text-gray-400">(Optional)</span>
-                                                                </label>
-                                                                <div
-                                                                    className={`border-2 border-dashed rounded-md p-4 text-center
-                  ${isFileSelected('business_registration') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
-                                                                >
-                                                                    <div className="flex flex-col items-center">
-                                                                        <FileText className={`h-6 w-6 mb-2 ${isFileSelected('business_registration') ? 'text-green-500' : 'text-gray-400'}`} />
-                                                                        <p className="text-sm text-gray-500 mb-2">
-                                                                            {isFileSelected('business_registration')
-                                                                                ? files.business_registration.name
-                                                                                : "Upload business registration if applicable"}
-                                                                        </p>
-                                                                        <input
-                                                                            type="file"
-                                                                            className="hidden"
-                                                                            id="business-reg-upload"
-                                                                            ref={businessRegInputRef}
-                                                                            accept="image/*,application/pdf"
-                                                                            onChange={handleFileSelect('business_registration')}
-                                                                        />
-                                                                        <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(businessRegInputRef)}>
-                                                                            <Upload className="h-4 w-4 mr-1" />
-                                                                            {isFileSelected('business_registration') ? "Change File" : "Select File"}
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Submit Button */}
-                                                            <Button
-                                                                onClick={handleVerificationSubmit}
-                                                                className="w-full cursor-pointer bg-teal-600 hover:bg-teal-700"
-                                                                disabled={isSubmitting || !files.id_card || !files.photo}
-                                                            >
-                                                                {isSubmitting ? "Submitting..." : "Submit for Verification"}
-                                                            </Button>
-                                                        </div>
-                                                    </DialogContent>
-                                                </Dialog>
                                             </div>
-                                        )}
 
-                                        {/* Delete Account - Confirmation Modal */}
-                                        {/* <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                            {/* ID Card Verification */}
+                                            {profileData.agent && (
+                                                <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                                                    <div>
+                                                        <h3 className="font-medium">ID Card Verification</h3>
+                                                        <p className="text-sm text-gray-500">
+                                                            Verify your identity with a government-issued ID
+                                                        </p>
+                                                    </div>
+                                                    <Dialog open={isDocDialogOpen} onOpenChange={(open) => {
+                                                        setIsDocDialogOpen(open);
+                                                        if (!open) resetForm();
+                                                    }}>
+                                                        <DialogTrigger asChild>
+                                                            <div className='cursor-pointer'>
+                                                                {profile?.is_identity_verified ? (
+                                                                    <>
+                                                                        <Button variant="outline" size="sm" disabled className="bg-green-50">
+                                                                            <Check className="h-4 w-4 mr-1 text-green-500" />
+                                                                            Verified
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button variant="outline" size="sm" className="bg-green-50">
+                                                                        <CreditCard className="h-4 w-4 mr-1" />
+                                                                        Verify
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="sm:max-w-lg">
+                                                            <DialogHeader>
+                                                                <DialogTitle>Verify Your Identity</DialogTitle>
+                                                                <DialogDescription>
+                                                                    Please provide the required documents for verification
+                                                                </DialogDescription>
+                                                            </DialogHeader>
+
+                                                            {submitStatus && (
+                                                                <Alert variant={submitStatus === "success" ? "default" : "destructive"} className="mb-4">
+                                                                    <AlertCircle className="h-4 w-4" />
+                                                                    <AlertTitle>
+                                                                        {submitStatus === "success" ? "Success" : "Error"}
+                                                                    </AlertTitle>
+                                                                    <AlertDescription>{statusMessage}</AlertDescription>
+                                                                </Alert>
+                                                            )}
+
+                                                            <div className="space-y-4 py-4">
+                                                                {/* ID Card Upload */}
+                                                                <div className="space-y-2">
+                                                                    <label className="text-sm font-medium">
+                                                                        ID Card <span className="text-red-500">*</span>
+                                                                    </label>
+                                                                    <div
+                                                                        className={`border-2 border-dashed rounded-md p-4 text-center
+                                                                        ${isFileSelected('id_card') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                    >
+                                                                        <div className="flex flex-col items-center">
+                                                                            <CreditCard className={`h-6 w-6 mb-2 ${isFileSelected('id_card') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                            <p className="text-sm text-gray-500 mb-2">
+                                                                                {isFileSelected('id_card')
+                                                                                    ? files.id_card.name
+                                                                                    : "Upload a photo of your government-issued ID"}
+                                                                            </p>
+                                                                            <input
+                                                                                type="file"
+                                                                                className="hidden"
+                                                                                id="id-card-upload"
+                                                                                ref={idCardInputRef}
+                                                                                accept="image/*"
+                                                                                onChange={handleFileSelect('id_card')}
+                                                                            />
+                                                                            <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(idCardInputRef)}>
+                                                                                <Upload className="h-4 w-4 mr-1" />
+                                                                                {isFileSelected('id_card') ? "Change File" : "Select File"}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Photo Upload */}
+                                                                <div className="space-y-2">
+                                                                    <label className="text-sm font-medium">
+                                                                        Your Photo <span className="text-red-500">*</span>
+                                                                    </label>
+                                                                    <div
+                                                                        className={`border-2 border-dashed rounded-md p-4 text-center
+                  ${isFileSelected('photo') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                    >
+                                                                        <div className="flex flex-col items-center">
+                                                                            <Camera className={`h-6 w-6 mb-2 ${isFileSelected('photo') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                            <p className="text-sm text-gray-500 mb-2">
+                                                                                {isFileSelected('photo')
+                                                                                    ? files.photo.name
+                                                                                    : "Upload a recent photo of yourself"}
+                                                                            </p>
+                                                                            <input
+                                                                                type="file"
+                                                                                className="hidden"
+                                                                                id="photo-upload"
+                                                                                ref={photoInputRef}
+                                                                                accept="image/*"
+                                                                                onChange={handleFileSelect('photo')}
+                                                                            />
+                                                                            <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(photoInputRef)}>
+                                                                                <Upload className="h-4 w-4 mr-1" />
+                                                                                {isFileSelected('photo') ? "Change File" : "Select File"}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Business Registration Upload (Optional) */}
+                                                                <div className="space-y-2">
+                                                                    <label className="text-sm font-medium">
+                                                                        Business Registration <span className="text-gray-400">(Optional)</span>
+                                                                    </label>
+                                                                    <div
+                                                                        className={`border-2 border-dashed rounded-md p-4 text-center
+                  ${isFileSelected('business_registration') ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                                                                    >
+                                                                        <div className="flex flex-col items-center">
+                                                                            <FileText className={`h-6 w-6 mb-2 ${isFileSelected('business_registration') ? 'text-green-500' : 'text-gray-400'}`} />
+                                                                            <p className="text-sm text-gray-500 mb-2">
+                                                                                {isFileSelected('business_registration')
+                                                                                    ? files.business_registration.name
+                                                                                    : "Upload business registration if applicable"}
+                                                                            </p>
+                                                                            <input
+                                                                                type="file"
+                                                                                className="hidden"
+                                                                                id="business-reg-upload"
+                                                                                ref={businessRegInputRef}
+                                                                                accept="image/*,application/pdf"
+                                                                                onChange={handleFileSelect('business_registration')}
+                                                                            />
+                                                                            <Button variant="outline" size="sm" type="button" onClick={triggerFileInput(businessRegInputRef)}>
+                                                                                <Upload className="h-4 w-4 mr-1" />
+                                                                                {isFileSelected('business_registration') ? "Change File" : "Select File"}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Submit Button */}
+                                                                <Button
+                                                                    onClick={handleVerificationSubmit}
+                                                                    className="w-full cursor-pointer bg-teal-600 hover:bg-teal-700"
+                                                                    disabled={isSubmitting || !files.id_card || !files.photo}
+                                                                >
+                                                                    {isSubmitting ? "Submitting..." : "Submit for Verification"}
+                                                                </Button>
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                </div>
+                                            )}
+
+                                            {/* Delete Account - Confirmation Modal */}
+                                            {/* <div className="flex items-center justify-between py-2 border-t border-gray-200">
                                             <div>
                                                 <h3 className="font-medium text-red-600">Delete Account</h3>
                                                 <p className="text-sm text-gray-500">
@@ -2465,119 +2470,117 @@ const Profile = () => {
                                                 </DialogContent>
                                             </Dialog>
                                         </div> */}
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                            <TabsContent value="favorites" className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {favorites?.map((listing: any, index: number) => (
-                                        <Card key={index} onClick={() => handleCardClick(listing.property_id)} className="h-full cursor-pointer">
-                                            <div className="relative h-48">
-                                                <img
-                                                    src={listing.image}
-                                                    alt={listing.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                <Badge
-                                                    className={`absolute top-3 right-3 ${listing.status === 'Active' ? 'bg-green-500' :
-                                                        listing.status === 'Under Contract' ? 'bg-amber-500' :
-                                                            'bg-blue-500'
-                                                        }`}
-                                                >
-                                                    {listing.status}
-                                                </Badge>
-                                            </div>
-                                            <CardHeader className="pb-2">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <CardTitle>{listing.title}</CardTitle>
-                                                        <CardDescription className="flex items-center mt-1">
-                                                            <MapPin className="h-3 w-3 mr-1" /> {listing.address}
-                                                        </CardDescription>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
-                                                        <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                    </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="favorites" className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {favorites?.map((listing: any, index: number) => (
+                                            <Card key={index} onClick={() => handleCardClick(listing.property_id)} className="h-full cursor-pointer">
+                                                <div className="relative h-48 mt-[-24px]">
+                                                    <img
+                                                        src={listing.images[0]}
+                                                        alt={listing.title}
+                                                        className="w-full h-full object-cover rounded-t-md"
+                                                    />
+                                                    {/* <Badge
+                                                        className={`absolute top-3 right-3`}
+                                                    >
+                                                        {listing.status}
+                                                    </Badge> */}
                                                 </div>
-                                            </CardHeader>
-                                            <CardContent className="pt-2">
-                                                <div className="flex justify-between text-sm mb-4">
-                                                    <div className="flex items-center flex-wrap gap-1">
-                                                        <Badge variant="outline" className="mr-1">
-                                                            {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                        </Badge>
-                                                        <Badge variant="outline" className="mr-1">
-                                                            {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                        </Badge>
-                                                        <Badge variant="outline">
-                                                            {listing.area} sqft
-                                                        </Badge>
-                                                    </div>
-                                                    <Badge variant="secondary">{listing.type}</Badge>
-                                                </div>
-
-                                                <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Views</p>
-                                                        <p className="font-semibold">{listing.views}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Inquiries</p>
-                                                        <p className="font-semibold">{listing.inquiries}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Favorites</p>
-                                                        <p className="font-semibold">{listing.favorites}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between mt-4">
-                                                    <div className="flex items-center">
-                                                        <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
-                                                            listing.performance?.trend === 'down' ? 'text-red-600' :
-                                                                'text-gray-600'
-                                                            }`}>
-                                                            {listing.performance?.trend === 'up' ? (
-                                                                <TrendingUp className="h-4 w-4 mr-1" />
-                                                            ) : listing.performance?.trend === 'down' ? (
-                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
-                                                            ) : (
-                                                                <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
-                                                            )}
-                                                            <span className="text-sm font-medium">
-                                                                {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
-                                                            </span>
+                                                <CardHeader className="pb-2">
+                                                    <div className="flex flex-col">
+                                                        <div>
+                                                            <CardTitle>{listing.title}</CardTitle>
+                                                            <CardDescription className="flex items-center mt-1">
+                                                                <MapPin className="h-3 w-3 mr-1" /> {listing.address}
+                                                            </CardDescription>
                                                         </div>
-                                                        <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                        <div className="text-left">
+                                                            <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
+                                                            {/* <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p> */}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                                {favorites?.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
-                                        <svg
-                                            className="w-16 h-16 text-gray-300 mb-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                            />
-                                        </svg>
-                                        <h2 className="text-lg font-medium text-gray-700 mb-1">No favorites found</h2>
-                                        <p className="text-gray-500 text-center">This user hasn't added any items to their favorites yet.</p>
+                                                </CardHeader>
+                                                <CardContent className="pt-2">
+                                                    <div className="flex justify-between text-sm mb-4">
+                                                        <div className="flex items-center flex-wrap gap-1">
+                                                            <Badge variant="outline" className="mr-1">
+                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="mr-1">
+                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                            </Badge>
+                                                            <Badge variant="outline">
+                                                                {listing.area} sqft
+                                                            </Badge>
+                                                        </div>
+                                                        <Badge variant="secondary">{listing.type}</Badge>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Views</p>
+                                                            <p className="font-semibold">{listing.views}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Inquiries</p>
+                                                            <p className="font-semibold">{listing.inquiries}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">Favorites</p>
+                                                            <p className="font-semibold">{listing.favorites}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between mt-4">
+                                                        <div className="flex items-center">
+                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
+                                                                listing.performance?.trend === 'down' ? 'text-red-600' :
+                                                                    'text-gray-600'
+                                                                }`}>
+                                                                {listing.performance?.trend === 'up' ? (
+                                                                    <TrendingUp className="h-4 w-4 mr-1" />
+                                                                ) : listing.performance?.trend === 'down' ? (
+                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
+                                                                ) : (
+                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
+                                                                )}
+                                                                <span className="text-sm font-medium">
+                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                     </div>
-                                )}
-                            </TabsContent>
-                        </Tabs>
+                                    {favorites?.length === 0 && (
+                                        <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+                                            <svg
+                                                className="w-16 h-16 text-gray-300 mb-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="2"
+                                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                />
+                                            </svg>
+                                            <h2 className="text-lg font-medium text-gray-700 mb-1">No favorites found</h2>
+                                            <p className="text-gray-500 text-center">This user hasn't added any items to their favorites yet.</p>
+                                        </div>
+                                    )}
+                                </TabsContent>
+                            </Tabs>
+                        }
                     </div>
                 </div>
             </div>

@@ -173,7 +173,7 @@ const VerifyOTP = () => {
             <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow-lg">
                 <h2 className="text-2xl font-bold text-center text-teal-700 mb-2">Verify Your Email</h2>
                 <p className="text-center text-gray-600 mb-6">
-                    We've sent a 6-digit code to <span className="font-medium text-teal-600">{email}</span>
+                    We've sent a 5-digit code to <span className="font-medium text-teal-600">{email}</span>
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -187,7 +187,7 @@ const VerifyOTP = () => {
                                 <input
                                     key={index}
                                     ref={(el: any) => (inputRefs.current[index] = el)}
-                                    type="text"
+                                    type="number"
                                     maxLength={1}
                                     value={digit}
                                     onChange={(e) => handleOTPChange(index, e.target.value)}

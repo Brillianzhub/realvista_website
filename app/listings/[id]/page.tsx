@@ -210,6 +210,28 @@ const PropertyDetailsPage = () => {
         return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
+    const handlePhoneCall = () => {
+        if (listing.owner.phone_number) {
+            window.location.href = `tel:${listing.owner.phone_number}`
+        }
+    }
+
+    const handleWhatsApp = () => {
+        if (listing.owner.phone_number) {
+            const message = encodeURIComponent(`Hi ${listing.owner.owner_name}, I'm interested in your property listing.`)
+            const whatsappUrl = `https://wa.me/${listing.owner.phone_number.replace(/\D/g, '')}?text=${message}`
+            window.open(whatsappUrl, '_blank')
+        }
+    }
+
+    const handleEmail = () => {
+        if (listing.owner.email) {
+            const subject = encodeURIComponent('Property Inquiry')
+            const body = encodeURIComponent(`Hi ${listing.owner.owner_name},\n\nI'm interested in your property listing and would like to get more information.\n\nThank you.`)
+            window.location.href = `mailto:${listing.owner.email}?subject=${subject}&body=${body}`
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-teal-50">
@@ -621,6 +643,13 @@ const PropertyDetailsPage = () => {
                                                             </AvatarFallback>
                                                         )}
                                                     </Avatar>
+                                                    <div className="w-full p-4 flex items-center justify-center mt-[-10px] gap-2 rounded-lg">
+                                                        <h2>Ratings:</h2>
+                                                        <div className="flex items-center">
+                                                            <Star className="text-yellow-500 mr-1" />
+                                                            <span className="font-semibold">{listing?.owner?.owner_rating || 0.0}</span>
+                                                        </div>
+                                                    </div>
 
                                                     <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
                                                         <h4 className="font-medium mb-2 text-center text-teal-600">Contact Information</h4>
@@ -671,23 +700,32 @@ const PropertyDetailsPage = () => {
                                                     <div className="mt-6 w-full">
                                                         <h4 className="font-medium mb-2">Preferred Contact Method</h4>
                                                         <div className="flex space-x-2 text-sm justify-start">
-                                                            {listing.owner.contact_by_phone && (<Badge className={`py-2 ${listing.owner.contact_by_phone ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
-                                                                <Phone className="h-3 w-3 mr-1" /> Phone
-                                                            </Badge>)
+                                                            {listing.owner.contact_by_phone && (
+                                                                <Badge
+                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
+                                                                    onClick={handlePhoneCall}
+                                                                >
+                                                                    <Phone className="h-3 w-3 mr-1" /> Phone
+                                                                </Badge>
+                                                            )}
 
-                                                            }
-                                                            {listing.owner.contact_by_whatsapp && (<Badge className={`py-2 ${listing.owner.contact_by_whatsapp ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
-                                                                <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                                                            </Badge>)
+                                                            {listing.owner.contact_by_whatsapp && (
+                                                                <Badge
+                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
+                                                                    onClick={handleWhatsApp}
+                                                                >
+                                                                    <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
+                                                                </Badge>
+                                                            )}
 
-                                                            }
-                                                            {listing.owner.contact_by_email && (<Badge className={`py-2 ${listing.owner.contact_by_email ? 'bg-teal-500' : 'bg-gray-200 text-gray-600'}`}>
-                                                                <Mail className="h-3 w-3 mr-1" /> Email
-                                                            </Badge>)
-
-                                                            }
-
-
+                                                            {listing.owner.contact_by_email && (
+                                                                <Badge
+                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
+                                                                    onClick={handleEmail}
+                                                                >
+                                                                    <Mail className="h-3 w-3 mr-1" /> Email
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

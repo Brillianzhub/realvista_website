@@ -124,7 +124,7 @@ const ChangePassword = () => {
 
     return (
         <div className="py-20">
-            <div className="w-[450px] mx-auto mt-10 p-8 bg-white rounded-lg shadow-lg">
+            <div className="md:w-[450px] mx-auto mt-10 p-8 bg-white rounded-lg shadow-lg">
                 <h2 className="text-2xl font-bold text-center text-teal-700 mb-2">Change Your Password</h2>
                 <p className="text-center text-gray-600 mb-6">
                     Create a new password for <span className="font-medium text-teal-600">{email}</span>

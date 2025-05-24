@@ -201,6 +201,26 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   };
 
 
+  const handleViewListing = async (id: number) => {
+    try {
+      // Make POST request to track the property view
+      await api.post(`/market/view-property/${id}`, {}, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`
+        }
+      });
+
+      // Navigate to the listing page
+      router.push(`/listings/${id}`);
+    } catch (error) {
+      console.error('Error tracking property view:', error);
+      // Still navigate even if the tracking fails
+      router.push(`/listings/${id}`);
+    }
+  }
+
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -210,7 +230,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/listings/${property.id}`} className="block">
+      <div className="block">
         <div className="relative">
           <div className="relative overflow-hidden" style={{ height: "240px" }}>
             <img
@@ -243,12 +263,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
             </button>
           </div>
         </div>
-      </Link>
+      </div>
 
-      <div className="p-5">
-        <Link href={`/listings/${property.id}`}>
-          <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">{property.title}</h3>
-        </Link>
+      <div onClick={() => handleViewListing(property.id)} className="p-5 cursor-pointer">
+        <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">{property.title}</h3>
         <div className="flex items-center mb-3">
           <MapPin className="mr-2 text-[#348b8b] w-4 h-4" />
           <span className="text-gray-600 text-sm">{property.address}, {property.city}, {property.state}</span>

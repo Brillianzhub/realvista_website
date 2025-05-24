@@ -55,26 +55,35 @@ import {
 } from "@/components/ui/table";
 import api from "@/config/apiClient";
 import { useRouter } from "next/navigation";
+import DashboardLayout from "../DashboardLayout";
+
+// Currency interface based on your API response
+interface Currency {
+    id: number;
+    currency_code: string;
+    description: string | null;
+    rate: string;
+    base: string;
+}
 
 // Define the form schema with Zod
 const currencySchema = z.object({
     currencies: z.array(
         z.object({
-            code: z.string().min(3, {
+            id: z.number().optional(),
+            currency_code: z.string().min(3, {
                 message: "Currency code must be at least 3 characters.",
             }).max(3, {
                 message: "Currency code must be exactly 3 characters.",
             }),
-            name: z.string().min(2, {
-                message: "Currency name is required.",
-            }),
-            rate: z.coerce
-                .number({
-                    invalid_type_error: "Rate must be a number."
-                })
-                .positive({
+            description: z.string().nullable().optional(),
+            rate: z.string().refine(
+                (val) => !isNaN(Number(val)) && Number(val) > 0,
+                {
                     message: "Rate must be a positive number."
-                }),
+                }
+            ),
+            base: z.string(),
             isBase: z.boolean().default(false),
         })
     ).min(1, {
@@ -85,15 +94,6 @@ const currencySchema = z.object({
 // TypeScript type for our form
 type CurrencyFormValues = z.infer<typeof currencySchema>;
 
-// Default values for the form
-const defaultValues: CurrencyFormValues = {
-    currencies: [
-        { code: "USD", name: "US Dollar", rate: 1, isBase: true },
-        { code: "EUR", name: "Euro", rate: 0.92, isBase: false },
-        { code: "GBP", name: "British Pound", rate: 0.79, isBase: false },
-    ],
-};
-
 export default function CurrencyRatesPage() {
     // Layout state
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -103,18 +103,23 @@ export default function CurrencyRatesPage() {
     const [status, setStatus] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(true);
+    const [updateLoading, setUpdateLoading] = useState(false);
     const router = useRouter();
     const [userData, setUserData] = useState<any>();
+    const [currencies, setCurrencies] = useState<Currency[]>([]);
+    const [baseCurrency, setBaseCurrency] = useState<string>("EUR");
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
     // Initialize the form with React Hook Form
     const form = useForm<any>({
         resolver: zodResolver(currencySchema),
-        defaultValues,
+        defaultValues: {
+            currencies: []
+        },
     });
 
     // Use field array for dynamic currency list
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
         name: "currencies",
     });
@@ -154,29 +159,81 @@ export default function CurrencyRatesPage() {
     const fetchCurrencyRates = async () => {
         setFetchLoading(true);
         try {
-            // Mock API call - replace with your actual endpoint
-            const response = await api.get('/update-currency-rates/', {
+            const response = await api.get('/currencies/', {
                 headers: {
                     Authorization: `Token ${token}`
                 }
             });
 
-            // Update form with fetched data
-            if (response.data && response.data.currencies) {
-                form.reset({ currencies: response.data.currencies });
+            // The response is an array of currency objects
+            const currencyData: Currency[] = response.data;
+            setCurrencies(currencyData);
+            
+            // Find the base currency (should be EUR based on your data)
+            const baseCurr = currencyData.find(c => c.base === c.currency_code);
+            if (baseCurr) {
+                setBaseCurrency(baseCurr.currency_code);
             }
+
+            // Transform data for the form
+            const formData = currencyData.map(currency => ({
+                id: currency.id,
+                currency_code: currency.currency_code,
+                description: currency.description,
+                rate: currency.rate,
+                base: currency.base,
+                isBase: currency.base === currency.currency_code
+            }));
+
+            replace(formData);
+            
         } catch (error) {
             console.error("Error fetching currency rates:", error);
             setStatus({
                 success: false,
-                message: "Failed to fetch currency rates. Using default values.",
+                message: "Failed to fetch currency rates. Please try again.",
             });
         } finally {
             setFetchLoading(false);
         }
     };
 
-    const handleUpdateCurrencyRates = async (values: any) => {
+    const handleUpdateCurrencyRates = async () => {
+        setUpdateLoading(true);
+        setStatus(null);
+
+        try {
+            // Call the update endpoint using GET method
+            const response = await api.get('/update-currency-rates/', {
+                headers: {
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            console.log("Update API response:", response.data);
+
+            // Handle successful response
+            setStatus({ 
+                success: true, 
+                message: "Currency rates updated successfully from external source!" 
+            });
+
+            // Refresh the currency data after update
+            await fetchCurrencyRates();
+            
+        } catch (error: any) {
+            // Handle error
+            setStatus({
+                success: false,
+                message: error.response?.data?.message || "Failed to update currency rates. Please try again."
+            });
+            console.error("Error updating currency rates:", error);
+        } finally {
+            setUpdateLoading(false);
+        }
+    };
+
+    const handleSaveCurrencyRates = async (values: CurrencyFormValues) => {
         setLoading(true);
         setStatus(null);
 
@@ -192,9 +249,18 @@ export default function CurrencyRatesPage() {
                 return;
             }
 
-            // Send the POST request to the API endpoint
-            const response = await api.post('/update-currency-rates/',
-                values,
+            // Transform the data back to the API format if needed
+            const apiData = values.currencies.map(currency => ({
+                id: currency.id,
+                currency_code: currency.currency_code,
+                description: currency.description,
+                rate: currency.rate,
+                base: currency.base
+            }));
+
+            // Send the POST request to save the manually edited rates
+            const response = await api.post('/currencies/',
+                { currencies: apiData },
                 {
                     headers: {
                         Authorization: `Token ${token}`
@@ -202,25 +268,31 @@ export default function CurrencyRatesPage() {
                 }
             );
 
-            console.log("API response:", response.data);
+            console.log("Save API response:", response.data);
 
             // Handle successful response
-            setStatus({ success: true, message: "Currency rates updated successfully!" });
+            setStatus({ success: true, message: "Currency rates saved successfully!" });
         } catch (error: any) {
             // Handle error
             setStatus({
                 success: false,
-                message: error.response?.data?.message || "Failed to update currency rates. Please try again."
+                message: error.response?.data?.message || "Failed to save currency rates. Please try again."
             });
-            console.error("Error updating currency rates:", error);
+            console.error("Error saving currency rates:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const addNewCurrency = () => {
-        append({ code: "", name: "", rate: 0, isBase: false });
-    };
+    // const addNewCurrency = () => {
+    //     append({ 
+    //         currency_code: "", 
+    //         description: "", 
+    //         rate: "1.0", 
+    //         base: baseCurrency,
+    //         isBase: false 
+    //     });
+    // };
 
     const handleBaseChange = (index: number, value: boolean) => {
         if (value) {
@@ -231,45 +303,53 @@ export default function CurrencyRatesPage() {
                     form.setValue(`currencies.${i}.isBase`, false);
                 }
             });
+            
+            // Set the new base currency
+            const newBaseCurrency = form.getValues(`currencies.${index}.currency_code`);
+            setBaseCurrency(newBaseCurrency);
+            
+            // Update all currencies to have this as their base
+            currencies.forEach((_: any, i: any) => {
+                form.setValue(`currencies.${i}.base`, newBaseCurrency);
+            });
         }
-    };
-
-    const toggleSidebar = () => {
-        setSidebarOpen(!sidebarOpen);
-    };
-
-    const toggleMobile = () => {
-        setMobileOpen(!mobileOpen);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('userData');
-        localStorage.removeItem('token');
-        setUserData(null);
-        router.push("/dashboard/auth");
-        window.dispatchEvent(new Event('userLogout'));
     };
 
     // Currency content component
     const CurrencyContent = () => {
         return (
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Currency Rates</h1>
-                        <p className="text-gray-500">Manage exchange rates for your application</p>
-                    </div>
-                </div>
-
                 <Card>
                     <CardHeader>
-                        <CardTitle>Update Currency Exchange Rates</CardTitle>
-                        <CardDescription>
-                            Set and manage currency exchange rates. Select one currency as the base (rate 1.0).
-                        </CardDescription>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle>Manage Currency Exchange Rates</CardTitle>
+                                <CardDescription>
+                                    View and manage currency exchange rates. Base currency: {baseCurrency}
+                                </CardDescription>
+                            </div>
+                            <Button 
+                                onClick={handleUpdateCurrencyRates}
+                                disabled={updateLoading || fetchLoading}
+                                variant="outline"
+                                className="ml-4"
+                            >
+                                {updateLoading ? (
+                                    <>
+                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                        Fetch Latest Rates
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </CardHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleUpdateCurrencyRates)} className="space-y-4">
+                        <form onSubmit={form.handleSubmit(handleSaveCurrencyRates)} className="space-y-4">
                             <CardContent>
                                 {fetchLoading ? (
                                     <div className="flex justify-center items-center p-6">
@@ -278,110 +358,123 @@ export default function CurrencyRatesPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Code</TableHead>
-                                                    <TableHead>Currency Name</TableHead>
-                                                    <TableHead>Exchange Rate</TableHead>
-                                                    <TableHead>Base</TableHead>
-                                                    <TableHead></TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {fields.map((field, index) => (
-                                                    <TableRow key={field.id}>
-                                                        <TableCell>
-                                                            <FormField
-                                                                control={form.control}
-                                                                name={`currencies.${index}.code`}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormControl>
-                                                                            <Input placeholder="USD" {...field} className="w-20" maxLength={3} />
-                                                                        </FormControl>
-                                                                        <FormMessage />
-                                                                    </FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <FormField
-                                                                control={form.control}
-                                                                name={`currencies.${index}.name`}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormControl>
-                                                                            <Input placeholder="US Dollar" {...field} />
-                                                                        </FormControl>
-                                                                        <FormMessage />
-                                                                    </FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <FormField
-                                                                control={form.control}
-                                                                name={`currencies.${index}.rate`}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormControl>
-                                                                            <Input
-                                                                                type="number"
-                                                                                step="0.0001"
-                                                                                placeholder="1.0"
-                                                                                {...field}
-                                                                                disabled={form.watch(`currencies.${index}.isBase`)}
-                                                                                value={form.watch(`currencies.${index}.isBase`) ? 1 : field.value}
-                                                                                className="w-24"
-                                                                            />
-                                                                        </FormControl>
-                                                                        <FormMessage />
-                                                                    </FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <FormField
-                                                                control={form.control}
-                                                                name={`currencies.${index}.isBase`}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormControl>
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={field.value}
-                                                                                onChange={(e) => {
-                                                                                    field.onChange(e.target.checked);
-                                                                                    handleBaseChange(index, e.target.checked);
-                                                                                    if (e.target.checked) {
-                                                                                        form.setValue(`currencies.${index}.rate`, 1);
-                                                                                    }
-                                                                                }}
-                                                                                className="h-4 w-4"
-                                                                            />
-                                                                        </FormControl>
-                                                                    </FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => remove(index)}
-                                                                disabled={fields.length <= 1}
-                                                            >
-                                                                <Trash2 className="h-4 w-4 text-gray-500" />
-                                                            </Button>
-                                                        </TableCell>
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead className="w-20">Code</TableHead>
+                                                        {/* <TableHead>Currency Name</TableHead> */}
+                                                        <TableHead className="w-32">Exchange Rate</TableHead>
+                                                        <TableHead className="w-20">Base</TableHead>
+                                                        {/* <TableHead className="w-20">Actions</TableHead> */}
                                                     </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {fields.map((field, index) => (
+                                                        <TableRow key={field.id}>
+                                                            <TableCell>
+                                                                <FormField
+                                                                    control={form.control}
+                                                                    name={`currencies.${index}.currency_code`}
+                                                                    render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormControl>
+                                                                                <Input 
+                                                                                    placeholder="USD" 
+                                                                                    {...field} 
+                                                                                    className="w-16 text-center font-mono" 
+                                                                                    maxLength={3}
+                                                                                    style={{ textTransform: 'uppercase' }}
+                                                                                />
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            {/* <TableCell>
+                                                                <FormField
+                                                                    control={form.control}
+                                                                    name={`currencies.${index}.description`}
+                                                                    render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormControl>
+                                                                                <Input 
+                                                                                    placeholder="US Dollar" 
+                                                                                    {...field} 
+                                                                                    value={field.value || ''}
+                                                                                />
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )}
+                                                                />
+                                                            </TableCell> */}
+                                                            <TableCell>
+                                                                <FormField
+                                                                    control={form.control}
+                                                                    name={`currencies.${index}.rate`}
+                                                                    render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormControl>
+                                                                                <Input
+                                                                                    type="text"
+                                                                                    placeholder="1.0"
+                                                                                    {...field}
+                                                                                    disabled={form.watch(`currencies.${index}.isBase`)}
+                                                                                    value={form.watch(`currencies.${index}.isBase`) ? "1.000000" : field.value}
+                                                                                    className="w-28 text-right font-mono"
+                                                                                />
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <FormField
+                                                                    control={form.control}
+                                                                    name={`currencies.${index}.isBase`}
+                                                                    render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormControl>
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={field.value}
+                                                                                    onChange={(e) => {
+                                                                                        field.onChange(e.target.checked);
+                                                                                        handleBaseChange(index, e.target.checked);
+                                                                                        if (e.target.checked) {
+                                                                                            form.setValue(`currencies.${index}.rate`, "1.000000");
+                                                                                        }
+                                                                                    }}
+                                                                                    className="h-4 w-4"
+                                                                                />
+                                                                            </FormControl>
+                                                                        </FormItem>
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            {/* <TableCell>
+                                                                {fields.length > 1 && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => remove(index)}
+                                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </TableCell> */}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
 
-                                        <Button
+                                        {/* <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
@@ -390,24 +483,27 @@ export default function CurrencyRatesPage() {
                                         >
                                             <Plus className="mr-2 h-4 w-4" />
                                             Add Currency
-                                        </Button>
+                                        </Button> */}
                                     </>
                                 )}
                             </CardContent>
-                            <CardFooter>
-                                <Button type="submit" disabled={loading || fetchLoading} className="ml-auto">
+                            <CardFooter className="flex justify-between">
+                                <div className="text-sm text-gray-500">
+                                    {currencies.length} currencies loaded
+                                </div>
+                                {/* <Button type="submit" disabled={loading || fetchLoading}>
                                     {loading ? (
                                         <>
                                             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                            Updating...
+                                            Saving...
                                         </>
                                     ) : (
                                         <>
                                             <Save className="mr-2 h-4 w-4" />
-                                            Save Changes
+                                            Save Manual Changes
                                         </>
                                     )}
-                                </Button>
+                                </Button> */}
                             </CardFooter>
                         </form>
                     </Form>
@@ -425,156 +521,11 @@ export default function CurrencyRatesPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Mobile sidebar toggle */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b p-4 flex items-center justify-between">
-                <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={toggleMobile}>
-                        {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </Button>
-                    <span className="ml-3 text-xl font-bold">Realvista</span>
-                </div>
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 rounded-full">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src="/avatar.png" />
-                                <AvatarFallback>JD</AvatarFallback>
-                            </Avatar>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Settings</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Logout</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            {/* Mobile sidebar */}
-            <div className={`lg:hidden fixed inset-0 z-20 transform ${mobileOpen ? "translate-x-0" : "-translate-x-full"
-                } transition-transform duration-300 ease-in-out`}>
-                <div className="relative flex flex-col h-full max-w-xs w-full bg-white border-r shadow-lg pt-16">
-                    <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-                        <nav className="flex-1 space-y-2">
-                            <Link href="/dashboard" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                                <LayoutDashboard className="mr-3 h-5 w-5" />
-                                <span>Dashboard</span>
-                            </Link>
-                            <Link href="/dashboard/notifications" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                                <Bell className="mr-3 h-5 w-5" />
-                                <span>Notifications</span>
-                            </Link>
-                            <Link href="/dashboard/currency" className="flex items-center px-4 py-3 bg-gray-100 text-gray-900 rounded-lg">
-                                <DollarSign className="mr-3 h-5 w-5" />
-                                <span>Currency Rates</span>
-                            </Link>
-                            <Link href="/dashboard/users" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                                <Users className="mr-3 h-5 w-5" />
-                                <span>Users</span>
-                            </Link>
-                            <Link href="/dashboard/settings" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                                <Settings className="mr-3 h-5 w-5" />
-                                <span>Settings</span>
-                            </Link>
-                            <Link href="/dashboard/help" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                                <HelpCircle className="mr-3 h-5 w-5" />
-                                <span>Help & Support</span>
-                            </Link>
-                        </nav>
-
-                        <div className="mt-6 pt-6 border-t">
-                            <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-                                <LogOut className="mr-3 h-5 w-5" />
-                                <span>Logout</span>
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Backdrop */}
-                <div
-                    className="absolute inset-0 bg-gray-600 bg-opacity-50"
-                    onClick={toggleMobile}
-                ></div>
-            </div>
-
-            {/* Desktop sidebar */}
-            <div className={`hidden lg:flex lg:flex-col fixed inset-y-0 z-10 ${sidebarOpen ? "lg:w-64" : "lg:w-20"
-                } transition-all duration-300`}>
-                <div className="flex flex-col h-full bg-white border-r">
-                    {/* Logo */}
-                    <div className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} h-16 px-4`}>
-                        {sidebarOpen && <span className="text-xl font-bold">Realvista</span>}
-                        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-                            <ChevronDown className={`h-5 w-5 transform ${sidebarOpen ? "rotate-0" : "rotate-180"}`} />
-                        </Button>
-                    </div>
-
-                    {/* Nav Links */}
-                    <nav className="flex-1 px-2 py-4 pt-10 space-y-2 overflow-y-auto">
-                        <Link
-                            href="/dashboard"
-                            className={`flex items-center ${sidebarOpen ? "px-4 justify-start" : "justify-center"
-                                } py-3 text-gray-700 rounded-lg hover:bg-gray-100`}
-                        >
-                            <LayoutDashboard className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
-                            {sidebarOpen && <span>Notifications</span>}
-                        </Link>
-
-                        <Link
-                            href="/dashboard/currency-management"
-                            className={`flex items-center ${sidebarOpen ? "px-4 justify-start" : "justify-center"
-                                } py-3 bg-gray-100 text-gray-900 rounded-lg`}
-                        >
-                            <DollarSign className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
-                            {sidebarOpen && <span>Currency Rates</span>}
-                        </Link>
-                    </nav>
-
-                    {/* Profile */}
-                    <div className="border-t p-4">
-                        <div className={`flex ${sidebarOpen ? "items-center" : "flex-col items-center justify-center"}`}>
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src="/avatar.png" />
-                                <AvatarFallback>JD</AvatarFallback>
-                            </Avatar>
-
-                            {sidebarOpen && (
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium">{userData?.name}</p>
-                                    <p className="text-xs text-gray-500">{userData?.email}</p>
-                                    <button onClick={handleLogout} className="text-xs text-red-500 cursor-pointer">Log Out</button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main content */}
-            <div className={`${sidebarOpen ? "lg:pl-64" : "lg:pl-20"
-                } transition-all duration-300 pt-0 lg:pt-0`}>
-                <div className="lg:hidden h-16">
-                    {/* Spacer for mobile header */}
-                </div>
-
-                {/* Header */}
-                <header className="hidden lg:block bg-white shadow-sm">
-                    <div className="px-4 sm:px-6 lg:px-8">
-                        {/* Header content if needed */}
-                    </div>
-                </header>
-
-                {/* Page content */}
-                <main className="p-4 sm:p-6 lg:p-8">
-                    <CurrencyContent />
-                </main>
-            </div>
-        </div>
+        <DashboardLayout
+            title="Currency Rates"
+            description="Manage exchange rates for your application"
+        >
+            <CurrencyContent />
+        </DashboardLayout>
     );
 }

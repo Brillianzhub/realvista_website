@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import axios from "axios";
 import {
   LayoutDashboard,
@@ -66,7 +67,32 @@ const defaultValues: Partial<NotificationFormValues> = {
   message: "Check out the latest properties and market news this week!",
 };
 
+// Define navigation items
+const navigationItems = [
+  {
+    name: "Email Notifications",
+    href: "/dashboard",
+    icon: Bell,
+    exact: true, // This will match exactly /dashboard
+  },
+  {
+    name: "Push Notifications", 
+    href: "/dashboard/push-notifications",
+    icon: LayoutDashboard,
+    exact: false,
+  },
+  {
+    name: "Currency Rates",
+    href: "/dashboard/currency-management", 
+    icon: DollarSign,
+    exact: false,
+  },
+];
+
 export default function DashboardWithNotifications() {
+  // Get current pathname for active state
+  const pathname = usePathname();
+  
   // Layout state
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -115,6 +141,14 @@ export default function DashboardWithNotifications() {
 
   const toggleMobile = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  // Function to check if a navigation item is active
+  const isActive = (item: typeof navigationItems[0]) => {
+    if (item.exact) {
+      return pathname === item.href;
+    }
+    return pathname.startsWith(item.href);
   };
 
   // Initialize the form with React Hook Form
@@ -190,7 +224,7 @@ export default function DashboardWithNotifications() {
                 <FormField
                   control={form.control}
                   name="subject"
-                  render={({ field }:any) => (
+                  render={({ field }: any) => (
                     <FormItem>
                       <FormLabel>Subject Line</FormLabel>
                       <FormControl>
@@ -204,14 +238,14 @@ export default function DashboardWithNotifications() {
                 <FormField
                   control={form.control}
                   name="message"
-                  render={({ field }:any) => (
+                  render={({ field }: any) => (
                     <FormItem>
                       <FormLabel>Message</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Enter your message here" 
-                          rows={6} 
-                          {...field} 
+                        <Textarea
+                          placeholder="Enter your message here"
+                          rows={6}
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -251,11 +285,73 @@ export default function DashboardWithNotifications() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar toggle */}
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-300 ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        <div className="flex flex-col h-full">
+          {/* Mobile logo */}
+          <div className="flex items-center justify-between h-16 px-4 border-b">
+            <span className="text-xl font-bold">Realvista</span>
+            <Button variant="ghost" size="icon" onClick={toggleMobile}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Mobile nav */}
+          <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item);
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                    active 
+                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <Icon className="mr-3 h-5 w-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Mobile profile */}
+          <div className="border-t p-4">
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="/avatar.png" />
+                <AvatarFallback>JD</AvatarFallback>
+              </Avatar>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{userData?.name}</p>
+                <p className="text-xs text-gray-500">{userData?.email}</p>
+                <button onClick={handleLogout} className="text-xs text-red-500 cursor-pointer">Log Out</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b p-4 flex items-center justify-between">
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={toggleMobile}>
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <Menu className="h-6 w-6" />
           </Button>
           <span className="ml-3 text-xl font-bold">Realvista</span>
         </div>
@@ -275,53 +371,9 @@ export default function DashboardWithNotifications() {
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-
-      {/* Mobile sidebar */}
-      <div className={`lg:hidden fixed inset-0 z-20 transform ${mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out`}>
-        <div className="relative flex flex-col h-full max-w-xs w-full bg-white border-r shadow-lg pt-16">
-          <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-            <nav className="flex-1 space-y-2">
-              <Link href="/dashboard" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                <LayoutDashboard className="mr-3 h-5 w-5" />
-                <span>Dashboard</span>
-              </Link>
-              <Link href="/dashboard/notifications" className="flex items-center px-4 py-3 bg-gray-100 text-gray-900 rounded-lg">
-                <Bell className="mr-3 h-5 w-5" />
-                <span>Notifications</span>
-              </Link>
-              <Link href="/dashboard/users" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                <Users className="mr-3 h-5 w-5" />
-                <span>Users</span>
-              </Link>
-              <Link href="/dashboard/settings" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                <Settings className="mr-3 h-5 w-5" />
-                <span>Settings</span>
-              </Link>
-              <Link href="/dashboard/help" className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100">
-                <HelpCircle className="mr-3 h-5 w-5" />
-                <span>Help & Support</span>
-              </Link>
-            </nav>
-
-            <div className="mt-6 pt-6 border-t">
-              <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-                <LogOut className="mr-3 h-5 w-5" />
-                <span>Logout</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-gray-600 bg-opacity-50"
-          onClick={toggleMobile}
-        ></div>
       </div>
 
       {/* Desktop sidebar */}
@@ -329,31 +381,37 @@ export default function DashboardWithNotifications() {
         } transition-all duration-300`}>
         <div className="flex flex-col h-full bg-white border-r">
           {/* Logo */}
-          <div className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} h-16 px-4`}>
+          <div className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} h-16 px-4 border-b`}>
             {sidebarOpen && <span className="text-xl font-bold">Realvista</span>}
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <ChevronDown className={`h-5 w-5 transform ${sidebarOpen ? "rotate-0" : "rotate-180"}`} />
+              <ChevronDown className={`h-5 w-5 transform transition-transform ${sidebarOpen ? "rotate-0" : "rotate-180"}`} />
             </Button>
           </div>
 
           {/* Nav Links */}
-          <nav className="flex-1 px-2 py-4 pt-10 space-y-2 overflow-y-auto">
-            <Link
-              href="/dashboard"
-              className={`flex items-center ${sidebarOpen ? "px-4 justify-start" : "justify-center"
-                } py-3 bg-gray-100 text-gray-900 rounded-lg`}
-            >
-              <Bell className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
-              {sidebarOpen && <span>Notifications</span>}
-            </Link>
-            <Link
-              href="/dashboard/currency-management"
-              className={`flex items-center ${sidebarOpen ? "px-4 justify-start" : "justify-center"
-                } py-3 bg-gray-100 text-gray-900 rounded-lg`}
-            >
-              <DollarSign className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
-              {sidebarOpen && <span>Currency Rates</span>}
-            </Link>
+          <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item);
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center ${
+                    sidebarOpen ? "px-4 justify-start" : "justify-center"
+                  } py-3 rounded-lg transition-colors ${
+                    active 
+                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  title={!sidebarOpen ? item.name : undefined}
+                >
+                  <Icon className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
+                  {sidebarOpen && <span>{item.name}</span>}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Profile */}
@@ -368,7 +426,9 @@ export default function DashboardWithNotifications() {
                 <div className="ml-3">
                   <p className="text-sm font-medium">{userData?.name}</p>
                   <p className="text-xs text-gray-500">{userData?.email}</p>
-                  <button onClick={handleLogout} className="text-xs text-red-500 cursor-pointer">Log Out</button>
+                  <button onClick={handleLogout} className="text-xs text-red-500 cursor-pointer hover:text-red-700">
+                    Log Out
+                  </button>
                 </div>
               )}
             </div>

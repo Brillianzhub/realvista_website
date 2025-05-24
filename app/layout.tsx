@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "./_components/Navbar";
-import Footer from "./_components/Footer";
 import { Toaster } from "@/components/ui/sonner"
 import CookieManager from "./_components/CookieManager";
+import { GoogleAnalytics } from "./_components/GoogleAnalytics";
+import ConditionalLayout from "./_components/ConditionalLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,13 +31,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        <main>
-          {children}
-          <Toaster />
-          <CookieManager />
-        </main>
-        <Footer />
+        <GoogleAnalytics />
+        <ConditionalLayout>
+          <main>
+            {children}
+            <Toaster />
+            <CookieManager />
+          </main>
+        </ConditionalLayout>
       </body>
     </html>
   );

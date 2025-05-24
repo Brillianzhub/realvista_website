@@ -169,13 +169,39 @@ const FeaturedAgents: React.FC = () => {
     });
   };
 
-  const isPhonePreferred = selectedAgent?.preferred_contact_mode === 'phone';
+  const isPhonePreferred = selectedAgent?.preferred_contact_mode === 'phone'
+  const isWhatsAppPreferred = selectedAgent?.preferred_contact_mode === 'whatsapp'
+  const isEmailPreferred = selectedAgent?.preferred_contact_mode === 'email'
 
   const handlePhoneClick = () => {
-    if (isPhonePreferred && selectedAgent?.phone_number) {
-      window.location.href = `tel:${selectedAgent?.phone_number}`;
+    if (selectedAgent?.phone_number) {
+      window.location.href = `tel:${selectedAgent.phone_number}`
     }
-  };
+  }
+
+  const handleWhatsAppClick = () => {
+    if (selectedAgent?.phone_number) {
+      const message = encodeURIComponent(`Hi ${selectedAgent.agency_name || 'there'}, I'm interested in your services and would like to discuss further.`)
+      const whatsappUrl = `https://wa.me/${selectedAgent.phone_number.replace(/\D/g, '')}?text=${message}`
+      window.open(whatsappUrl, '_blank')
+    }
+  }
+
+
+  const getClickHandler = () => {
+    if (isPhonePreferred) return handlePhoneClick
+    if (isWhatsAppPreferred) return handleWhatsAppClick
+    return undefined
+  }
+
+  const getIcon = () => {
+    if (isPhonePreferred) return <Phone size={16} className="mr-1" />
+    if (isWhatsAppPreferred) return <MessageCircle size={16} className="mr-1" />
+    return null
+  }
+
+  const isClickable = isPhonePreferred || isWhatsAppPreferred || isEmailPreferred
+
 
   return (
     <section className="py-20 relative" style={{ background: `linear-gradient(to bottom, ${primaryColor}05, ${primaryColor}15)` }}>
@@ -387,11 +413,12 @@ const FeaturedAgents: React.FC = () => {
                   <div className="mt-6 w-full">
                     <h4 className="font-medium mb-2">Preferred Contact Method</h4>
                     <Badge
-                      className={`w-full justify-center py-2 capitalize flex items-center gap-2 ${isPhonePreferred ? 'cursor-pointer' : ''}`}
+                      className={`w-full justify-center py-2 capitalize flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+                        }`}
                       style={{ backgroundColor: primaryColor }}
-                      onClick={isPhonePreferred ? handlePhoneClick : undefined}
+                      onClick={isClickable ? getClickHandler() : undefined}
                     >
-                      {isPhonePreferred && <Phone size={16} className="mr-1" />}
+                      {getIcon()}
                       {selectedAgent.preferred_contact_mode}
                     </Badge>
                   </div>

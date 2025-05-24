@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import {
     User,
     UserPlus,
@@ -828,4 +828,10 @@ const SignUpPage = () => {
     );
 };
 
-export default SignUpPage;
+export default function SignUpPageComponent() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SignUpPage />
+        </Suspense>
+    );
+}

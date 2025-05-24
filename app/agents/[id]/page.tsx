@@ -253,6 +253,39 @@ const AgentProfilePage = () => {
         });
     };
 
+     const isPhonePreferred = agent?.preferred_contact_mode === 'phone'
+      const isWhatsAppPreferred = agent?.preferred_contact_mode === 'whatsapp'
+      const isEmailPreferred = agent?.preferred_contact_mode === 'email'
+    
+      const handlePhoneClick = () => {
+        if (agent?.phone_number) {
+          window.location.href = `tel:${agent.phone_number}`
+        }
+      }
+    
+      const handleWhatsAppClick = () => {
+        if (agent?.phone_number) {
+          const message = encodeURIComponent(`Hi ${agent.agency_name || 'there'}, I'm interested in your services and would like to discuss further.`)
+          const whatsappUrl = `https://wa.me/${agent.phone_number.replace(/\D/g, '')}?text=${message}`
+          window.open(whatsappUrl, '_blank')
+        }
+      }
+    
+    
+      const getClickHandler = () => {
+        if (isPhonePreferred) return handlePhoneClick
+        if (isWhatsAppPreferred) return handleWhatsAppClick
+        return undefined
+      }
+    
+      const getIcon = () => {
+        if (isPhonePreferred) return <Phone size={16} className="mr-1" />
+        if (isWhatsAppPreferred) return <MessageCircle size={16} className="mr-1" />
+        return null
+      }
+    
+      const isClickable = isPhonePreferred || isWhatsAppPreferred || isEmailPreferred
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -417,9 +450,12 @@ const AgentProfilePage = () => {
                             <div className="mt-8">
                                 <h4 className="font-medium mb-3">Preferred Contact Method</h4>
                                 <Badge
-                                    className="w-full justify-center py-2 capitalize"
+                                    className={`w-full justify-center py-2 capitalize flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+                                        }`}
                                     style={{ backgroundColor: primaryColor }}
+                                    onClick={isClickable ? getClickHandler() : undefined}
                                 >
+                                    {getIcon()}
                                     {agent.preferred_contact_mode}
                                 </Badge>
                             </div>
@@ -695,7 +731,7 @@ const AgentProfilePage = () => {
                                                         </p>
                                                         <div className="flex justify-between items-center">
                                                             <div className="font-bold text-xl" style={{ color: primaryColor }}>
-                                                                ${property.price.toLocaleString()}
+                                                                {property.currency} {parseFloat(property.price).toLocaleString()}
                                                             </div>
                                                             <Link
                                                                 href={`/listings/${property.id}`}
