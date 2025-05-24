@@ -2,8 +2,7 @@
 
 import Script from 'next/script'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
-
+import { useEffect, Suspense } from 'react'
 
 // Extend Window interface for gtag
 declare global {
@@ -24,8 +23,8 @@ const pageview = (url: string) => {
     }
 }
 
-// Google Analytics component
-export const GoogleAnalytics = () => {
+// Separate component for tracking that uses useSearchParams
+const PageViewTracker = () => {
     const pathname = usePathname()
     const searchParams = useSearchParams()
 
@@ -36,6 +35,11 @@ export const GoogleAnalytics = () => {
         }
     }, [pathname, searchParams])
 
+    return null // This component doesn't render anything
+}
+
+// Google Analytics component
+export const GoogleAnalytics = () => {
     if (!GA_ID) return null
 
     return (
@@ -52,6 +56,9 @@ export const GoogleAnalytics = () => {
           gtag('config', '${GA_ID}');
         `}
             </Script>
+            <Suspense fallback={null}>
+                <PageViewTracker />
+            </Suspense>
         </>
     )
 }

@@ -1,8 +1,7 @@
 "use client"
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
-import { ChevronUp } from 'lucide-react';
+
 
 export default function PrivacyPolicy() {
   const [showScrollButton, setShowScrollButton] = useState(false);
