@@ -26,7 +26,9 @@ import {
     Facebook,
     Twitter,
     Linkedin,
-    Star
+    Star,
+    Calculator,
+    DollarSign
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -391,7 +393,20 @@ const PropertyDetailsPage = () => {
                                     <span className="font-semibold">{listing.availability}</span>
                                     <span className="text-sm text-gray-500">Availability</span>
                                 </div>
+                                {/* Price per Square Meter */}
+                                <div className="flex flex-col items-center">
+                                    <Calculator className="text-teal-500 mb-2 w-8 h-8" />
+                                    <span className="font-semibold">
+                                        {listing.price && listing.square_feet
+                                            ? `${listing.currency}${Math.round(listing.price / listing.square_feet).toLocaleString()}/sq m`
+                                            : 'N/A'
+                                        }
+                                    </span>
+                                    <span className="text-sm text-gray-500">Price per sq m</span>
+                                </div>
+                             
                             </div>
+
                             {listing.payment_plans.length > 0 && (<h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>)}
 
                             <div className='w-full flex gap-8 mb-4'>

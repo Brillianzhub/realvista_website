@@ -66,9 +66,9 @@ export default function LoginPage() {
             <div className="hidden md:flex md:w-1/2 bg-teal-700" style={{ backgroundColor: '#348b8b' }}>
                 <div className="flex flex-col justify-center items-center w-full p-12 text-white">
                     <Home size={64} className="mb-6" />
-                    <h1 className="text-4xl font-bold mb-4">Welcome Back</h1>
+                    <h1 className="text-4xl font-bold mb-4">Sign In to Admin</h1>
                     <p className="text-lg text-center max-w-md">
-                        Access your real estate portfolio and discover new property opportunities in just a few clicks.
+                        Access insights and manage operations.
                     </p>
                 </div>
             </div>

@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Send,
   RefreshCw,
-  DollarSign
+  DollarSign,
+  TrendingUp
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,6 +86,12 @@ const navigationItems = [
     name: "Currency Rates",
     href: "/dashboard/currency-management", 
     icon: DollarSign,
+    exact: false,
+  },
+  {
+    name: "Trends",
+    href: "/dashboard/trends", 
+    icon: TrendingUp,
     exact: false,
   },
 ];
@@ -319,7 +326,7 @@ export default function DashboardWithNotifications() {
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                     active 
-                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
+                      ? "bg-blue-50 text-teal-700 border-r-2 border-teal-700" 
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
@@ -402,7 +409,7 @@ export default function DashboardWithNotifications() {
                     sidebarOpen ? "px-4 justify-start" : "justify-center"
                   } py-3 rounded-lg transition-colors ${
                     active 
-                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
+                      ? "bg-teal-50 text-teal-700 border-r-2 border-teal-700" 
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                   title={!sidebarOpen ? item.name : undefined}

@@ -119,7 +119,7 @@ const EmailNotificationsPage = () => {
                                             <FormControl>
                                                 <Textarea
                                                     placeholder="Enter your message here"
-                                                    rows={6}
+                                                    rows={10}
                                                     {...field}
                                                 />
                                             </FormControl>

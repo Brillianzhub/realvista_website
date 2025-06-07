@@ -363,7 +363,7 @@ export default function CurrencyRatesPage() {
                                                 <TableHeader>
                                                     <TableRow>
                                                         <TableHead className="w-20">Code</TableHead>
-                                                        {/* <TableHead>Currency Name</TableHead> */}
+                                                        <TableHead>Description</TableHead>
                                                         <TableHead className="w-32">Exchange Rate</TableHead>
                                                         <TableHead className="w-20">Base</TableHead>
                                                         {/* <TableHead className="w-20">Actions</TableHead> */}
@@ -392,7 +392,7 @@ export default function CurrencyRatesPage() {
                                                                     )}
                                                                 />
                                                             </TableCell>
-                                                            {/* <TableCell>
+                                                            <TableCell>
                                                                 <FormField
                                                                     control={form.control}
                                                                     name={`currencies.${index}.description`}
@@ -400,7 +400,7 @@ export default function CurrencyRatesPage() {
                                                                         <FormItem>
                                                                             <FormControl>
                                                                                 <Input 
-                                                                                    placeholder="US Dollar" 
+                                                                                    placeholder="Description" 
                                                                                     {...field} 
                                                                                     value={field.value || ''}
                                                                                 />
@@ -409,7 +409,7 @@ export default function CurrencyRatesPage() {
                                                                         </FormItem>
                                                                     )}
                                                                 />
-                                                            </TableCell> */}
+                                                            </TableCell>
                                                             <TableCell>
                                                                 <FormField
                                                                     control={form.control}

@@ -6,15 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Bell,
-    Users,
-    Settings,
-    HelpCircle,
-    LogOut,
     Menu,
     X,
-    ChevronDown,
     DollarSign,
-    LucideIcon
+    LucideIcon,
+    TrendingUp
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,6 +51,12 @@ const navigationItems: NavigationItem[] = [
         name: "Currency Rates",
         href: "/dashboard/currency-management",
         icon: DollarSign,
+        exact: false,
+    },
+    {
+        name: "Trends",
+        href: "/dashboard/trends",
+        icon: TrendingUp,
         exact: false,
     },
 

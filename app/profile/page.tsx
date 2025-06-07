@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     User,
     MapPin,
@@ -35,7 +35,9 @@ import {
     Camera,
     PlusCircle,
     Loader2,
-    Trash2
+    Trash2,
+    MoreVertical,
+    ImagePlus
 } from 'lucide-react';
 import {
     AlertDialog,
@@ -66,6 +68,8 @@ import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CancellationModal from './SubscriptionCancelModal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Agent {
     id: string | null;
@@ -163,6 +167,28 @@ const Profile = () => {
     const [pendingDeleteId, setPendingDeleteId] = useState(null);
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isFeaturesDialogOpen, setIsFeaturesDialogOpen] = useState(false);
+    const [currentFeaturesListingId, setCurrentFeaturesListingId] = useState(null);
+    const [featuresData, setFeaturesData] = useState<any>({
+        negotiable: 'no',
+        furnished: false,
+        pet_friendly: false,
+        parking_available: false,
+        swimming_pool: false,
+        garden: false,
+        electricity_proximity: 'moderate',
+        road_network: 'good',
+        development_level: 'moderate',
+        water_supply: false,
+        security: false,
+        additional_features: ''
+    });
+    const [featuresLoading, setFeaturesLoading] = useState(false);
+    const [isFilesDialogOpen, setIsFilesDialogOpen] = useState(false);
+    const [currentFilesListingId, setCurrentFilesListingId] = useState(null);
+    const [filesLoading, setFilesLoading] = useState(false);
+    const [existingFiles, setExistingFiles] = useState<any>([]);
+    const [selectedFiles, setSelectedFiles] = useState<any>([]);
 
     const handlePasswordChange = async () => {
         // Validation
@@ -214,14 +240,120 @@ const Profile = () => {
         }
     };
 
-    const handleDeleteAccount = () => {
-        // Account deletion logic would go here
-        alert("Account scheduled for deletion in 30 days");
-        setIsDeleteConfirmOpen(false);
+    const handleAddFiles = async (listingId: any) => {
+        try {
+            setCurrentFilesListingId(listingId);
+            setFilesLoading(true);
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const property = userProperties.find((prop: any) => prop.id === listingId);
+
+            const existingImages = property.image_files
+
+            setExistingFiles(existingImages);
+
+            setIsFilesDialogOpen(true);
+            setFilesLoading(false);
+        } catch (error) {
+            console.error("Error fetching files:", error);
+            setFilesLoading(false);
+            // If no files exist yet, open with empty state
+            setExistingFiles([]);
+            setIsFilesDialogOpen(true);
+            // toast.info("No existing files found. You can upload new files and images.");
+        }
     };
 
-    const handleDeleteClick = (e: any, id: any) => {
+
+    const handleFileUpload = async () => {
+        if (!selectedFiles.length || !currentFilesListingId) {
+            toast.error("Please select files to upload");
+            return;
+        }
+
+        const allowedTypes = ['pdf', 'png', 'jpg', 'jpeg', 'mp3', 'mp4'];
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+        try {
+            setFilesLoading(true);
+            const formData = new FormData();
+
+            // Append the property ID to FormData
+            formData.append('property', currentFilesListingId);
+
+            // Loop through the selected files and add them to FormData
+            selectedFiles.forEach((file: any) => {
+                const name = file.name || `file_${Date.now()}`;
+                const extension = name.split('.').pop().toLowerCase();
+
+                // Validate file type
+                if (!allowedTypes.includes(extension)) {
+                    toast.error(`The file "${name}" is not allowed. Only PDF, JPG, JPEG, MP3, and MP4 files are supported.`);
+                    setFilesLoading(false);
+                    return;
+                }
+
+                // Validate file size
+                if (file.size > maxFileSize) {
+                    toast.error(`The file "${name}" exceeds the 10MB size limit.`);
+                    setFilesLoading(false);
+                    return;
+                }
+
+                // Determine the MIME type based on the extension
+                let type = 'application/octet-stream';
+                if (['jpg', 'jpeg', 'png'].includes(extension)) {
+                    type = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+                } else if (extension === 'pdf') {
+                    type = 'application/pdf';
+                } else if (extension === 'mp3') {
+                    type = 'audio/mpeg';
+                } else if (extension === 'mp4') {
+                    type = 'video/mp4';
+                }
+
+                // Append file to formData (FormData expects file objects)
+                const fileObj = new File([file], name, { type });
+                formData.append('file', fileObj);
+            });
+
+            // Send the request to upload the files
+            const response = await api.post(`/market/upload-file-market/`, formData, {
+                headers: {
+                    Authorization: `Token ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                }
+            });
+
+            if (response.data) {
+                toast.success("Files uploaded successfully!");
+                setSelectedFiles([]);
+                setIsFilesDialogOpen(false);
+                fetchProfile(); // Refresh listings
+            }
+        } catch (error) {
+            console.error("Error uploading files:", error);
+            toast.error("Failed to upload files. Please try again.");
+        } finally {
+            setFilesLoading(false);
+        }
+    };
+
+
+    const handleImagePick = (event: any) => {
+        const files = Array.from(event.target.files);
+        setSelectedFiles((prevFiles: any) => [...prevFiles, ...files]);
+    };
+
+    // Remove file from selection
+    const removeFile = (index: any) => {
+        setSelectedFiles((prevFiles: any) => prevFiles.filter((_: any, i: any) => i !== index));
+    };
+
+
+    const handleDeleteClick = async (e: any, id: any) => {
         e.stopPropagation(); // Prevent card click event
+        await new Promise(resolve => setTimeout(resolve, 100));
         setPendingDeleteId(id);
         setIsAlertOpen(true);
     };
@@ -340,6 +472,9 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editableProfile, setEditableProfile] = useState({ ...profileData });
     const [isAddingListing, setIsAddingListing] = useState(false);
+    const [isUpdatingListing, setIsUpdatingListing] = useState(false);
+    const [currentListingId, setCurrentListingId] = useState(null);
+    const [userProperties, setUserProperties] = useState<any>(null)
     const [newListing, setNewListing] = useState<any>({
         title: "",
         description: "",
@@ -411,6 +546,27 @@ const Profile = () => {
     }
 
     console.log("favorites--->", favorites)
+
+
+    const fetchUserProperties = async () => {
+        try {
+            setLoading(true)
+            const response = await api.get("/market/fetch-user-listed-properties/", {
+                headers: {
+                    "Content-Type": "Application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+            setUserProperties(response.data);
+            setListings(response.data)
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+            setLoading(false);
+            toast.error("Failed to load profile data. Please try again later.");
+        }
+    }
+
+    console.log('userproperties--->', userProperties)
 
 
     const fetchProfile = async () => {
@@ -558,7 +714,7 @@ const Profile = () => {
                     performanceByMonth
                 });
             }
-            setListings(userData.agent?.properties)
+            // setListings(userData.agent?.properties)
             setLoading(false);
         } catch (err) {
             console.error("Error fetching user data:", err);
@@ -571,7 +727,165 @@ const Profile = () => {
     useEffect(() => {
         fetchProfile();
         fetchUserFavorites()
+        fetchUserProperties()
     }, [token]);
+
+    const handleUpdateDetails = async (listingId: any) => {
+        const listingToUpdate = listings.find((listing: any) => listing.id === listingId);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (listingToUpdate) {
+            setNewListing({
+                title: listingToUpdate.title || "",
+                description: listingToUpdate.description || "",
+                property_type: listingToUpdate.property_type || listingToUpdate.type || "",
+                price: listingToUpdate.price?.toString() || "",
+                currency: listingToUpdate.currency || "USD",
+                listing_purpose: listingToUpdate.listing_purpose || "sale",
+                address: listingToUpdate.address || "",
+                city: listingToUpdate.city || "",
+                state: listingToUpdate.state || "",
+                // ADD THESE MISSING FIELDS:
+                zip_code: listingToUpdate.zip_code || "",
+                bedrooms: listingToUpdate.bedrooms?.toString() || "",
+                bathrooms: listingToUpdate.bathrooms?.toString() || "",
+                square_feet: listingToUpdate.square_feet?.toString() || listingToUpdate.area?.toString() || "",
+                lot_size: listingToUpdate.lot_size?.toString() || "",
+                year_built: listingToUpdate.year_built?.toString() || "",
+                availability: listingToUpdate.availability || "now",
+                availability_date: listingToUpdate.availability_date || ""
+            });
+
+            setIsUpdatingListing(true);
+            setCurrentListingId(listingId);
+            setIsListingDialogOpen(true);
+        }
+    }
+
+
+    const handleUpdateFeatures = async (listingId: any) => {
+        try {
+            setCurrentFeaturesListingId(listingId);
+            setFeaturesLoading(true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Find the specific property by listingId
+            const property = userProperties.find((prop: any) => prop.id === listingId);
+
+            // Get the first features object from the array (or use default if none exists)
+            const existingFeatures = property?.features?.[0] || {
+                negotiable: 'no',
+                furnished: false,
+                pet_friendly: false,
+                parking_available: false,
+                swimming_pool: false,
+                garden: false,
+                electricity_proximity: 'moderate',
+                road_network: 'good',
+                development_level: 'moderate',
+                water_supply: false,
+                security: false,
+                additional_features: ''
+            };
+
+            setFeaturesData(existingFeatures);
+            setIsFeaturesDialogOpen(true);
+            setFeaturesLoading(false);
+        } catch (error) {
+            console.error("Error fetching features:", error);
+            setFeaturesLoading(false);
+            // If features don't exist yet, open with default values
+            setIsFeaturesDialogOpen(true);
+            toast.info("No existing features found. You can add new features.");
+        }
+    };
+
+    const handleSubmitFeatures = async () => {
+        try {
+            setFeaturesLoading(true);
+
+            const payload = {
+                negotiable: featuresData.negotiable,
+                furnished: featuresData.furnished,
+                pet_friendly: featuresData.pet_friendly,
+                parking_available: featuresData.parking_available,
+                swimming_pool: featuresData.swimming_pool,
+                garden: featuresData.garden,
+                electricity_proximity: featuresData.electricity_proximity,
+                road_network: featuresData.road_network,
+                development_level: featuresData.development_level,
+                water_supply: featuresData.water_supply,
+                security: featuresData.security,
+                additional_features: featuresData.additional_features
+            };
+
+            const response = await api.post(`/market/property/${currentFeaturesListingId}/features/`, payload, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            if (response.data) {
+                toast.success("Property features updated successfully!");
+                setIsFeaturesDialogOpen(false);
+                resetFeaturesForm();
+                fetchProfile(); // Refresh the listings
+            }
+
+            setFeaturesLoading(false);
+        } catch (error) {
+            console.error("Error updating features:", error);
+            setFeaturesLoading(false);
+            toast.error("Failed to update property features. Please try again.");
+        }
+    };
+
+    // Function to reset features form
+    const resetFeaturesForm = () => {
+        setFeaturesData({
+            negotiable: 'no',
+            furnished: false,
+            pet_friendly: false,
+            parking_available: false,
+            swimming_pool: false,
+            garden: false,
+            electricity_proximity: 'moderate',
+            road_network: 'good',
+            development_level: 'moderate',
+            water_supply: false,
+            security: false,
+            additional_features: ''
+        });
+        setCurrentFeaturesListingId(null);
+    };
+
+
+    // Reset form function
+    const resetListingForm = () => {
+        setNewListing({
+            title: "",
+            description: "",
+            property_type: "",
+            price: "",
+            currency: "USD",
+            listing_purpose: "sale",
+            address: "",
+            city: "",
+            state: "",
+            zip_code: "",
+            bedrooms: "",
+            bathrooms: "",
+            square_feet: "",
+            lot_size: "",
+            year_built: "",
+            availability: "now",
+            availability_date: ""
+        });
+        setIsAddingListing(false);
+        setIsUpdatingListing(false);
+        setCurrentListingId(null);
+    };
 
     const handleProfileUpdate = async () => {
         try {
@@ -650,53 +964,48 @@ const Profile = () => {
                 payload.availability_date = newListing.availability_date;
             }
 
-            console.log("console.log----->", payload);
+            console.log("Payload:", payload);
 
-            // Make API call to list the property
-            const response = await api.post("/market/list-property/", payload, {
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Token ${token}`
-                }
-            });
+            let response;
 
-            // If successful, add to local state
-            if (response.data) {
-                setIsAddingListing(false);
-
-                // Reset the form - notice we don't include availability_date when availability is "now"
-                setNewListing({
-                    title: "",
-                    description: "",
-                    property_type: "",
-                    price: "",
-                    currency: "USD",
-                    listing_purpose: "sale",
-                    address: "",
-                    city: "",
-                    state: "",
-                    zip_code: "",
-                    bedrooms: "",
-                    bathrooms: "",
-                    square_feet: "",
-                    lot_size: "",
-                    year_built: "",
-                    availability: "now"
+            if (isUpdatingListing && currentListingId) {
+                const data = { ...payload, property_id: currentListingId }
+                // Update existing listing
+                response = await api.put(`/market/update-property/`, data, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Token ${token}`
+                    }
                 });
-                setIsListingDialogOpen(false)
-
-                fetchProfile()
-
+                toast.success("Property updated successfully!");
+            } else {
+                // Create new listing
+                response = await api.post("/market/list-property/", payload, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Token ${token}`
+                    }
+                });
                 toast.success("New property listed successfully!");
+            }
+
+            // If successful, reset form and refresh data
+            if (response.data) {
+                resetListingForm();
+                setIsListingDialogOpen(false);
+                fetchProfile(); // Refresh the listings
+                window.location.reload()
             }
 
             setLoading(false);
         } catch (error) {
-            console.error("Error adding property:", error);
+            console.error("Error with property:", error);
             setLoading(false);
-            toast.error("Failed to add property. Please try again.");
+            const action = isUpdatingListing ? "update" : "add";
+            toast.error(`Failed to ${action} property. Please try again.`);
         }
     };
+
 
     const handleEmailNotificationToggle = async (checked: any) => {
         try {
@@ -760,6 +1069,13 @@ const Profile = () => {
         e.preventDefault();
         e.stopPropagation();
     };
+
+    const handleImageSelect = (event: any) => {
+        const files = Array.from(event.target.files);
+        console.log('Selected files:', files); // Debug log
+        setSelectedFiles((prevFiles: any) => [...prevFiles, ...files]);
+    };
+
 
     const handleFileSelect = (type: any) => (e: any) => {
         const selectedFile = e.target.files[0];
@@ -875,6 +1191,32 @@ const Profile = () => {
         }
     };
 
+    const resetListingFormState = () => {
+        setIsUpdatingListing(false);
+        setCurrentListingId(null);
+        setNewListing({
+            title: "",
+            description: "",
+            property_type: "",
+            price: "",
+            currency: "USD",
+            listing_purpose: "sale",
+            address: "",
+            city: "",
+            state: "",
+            zip_code: "",
+            bedrooms: "",
+            bathrooms: "",
+            square_feet: "",
+            lot_size: "",
+            year_built: "",
+            availability: "now",
+            availability_date: ""
+        });
+        // window.location.reload();
+
+    };
+
     const handleDrop = (e: any) => {
         e.preventDefault();
         e.stopPropagation();
@@ -899,13 +1241,18 @@ const Profile = () => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Active': return 'bg-emerald-500 hover:bg-emerald-600';
-            case 'Under Contract': return 'bg-amber-500 hover:bg-amber-600';
-            case 'Sold': return 'bg-blue-500 hover:bg-blue-600';
-            case 'Coming Soon': return 'bg-purple-500 hover:bg-purple-600';
-            default: return 'bg-gray-500 hover:bg-gray-600';
+    const getStatusColor = (purpose: string) => {
+        switch (purpose?.toLowerCase()) {
+            case 'shop':
+                return 'bg-purple-500 hover:bg-purple-600';
+            case 'land':
+                return 'bg-amber-500 hover:bg-amber-600';
+            case 'duplex':
+                return 'bg-indigo-500 hover:bg-indigo-600';
+            case 'apartment':
+                return 'bg-emerald-500 hover:bg-emerald-600';
+            default:
+                return 'bg-gray-500 hover:bg-gray-600';
         }
     };
 
@@ -1211,50 +1558,6 @@ const Profile = () => {
                                                     onChange={(e) => setEditableProfile({ ...editableProfile, country_of_residence: e.target.value })}
                                                 />
                                             </div>
-                                            {/* {profileData.agent && (
-                                                <>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="agencyName">Agency Name</Label>
-                                                        <Input
-                                                            id="agencyName"
-                                                            value={editableProfile.agency_name}
-                                                            onChange={(e) => setEditableProfile({ ...editableProfile, agency_name: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="agencyAddress">Agency Address</Label>
-                                                        <Input
-                                                            id="agencyAddress"
-                                                            value={editableProfile.agency_address}
-                                                            onChange={(e) => setEditableProfile({ ...editableProfile, agency_address: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="whatsapp">WhatsApp Number</Label>
-                                                        <Input
-                                                            id="whatsapp"
-                                                            value={editableProfile.whatsapp_number}
-                                                            onChange={(e) => setEditableProfile({ ...editableProfile, whatsapp_number: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="preferredContact">Preferred Contact Method</Label>
-                                                        <Select
-                                                            defaultValue={editableProfile.preferred_contact_mode}
-                                                            onValueChange={(value) => setEditableProfile({ ...editableProfile, preferred_contact_mode: value })}
-                                                        >
-                                                            <SelectTrigger id="preferredContact">
-                                                                <SelectValue placeholder="Select contact method" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="phone">Phone</SelectItem>
-                                                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                                                <SelectItem value="email">Email</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </>
-                                            )} */}
                                         </div>
                                         <DialogFooter>
                                             {/* <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button> */}
@@ -1349,6 +1652,14 @@ const Profile = () => {
                                             Enter Referrer Code
                                         </Button>
                                     </div>)}
+                                    <Button
+
+                                        className="w-full flex items-center bg-orange-400 cursor-pointer hover:bg-orange-500 font-bold text-white justify-center hover:text-teal-70"
+                                    // onClick={() => setIsDialogOpen(true)}
+                                    >
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Withdraw Earnings
+                                    </Button>
 
                                 </CardContent>
                             </Card>
@@ -1471,7 +1782,13 @@ const Profile = () => {
                                 <TabsContent value="listings" className="space-y-6">
                                     <div className="flex justify-between items-center mb-6">
                                         <h2 className="text-2xl font-bold">My Properties</h2>
-                                        <Dialog open={isListingDialogOpen} onOpenChange={setIsListingDialogOpen} >
+                                        <Dialog open={isListingDialogOpen}
+                                            onOpenChange={(open) => {
+                                                setIsListingDialogOpen(open);
+                                                if (!open) {
+                                                    resetListingFormState();
+                                                }
+                                            }}>
                                             <DialogTrigger asChild>
                                                 <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
                                                     <Plus className="h-4 w-4 mr-1" /> Add New Property
@@ -1479,9 +1796,14 @@ const Profile = () => {
                                             </DialogTrigger>
                                             <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
                                                 <DialogHeader>
-                                                    <DialogTitle>Add New Property</DialogTitle>
+                                                    <DialogTitle>
+                                                        {isUpdatingListing ? "Update Property" : "Add New Property"}
+                                                    </DialogTitle>
                                                     <DialogDescription>
-                                                        Enter details for your new property listing.
+                                                        {isUpdatingListing
+                                                            ? "Update the details for your property listing."
+                                                            : "Enter details for your new property listing."
+                                                        }
                                                     </DialogDescription>
                                                 </DialogHeader>
                                                 <div className="grid gap-4 py-4">
@@ -1553,7 +1875,7 @@ const Profile = () => {
                                                             <Label htmlFor="currency">Currency</Label>
                                                             <Select
                                                                 onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
-                                                                defaultValue="USD"
+                                                                defaultValue="NGN"
                                                             >
                                                                 <SelectTrigger id="currency" className='w-full'>
                                                                     <SelectValue placeholder="Select currency" />
@@ -1580,7 +1902,7 @@ const Profile = () => {
                                                         />
                                                     </div>
 
-                                                    <div className="grid grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-2 gap-4">
                                                         <div className="space-y-2">
                                                             <Label htmlFor="city">City*</Label>
                                                             <Input
@@ -1601,7 +1923,7 @@ const Profile = () => {
                                                                 required
                                                             />
                                                         </div>
-                                                        <div className="space-y-2">
+                                                        {/* <div className="space-y-2">
                                                             <Label htmlFor="zip_code">ZIP Code</Label>
                                                             <Input
                                                                 id="zip_code"
@@ -1609,7 +1931,7 @@ const Profile = () => {
                                                                 onChange={(e) => setNewListing({ ...newListing, zip_code: e.target.value })}
                                                                 placeholder="e.g. 94103"
                                                             />
-                                                        </div>
+                                                        </div> */}
                                                     </div>
 
                                                     {/* Property Details */}
@@ -1725,75 +2047,13 @@ const Profile = () => {
                                                         />
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="images">Upload Images</Label>
-                                                        <div
-                                                            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                                                            onClick={() => fileInputRef.current.click()}
-                                                            onDragOver={handleDragOver}
-                                                            onDrop={handleDrop}
-                                                        >
-                                                            <Upload className="h-8 w-8 mx-auto text-gray-400" />
-                                                            <p className="mt-2 text-sm text-gray-500">Drag and drop images here or click to browse</p>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="mt-4"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    fileInputRef.current.click();
-                                                                }}
-                                                            >
-                                                                Choose Files
-                                                            </Button>
-                                                            <input
-                                                                type="file"
-                                                                ref={fileInputRef}
-                                                                multiple
-                                                                accept="image/*"
-                                                                className="hidden"
-                                                                onChange={handleFileSelect('business_registration')}
-                                                            />
-                                                        </div>
-
-                                                        {/* Image Previews */}
-                                                        {selectedImages?.length > 0 && (
-                                                            <div className="mt-4">
-                                                                <Label>Selected Images ({selectedImages?.length})</Label>
-                                                                <div className="grid grid-cols-3 gap-4 mt-2">
-                                                                    {selectedImages?.map((image: any, index: any) => (
-                                                                        <div key={index} className="relative group">
-                                                                            <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
-                                                                                <img
-                                                                                    src={image.preview}
-                                                                                    alt={`Property image ${index + 1}`}
-                                                                                    className="h-full w-full object-cover"
-                                                                                />
-                                                                            </div>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation(); // Prevent triggering the parent click handler
-                                                                                    removeImage(index);
-                                                                                }}
-                                                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                            >
-                                                                                <X className="h-4 w-4" />
-                                                                            </button>
-                                                                            <p className="text-xs text-gray-500 truncate mt-1">{image.name}</p>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
                                                 </div>
                                                 <DialogFooter>
-                                                    <Button variant="outline" onClick={() => setIsAddingListing(false)}>Cancel</Button>
+                                                    <Button variant="outline" onClick={() => setIsListingDialogOpen(false)}>Cancel</Button>
                                                     <Button
                                                         onClick={handleAddListing}
-                                                        disabled={loading || !newListing.title || !newListing.description || !newListing.property_type || !newListing.price}
+                                                        className='cursor-pointer'
+                                                        disabled={loading || !newListing.title || !newListing.property_type || !newListing.price}
                                                     >
                                                         {loading ? (
                                                             <>
@@ -1803,10 +2063,10 @@ const Profile = () => {
                                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                                     </svg>
                                                                 </span>
-                                                                Adding Property...
+                                                                {isUpdatingListing ? "Updating Property..." : "Adding Property..."}
                                                             </>
                                                         ) : (
-                                                            "Add Property"
+                                                            isUpdatingListing ? "Update Property" : "Add Property"
                                                         )}
                                                     </Button>
                                                 </DialogFooter>
@@ -1818,114 +2078,138 @@ const Profile = () => {
                                     {listings?.length === 0 ? (
                                         <EmptyState />
                                     ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {listings?.map((listing: any) => (
                                                 <Card
                                                     key={listing.id}
-                                                    className="h-full cursor-pointer overflow-hidden border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300 group"
+                                                    className="h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-white rounded-xl"
                                                 >
                                                     <div
-                                                        className="relative h-56 overflow-hidden"
+                                                        className="relative h-62 mt-[-1.8rem] overflow-hidden"
                                                         onClick={() => handleCardClick(listing.id)}
                                                     >
                                                         <img
-                                                            src={listing.image}
+                                                            src={listing?.image_files[0]?.file}
                                                             alt={listing.title}
                                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                         />
                                                         <Badge
-                                                            className={`absolute top-3 right-3 ${getStatusColor(listing.status)} text-white px-3 py-1 text-xs font-medium transition-all`}
+                                                            className={`absolute top-4 right-4 ${getStatusColor(listing.property_type)} text-white px-3 py-1 text-sm font-medium`}
                                                         >
-                                                            {listing.status}
+                                                            {listing.property_type}
                                                         </Badge>
-                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-16 opacity-60 group-hover:opacity-90 transition-opacity"></div>
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                                     </div>
 
-                                                    <CardHeader className="pb-2 relative">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="absolute cursor-pointer right-2 top-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                            onClick={(e) => handleDeleteClick(e, listing.id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-
-                                                        <div className="flex justify-between items-start pr-8">
-                                                            <div>
-                                                                <CardTitle className="text-lg font-bold text-gray-800 line-clamp-1">{listing.title}</CardTitle>
-                                                                <CardDescription className="flex items-center mt-1 text-gray-600">
-                                                                    <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                                                                    <span className="line-clamp-1">{listing.address}</span>
-                                                                </CardDescription>
-                                                            </div>
+                                                    <CardHeader className="pb-3 relative">
+                                                        <div className="absolute right-4 top-4">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-48 shadow-lg">
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleUpdateDetails(listing.id);
+                                                                        }}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <Edit className="h-4 w-4 mr-2" />
+                                                                        Update Details
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleUpdateFeatures(listing.id);
+                                                                        }}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <Settings className="h-4 w-4 mr-2" />
+                                                                        Update Features
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleAddFiles(listing.id);
+                                                                        }}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <ImagePlus className="h-4 w-4 mr-2" />
+                                                                        Add Files/Images
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteClick(e, listing.id);
+                                                                        }}
+                                                                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Delete Listing
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </div>
-                                                        <div className="mt-1">
-                                                            <p className="font-bold text-xl text-gray-900">{listing.currency} {listing.price.toLocaleString()}</p>
-                                                            <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+
+                                                        <div className="pr-10">
+                                                            <CardTitle className="text-xl font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
+                                                            <CardDescription className="flex items-center text-gray-600 mb-3">
+                                                                <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+                                                                <span>{listing.address}</span>
+                                                            </CardDescription>
+                                                            <div className="space-y-1">
+                                                                <p className="text-2xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
+                                                                <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                            </div>
                                                         </div>
                                                     </CardHeader>
 
-                                                    <CardContent className="pt-0">
-                                                        <div className="flex flex-wrap gap-1 mb-4">
-                                                            <Badge variant="outline" className="bg-gray-50">
+                                                    <CardContent className="pt-0 space-y-4">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                                                                 {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
                                                             </Badge>
-                                                            <Badge variant="outline" className="bg-gray-50">
+                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                                                                 {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
                                                             </Badge>
-                                                            <Badge variant="outline" className="bg-gray-50">
+                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                                                                 {listing.area} sqft
                                                             </Badge>
-                                                            <Badge variant="secondary" className="ml-auto">
+                                                            <Badge variant="secondary" className="bg-gray-100 text-gray-700">
                                                                 {listing.type}
                                                             </Badge>
                                                         </div>
 
-                                                        <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-b border-gray-100">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="flex items-center text-gray-600 mb-1">
-                                                                    <Eye className="h-3 w-3 mr-1" />
-                                                                    <p className="text-xs">Views</p>
+                                                        <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+                                                            <div className="text-center">
+                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                    <Eye className="h-4 w-4 mr-1" />
+                                                                    <p className="text-sm">Views</p>
                                                                 </div>
-                                                                <p className="font-semibold">{listing.views}</p>
+                                                                <p className="text-lg font-semibold text-gray-900">{listing.views}</p>
                                                             </div>
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="flex items-center text-gray-600 mb-1">
-                                                                    <MessageSquare className="h-3 w-3 mr-1" />
-                                                                    <p className="text-xs">Inquiries</p>
+                                                            <div className="text-center">
+                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                    <MessageSquare className="h-4 w-4 mr-1" />
+                                                                    <p className="text-sm">Inquiries</p>
                                                                 </div>
-                                                                <p className="font-semibold">{listing.inquiries}</p>
+                                                                <p className="text-lg font-semibold text-gray-900">{listing.inquiries}</p>
                                                             </div>
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="flex items-center text-gray-600 mb-1">
-                                                                    <Heart className="h-3 w-3 mr-1" />
-                                                                    <p className="text-xs">Favorites</p>
+                                                            <div className="text-center">
+                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                    <Heart className="h-4 w-4 mr-1" />
+                                                                    <p className="text-sm">Favorites</p>
                                                                 </div>
-                                                                <p className="font-semibold">{listing.favorites}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center justify-between mt-4">
-                                                            <div className="flex items-center">
-                                                                <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-emerald-600' :
-                                                                    listing.performance?.trend === 'down' ? 'text-red-600' :
-                                                                        'text-gray-600'
-                                                                    }`}>
-                                                                    {listing.performance?.trend === 'up' ? (
-                                                                        <TrendingUp className="h-4 w-4 mr-1" />
-                                                                    ) : listing.performance?.trend === 'down' ? (
-                                                                        <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
-                                                                    ) : (
-                                                                        <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
-                                                                    )}
-                                                                    <span className="text-sm font-medium">
-                                                                        {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (
-                                                                            listing.performance?.trend === 'up' ? 'increase' : 'decrease'
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                                <span className="text-xs text-gray-500 ml-2">in views this week</span>
+                                                                <p className="text-lg font-semibold text-gray-900">{listing.bookmarked}</p>
                                                             </div>
                                                         </div>
                                                     </CardContent>
@@ -2428,48 +2712,6 @@ const Profile = () => {
                                                     </Dialog>
                                                 </div>
                                             )}
-
-                                            {/* Delete Account - Confirmation Modal */}
-                                            {/* <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                                            <div>
-                                                <h3 className="font-medium text-red-600">Delete Account</h3>
-                                                <p className="text-sm text-gray-500">
-                                                    Permanently remove your account and all data
-                                                </p>
-                                            </div>
-                                            <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="destructive" size="sm">
-                                                        Delete
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Schedule Account Deletion</DialogTitle>
-                                                        <DialogDescription>
-                                                            Your account will be scheduled for deletion in 30 days. During this period, you can log in to cancel the deletion process.
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="py-4">
-                                                        <Alert variant="destructive">
-                                                            <AlertCircle className="h-4 w-4" />
-                                                            <AlertTitle>Warning</AlertTitle>
-                                                            <AlertDescription>
-                                                                This action cannot be undone after the 30-day period. All your data will be permanently deleted.
-                                                            </AlertDescription>
-                                                        </Alert>
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
-                                                            Cancel
-                                                        </Button>
-                                                        <Button variant="destructive" onClick={handleDeleteAccount}>
-                                                            Schedule Deletion
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        </div> */}
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
@@ -2483,11 +2725,6 @@ const Profile = () => {
                                                         alt={listing.title}
                                                         className="w-full h-full object-cover rounded-t-md"
                                                     />
-                                                    {/* <Badge
-                                                        className={`absolute top-3 right-3`}
-                                                    >
-                                                        {listing.status}
-                                                    </Badge> */}
                                                 </div>
                                                 <CardHeader className="pb-2">
                                                     <div className="flex flex-col">
@@ -2499,7 +2736,6 @@ const Profile = () => {
                                                         </div>
                                                         <div className="text-left">
                                                             <p className="font-bold text-lg">{listing.currency} {listing.price.toLocaleString()}</p>
-                                                            {/* <p className="text-xs text-gray-500">Listed on {formatDate(listing.listed_date)}</p> */}
                                                         </div>
                                                     </div>
                                                 </CardHeader>
@@ -2531,27 +2767,6 @@ const Profile = () => {
                                                         <div>
                                                             <p className="text-xs text-gray-500">Favorites</p>
                                                             <p className="font-semibold">{listing.favorites}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between mt-4">
-                                                        <div className="flex items-center">
-                                                            <div className={`flex items-center ${listing.performance?.trend === 'up' ? 'text-green-600' :
-                                                                listing.performance?.trend === 'down' ? 'text-red-600' :
-                                                                    'text-gray-600'
-                                                                }`}>
-                                                                {listing.performance?.trend === 'up' ? (
-                                                                    <TrendingUp className="h-4 w-4 mr-1" />
-                                                                ) : listing.performance?.trend === 'down' ? (
-                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-90" />
-                                                                ) : (
-                                                                    <ArrowUpRight className="h-4 w-4 mr-1 transform rotate-45" />
-                                                                )}
-                                                                <span className="text-sm font-medium">
-                                                                    {listing.performance?.percentageChange}% {listing.performance?.trend !== 'neutral' && (listing.performance?.trend === 'up' ? 'increase' : 'decrease')}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-xs text-gray-500 ml-2">in views this week</span>
                                                         </div>
                                                     </div>
                                                 </CardContent>
@@ -2657,12 +2872,377 @@ const Profile = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <Dialog open={isFeaturesDialogOpen} onOpenChange={setIsFeaturesDialogOpen}>
+                <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Update Property Features</DialogTitle>
+                        <DialogDescription>
+                            Update the features and amenities for your property listing.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        {/* Negotiable */}
+                        <div className="space-y-2">
+                            <Label htmlFor="negotiable">Price Negotiable</Label>
+                            <Select
+                                onValueChange={(value) => setFeaturesData({ ...featuresData, negotiable: value })}
+                                value={featuresData.negotiable}
+                            >
+                                <SelectTrigger id="negotiable">
+                                    <SelectValue placeholder="Select option" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="yes">Yes</SelectItem>
+                                    <SelectItem value="no">No</SelectItem>
+                                    <SelectItem value="partially">Partially</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Boolean Features */}
+                        <div className="space-y-4">
+                            <Label className="text-base font-semibold">Property Amenities</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="furnished"
+                                        checked={featuresData.furnished}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, furnished: checked })}
+                                    />
+                                    <Label htmlFor="furnished" className="text-sm">Furnished</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="pet_friendly"
+                                        checked={featuresData.pet_friendly}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
+                                    />
+                                    <Label htmlFor="pet_friendly" className="text-sm">Pet Friendly</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="parking_available"
+                                        checked={featuresData.parking_available}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, parking_available: checked })}
+                                    />
+                                    <Label htmlFor="parking_available" className="text-sm">Parking Available</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="swimming_pool"
+                                        checked={featuresData.swimming_pool}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
+                                    />
+                                    <Label htmlFor="swimming_pool" className="text-sm">Swimming Pool</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="garden"
+                                        checked={featuresData.garden}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, garden: checked })}
+                                    />
+                                    <Label htmlFor="garden" className="text-sm">Garden</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="water_supply"
+                                        checked={featuresData.water_supply}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, water_supply: checked })}
+                                    />
+                                    <Label htmlFor="water_supply" className="text-sm">Water Supply</Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="security"
+                                        checked={featuresData.security}
+                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, security: checked })}
+                                    />
+                                    <Label htmlFor="security" className="text-sm">Security</Label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Location & Infrastructure Features */}
+                        <div className="space-y-4">
+                            <Label className="text-base font-semibold">Location & Infrastructure</Label>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-2">
+                                    <Label htmlFor="electricity_proximity">Electricity Proximity</Label>
+                                    <Select
+                                        onValueChange={(value) => setFeaturesData({ ...featuresData, electricity_proximity: value })}
+                                        value={featuresData.electricity_proximity}
+                                    >
+                                        <SelectTrigger id="electricity_proximity">
+                                            <SelectValue placeholder="Select proximity" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="excellent">Excellent</SelectItem>
+                                            <SelectItem value="good">Good</SelectItem>
+                                            <SelectItem value="moderate">Moderate</SelectItem>
+                                            <SelectItem value="poor">Poor</SelectItem>
+                                            <SelectItem value="none">None</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="road_network">Road Network</Label>
+                                    <Select
+                                        onValueChange={(value) => setFeaturesData({ ...featuresData, road_network: value })}
+                                        value={featuresData.road_network}
+                                    >
+                                        <SelectTrigger id="road_network">
+                                            <SelectValue placeholder="Select road network quality" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="excellent">Excellent</SelectItem>
+                                            <SelectItem value="good">Good</SelectItem>
+                                            <SelectItem value="moderate">Moderate</SelectItem>
+                                            <SelectItem value="poor">Poor</SelectItem>
+                                            <SelectItem value="none">None</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="development_level">Development Level</Label>
+                                    <Select
+                                        onValueChange={(value) => setFeaturesData({ ...featuresData, development_level: value })}
+                                        value={featuresData.development_level}
+                                    >
+                                        <SelectTrigger id="development_level">
+                                            <SelectValue placeholder="Select development level" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="highly_developed">Highly Developed</SelectItem>
+                                            <SelectItem value="well_developed">Well Developed</SelectItem>
+                                            <SelectItem value="moderate">Moderate</SelectItem>
+                                            <SelectItem value="developing">Developing</SelectItem>
+                                            <SelectItem value="undeveloped">Undeveloped</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Additional Features */}
+                        <div className="space-y-2">
+                            <Label htmlFor="additional_features">Additional Features</Label>
+                            <Textarea
+                                id="additional_features"
+                                rows={3}
+                                value={featuresData.additional_features || ""}
+                                onChange={(e) => setFeaturesData({ ...featuresData, additional_features: e.target.value })}
+                                placeholder="Describe any additional features or amenities..."
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsFeaturesDialogOpen(false);
+                                resetFeaturesForm();
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSubmitFeatures}
+                            disabled={featuresLoading}
+                            className="cursor-pointer"
+                        >
+                            {featuresLoading ? (
+                                <>
+                                    <span className="mr-2">
+                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                    Updating Features...
+                                </>
+                            ) : (
+                                "Update Features"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <CancellationModal
                 isOpen={isModalOpen}
                 onClose={handleCloseCancelModal}
                 onSubmit={handleCancelPlan}
                 loading={loading}
             />
+            <Dialog open={isFilesDialogOpen} onOpenChange={setIsFilesDialogOpen}>
+                <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Upload Files & Images</DialogTitle>
+                        <DialogDescription>
+                            Add photos and documents for your property listing.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        {/* Existing Files */}
+                        {existingFiles?.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>Existing Files ({existingFiles.length})</Label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {existingFiles.map((file: any, index: any) => (
+                                        <div key={index} className="relative group">
+                                            <div className="aspect-square bg-gray-100 rounded-md overflow-hidden border">
+                                                {file.file_type?.startsWith('image/') ? (
+                                                    <img
+                                                        src={file.file}
+                                                        alt={file.file_name}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                                                        <img
+                                                            src={file.file}
+                                                            alt={file.file_name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500 truncate mt-1">
+                                                {file.file_name}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* File Upload Area */}
+                        <div className="space-y-2">
+                            <Label htmlFor="files">Upload Videos/Images</Label>
+                            <div
+                                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                onClick={() => document.getElementById('file-input')?.click()}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                            >
+                                <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                                <p className="mt-2 text-sm text-gray-500">
+                                    Drag and drop files here or click to browse
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Supported: Images (JPG, PNG, GIF), videos (MP3, MP4) and Documents (PDF, DOC, DOCX) <br></br>
+                                    Size: 10MB (max)
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-4"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        document.getElementById('file-input')?.click();
+                                    }}
+                                >
+                                    Choose Files
+                                </Button>
+                                <input
+                                    id="file-input"
+                                    type="file"
+                                    multiple
+                                    accept="image/*,.pdf,.doc,.docx"
+                                    className="hidden"
+                                    onChange={handleImagePick}
+                                />
+                            </div>
+
+                            {/* Selected Files Preview */}
+                            {selectedFiles?.length > 0 && (
+                                <div className="mt-4">
+                                    <Label>Selected Files ({selectedFiles.length})</Label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
+                                        {selectedFiles.map((file: any, index: any) => (
+                                            <div key={index} className="relative group">
+                                                <div className="aspect-square bg-gray-100 rounded-md overflow-hidden border">
+                                                    {file.type.startsWith('image/') ? (
+                                                        <img
+                                                            src={URL.createObjectURL(file)}
+                                                            alt={file.name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                                                            <div className="text-center">
+                                                                <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                                                <p className="text-xs text-gray-500 truncate px-2">
+                                                                    {file.name}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeFile(index);
+                                                    }}
+                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                                <p className="text-xs text-gray-500 truncate mt-1">
+                                                    {file.name}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsFilesDialogOpen(false);
+                                setSelectedFiles([]);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleFileUpload}
+                            disabled={filesLoading}
+                            className="cursor-pointer"
+                        >
+                            {filesLoading ? (
+                                <>
+                                    <span className="mr-2">
+                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                    Uploading...
+                                </>
+                            ) : (
+                                `Upload ${selectedFiles.length} File${selectedFiles.length !== 1 ? 's' : ''}`
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

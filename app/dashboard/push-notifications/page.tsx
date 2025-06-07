@@ -211,7 +211,7 @@ const PushNotificationsPage = () => {
                                     <h4 className="font-medium text-sm text-gray-700 mb-2">Notification Preview:</h4>
                                     <div className="bg-white p-3 rounded border shadow-sm max-w-sm">
                                         <div className="flex items-start gap-2">
-                                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <div className="w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                                 <Bell className="w-3 h-3 text-white" />
                                             </div>
                                             <div className="min-w-0">
