@@ -18,18 +18,18 @@ const FAQPage: React.FC = () => {
     const [openItems, setOpenItems] = useState<number[]>([]);
 
     // FAQ categories
-    const categories = ['General', 'Portfolio Management', 'Investment Platform', 'Market', 'Mutual Investment'];
+    const categories = ['General', 'Portfolio Management', 'Investment Platform', 'Market', 'Mutual Investment', 'Technical Support and Account Management', 'Privacy and Security'];
 
     // FAQ data
     const faqItems: FAQItem[] = [
         {
             question: "What services does Realvista offer?",
-            answer: "Realvista provides a wide range of real estate services, which are categorized into four: (i) Portfolio Management: We provide a robust platform that allows users to update and manage their diverse real estate portfolios in real time. (ii) Investment Platform: Our investment services allow beginners and established real estate investors to seamlessly access affordable properties and generate cash flow by acquiring property slots depending on their financial capabilities. (iii) Market: Realvista is the meeting place for real estate buyers and sellers. Registered users, real estate agents, and companies can freely upload properties for rent or sale. These grants access to a pool of quality properties for the buyers. (iv) Mutual Investment: This unique feature allows for group mutual funding of properties. A group of investors can create an independent group. Each group can add member, upload, and manage their properties independently.",
+            answer: "Realvista provides a wide range of real estate services, which are categorised into four: (i) Portfolio Management: We provide a robust platform that allows users to update and manage their diverse real estate portfolios in real time. (ii) Investment Platform: Our investment services allow beginners and established real estate investors to seamlessly access affordable properties and generate cash flow by acquiring property slots depending on their financial capabilities. (iii) Market: Realvista is the meeting place for real estate buyers and sellers. Registered users, real estate agents, and companies can freely upload properties for rent or sale. These grants access to a pool of quality properties for the buyers. (iv) Mutual Investment: This unique feature allows for group mutual funding of properties. A group of investors can create an independent group. Each group can add member, upload, and manage their properties independently.",
             category: "General"
         },
         {
             question: "How do I create an account on your website/app?",
-            answer: "To create an account, click on the \"Sign Up\" button on the homepage of our website or app. If signing up from the website, you will be prompted to download the app to complete the registration. On the App, you'll be prompted to enter your Full name, email address, and password. After completing the registration, you'll receive a confirmation email with an activation token. Input the code on the app or click the link in your email to activate your account.",
+            answer: "To create an account, click on the \"Sign Up\" button on our website or app. You will be required to choose the type of account you wish to create (customer account or agent/company account). Fill out the registration form according to the type of account, providing your complete details, including full name, email address, and password. After completing the registration, you'll receive a confirmation email with an activation token. Input the code on the app or website to activate your account.",
             category: "General"
         },
         {
@@ -54,7 +54,7 @@ const FAQPage: React.FC = () => {
         },
         {
             question: "Who can invest with Realvista?",
-            answer: "The Realvista investment platform is regulated under real estate investment regulations. Our investment platform is mostly suitable for institutional investors or individuals with the experience, knowledge, and expertise necessary to make independent investment decisions and understand the risks posed by investment in real estate properties.",
+            answer: "The RealVista investment platform is regulated under real estate investment regulations. Our investment platform is mostly suitable for institutional investors or individuals with the experience, knowledge, and expertise necessary to make independent investment decisions and understand the risks posed by investment in real estate properties.",
             category: "Investment Platform"
         },
         {
@@ -74,12 +74,12 @@ const FAQPage: React.FC = () => {
         },
         {
             question: "What are the rules of the groups?",
-            answer: "Each group has its own private terms and conditions. We encourage you to pay close attention and review the rules before joining any group. The groups are not managed by Realvista; therefore, we will not be held responsible for any mismanagement of funds or wrong investment decisions.",
+            answer: "Each group has its private terms and conditions. We encourage you to pay close attention and review the terms and conditions before joining any group. The groups are not managed by Realvista; therefore, we will not be held responsible for any mismanagement of funds or wrong investment decisions.",
             category: "Mutual Investment"
         },
         {
             question: "How do I search for properties on your platform?",
-            answer: "To search for properties, use the search bar on the homepage. You can also select filters such as location, price range, property type, and features to personalize your search. Also, you can browse through curated categories or explore the map view to find listings near your preferred location.",
+            answer: "To search for properties, use the search bar on the homepage. You can also select filters such as location, price range, property type, and features to personalise your search. Also, you can browse through curated categories or explore the map view to find listings near your preferred location.",
             category: "Market"
         },
         {
@@ -89,12 +89,12 @@ const FAQPage: React.FC = () => {
         },
         {
             question: "How do I schedule a property viewing?",
-            answer: "To schedule a viewing, simply click on the \"Schedule a Viewing\" button on the property listing page. Select a date and time that work for you, and the listing agent/company will confirm the appointment. You will receive a reminder via email or SMS before the viewing.",
+            answer: "To schedule a viewing, simply click on the \"Schedule a Viewing\" button on the property listing page. Select a date and time that works for you, and the listing agent/company will confirm the appointment. You will receive a reminder via email or SMS before the viewing.",
             category: "Market"
         },
         {
             question: "How can I list my property for sale on your platform?",
-            answer: "You can only list properties through our mobile app. To list your property, you will need to create an agent/company account. On the homepage, select the 'manager' option, and then select 'list to the market'. Provide details about the property, upload high-quality photos, and set a price. Our team will review the listing to ensure it meets our standards before publishing it on the platform.",
+            answer: "You can list properties through our mobile app or website. To list your property, you will need to create an agent/company account. On the app, select the 'manager' option, and then select 'list to the market'. Provide details about the property, upload high-quality photos, and set a price. On the website, open your profile and click on My listings. Then click on 'Add New Property' to list a new property.",
             category: "Market"
         },
         {
@@ -104,33 +104,33 @@ const FAQPage: React.FC = () => {
         },
         {
             question: "How do I track the progress of my listing?",
-            answer: "You can monitor the performance of your listing by logging into your account, on the homepage, selecting the 'manager' option, and then selecting 'list to the market.' Here, you'll find analytics on views, inquiries, and offers. You may also get notifications on any major developments.",
+            answer: "You can monitor the performance of your listing by logging into your account, on the app homepage, selecting the 'manager' option, and then selecting 'list to the market.' Here, you'll find analytics on views, inquiries, and offers. On the website, visit your profile for more detailed analytics on your listings. You may also get notifications on any major developments.",
             category: "Market"
         },
         {
             question: "I'm having trouble logging into my account. What should I do?",
-            answer: "If you're unable to log in, firstly ensure your internet access is enabled and try logging in again. Secondly, try resetting your password by clicking on the \"Forgot Password\" link on the login page. If the problem persists, please contact our support team through the \"Contact\" section of the website or app for further assistance.",
-            category: "Technical Support"
+            answer: "If you're unable to log in, first ensure your internet access is enabled and try logging in again. Secondly, try resetting your password by clicking on the \"Forgot Password\" link on the login page. If the problem persists, please contact our support team through the \"Contact\" section of the website or app for further assistance.",
+            category: "Technical Support and Account Management"
         },
         {
             question: "How do I update my account information?",
             answer: "To update your account information, log into your account and visit the \"Profile Settings\" section. From here, you can update your email, phone number, password, and other details.",
-            category: "Technical Support"
+            category: "Technical Support and Account Management"
         },
         {
             question: "How do I delete my account?",
-            answer: "If you wish to delete your account, log into your account and visit the \"Profile Settings\" section. Scroll down to the bottom of the page. You will see the 'delete account' button; click on it and follow the prompts to delete your account permanently.",
-            category: "Technical Support"
+            answer: "If you wish to delete your account, log in to your account and visit the \"Profile Settings\" section. Scroll down to the bottom of the page. You will see the 'delete account' button; click on it and follow the prompts to delete your account permanently.",
+            category: "Technical Support and Account Management"
         },
         {
             question: "Is my personal information safe on your platform?",
-            answer: "Yes, we prioritize your privacy and security. We use industry-standard encryption to protect your personal and financial information. For more details, please refer to our Privacy Policy.",
-            category: "Technical Support"
+            answer: "Yes, we prioritise your privacy and security. We use industry-standard encryption to protect your personal and financial information. For more details, please refer to our Privacy Policy.",
+            category: "Privacy and Security"
         },
         {
             question: "Do you share my information with third parties?",
             answer: "We do not share your personal information with third parties unless required for specific services, such as processing payments or for legal purposes. You can review our Privacy Policy for a full explanation of how your data is used.",
-            category: "Technical Support"
+            category: "Privacy and Security"
         }
     ];
 

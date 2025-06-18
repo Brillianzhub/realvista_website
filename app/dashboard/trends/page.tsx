@@ -33,14 +33,8 @@ interface Trend {
   attachment?: string;
   publish: boolean;
   views: number;
+  date_created: string;
   date_updated: string;
-}
-
-interface TrendsResponse {
-  results: Trend[];
-  count?: number;
-  next?: string;
-  previous?: string;
 }
 
 interface AlertState {
@@ -60,7 +54,7 @@ const trendSchema = z.object({
 type TrendFormData = z.infer<typeof trendSchema>;
 
 const Trends: React.FC = () => {
-  const [trends, setTrends] = useState<TrendsResponse>({ results: [] });
+  const [trends, setTrends] = useState<Trend[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [editingTrend, setEditingTrend] = useState<Trend | null>(null);
@@ -112,14 +106,16 @@ const Trends: React.FC = () => {
   const fetchTrends = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const response = await api.get('/trends/reports/', {
+      const response = await api.get('/trends/get-all-reports/', {
         headers: {
           Authorization: `Token ${token}`
         }
       });
-      setTrends(response.data);
+      // Handle the new response structure - direct array
+      setTrends(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       showAlert('Error fetching trends', 'error');
+      setTrends([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -191,12 +187,11 @@ const Trends: React.FC = () => {
           }
         });
 
-        setTrends(prevTrends => ({
-          ...prevTrends,
-          results: prevTrends.results.map(trend =>
+        setTrends(prevTrends => 
+          prevTrends.map(trend =>
             trend.id === editingTrend.id ? { ...trend, ...response.data } : trend
           )
-        }));
+        );
 
         showAlert('Trend updated successfully!');
         setEditingTrend(null);
@@ -209,10 +204,7 @@ const Trends: React.FC = () => {
           }
         });
 
-        setTrends(prevTrends => ({
-          ...prevTrends,
-          results: [response.data, ...prevTrends.results]
-        }));
+        setTrends(prevTrends => [response.data, ...prevTrends]);
         showAlert('Trend created successfully!');
         setShowCreateForm(false);
       }
@@ -239,12 +231,11 @@ const Trends: React.FC = () => {
       );
 
       // Use the response data to update the state instead of assuming the toggle worked
-      setTrends(prevTrends => ({
-        ...prevTrends,
-        results: prevTrends.results.map(trend =>
+      setTrends(prevTrends => 
+        prevTrends.map(trend =>
           trend.id === trendId ? { ...trend, ...response.data } : trend
         )
-      }));
+      );
 
       // Use the actual response data for the success message
       const newStatus = response.data.publish;
@@ -473,7 +464,7 @@ const Trends: React.FC = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">Your Trends</h3>
                 <Badge variant="secondary" className="bg-teal-100 text-teal-800">
-                  {trends.results.length} {trends.results.length === 1 ? 'trend' : 'trends'}
+                  {trends.length} {trends.length === 1 ? 'trend' : 'trends'}
                 </Badge>
               </div>
 
@@ -481,7 +472,7 @@ const Trends: React.FC = () => {
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
                 </div>
-              ) : trends.results.length === 0 ? (
+              ) : trends.length === 0 ? (
                 <Card className="text-center py-8 border-dashed border-2 border-gray-300">
                   <CardContent>
                     <p className="text-gray-500">No trends yet. Create your first trend!</p>
@@ -489,7 +480,7 @@ const Trends: React.FC = () => {
                 </Card>
               ) : (
                 <div className="grid gap-4">
-                  {trends.results.map((trend: Trend) => (
+                  {trends.map((trend: Trend) => (
                     <Card key={trend.id} className="hover:shadow-md transition-shadow duration-200">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">

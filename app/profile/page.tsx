@@ -184,6 +184,14 @@ const Profile = () => {
         additional_features: ''
     });
     const [featuresLoading, setFeaturesLoading] = useState(false);
+    const [isCoordinatesDialogOpen, setIsCoordinatesDialogOpen] = useState(false);
+    const [currentCoordinatesListingId, setCurrentCoordinatesListingId] = useState(null);
+    const [coordinatesLoading, setCoordinatesLoading] = useState(false);
+    const [currentCoordinates, setCurrentCoordinates] = useState<any>([]);
+    const [newCoordinate, setNewCoordinate] = useState({
+        latitude: '',
+        longitude: ''
+    });
     const [isFilesDialogOpen, setIsFilesDialogOpen] = useState(false);
     const [currentFilesListingId, setCurrentFilesListingId] = useState(null);
     const [filesLoading, setFilesLoading] = useState(false);
@@ -264,6 +272,46 @@ const Profile = () => {
         }
     };
 
+    const handleDeleteFile = async (fileId: number) => {
+        try {
+            setFilesLoading(true);
+
+            const response = await api.delete('/market/property-file/delete/', {
+                data: { id: fileId },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Token ${token}`
+                }
+            });
+
+            if (response.status === 200) {
+                // Remove the deleted file from existingFiles state
+                setExistingFiles((prevFiles: any[]) =>
+                    prevFiles.filter((file: any) => file.id !== fileId)
+                );
+
+                // Update the userProperties state to reflect the change
+                setUserProperties((prevProperties: any[]) =>
+                    prevProperties.map((property: any) => {
+                        if (property.id === currentFilesListingId) {
+                            return {
+                                ...property,
+                                image_files: property.image_files.filter((file: any) => file.id !== fileId)
+                            };
+                        }
+                        return property;
+                    })
+                );
+
+                toast.success("File deleted successfully");
+            }
+        } catch (error) {
+            console.error("Error deleting file:", error);
+            // toast.error("Failed to delete file");
+        } finally {
+            setFilesLoading(false);
+        }
+    };
 
     const handleFileUpload = async () => {
         if (!selectedFiles.length || !currentFilesListingId) {
@@ -480,7 +528,7 @@ const Profile = () => {
         description: "",
         property_type: "",
         price: "",
-        currency: "USD",
+        currency: "",
         listing_purpose: "sale",
         address: "",
         city: "",
@@ -496,6 +544,7 @@ const Profile = () => {
     });
     const [submitStatus, setSubmitStatus] = useState<any>(null); // null, 'success', 'error'
     const [statusMessage, setStatusMessage] = useState<any>("");
+    const [selectedFile, setSelectedFile] = useState(null);
     const [files, setFiles] = useState<any>({
         id_card: null,
         photo: null,
@@ -730,10 +779,37 @@ const Profile = () => {
         fetchUserProperties()
     }, [token]);
 
+    const handleEditFileSelect = (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                toast.error("Please select a valid image file");
+                return;
+            }
+
+            // Validate file size (optional - 5MB limit)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("File size should be less than 5MB");
+                return;
+            }
+
+            setSelectedFile(file);
+
+            // Create preview URL for immediate display
+            const previewUrl = URL.createObjectURL(file);
+            setEditableProfile((prev: any) => ({
+                ...prev,
+                photo: previewUrl
+            }));
+        }
+    };
+
+
     const handleUpdateDetails = async (listingId: any) => {
         const listingToUpdate = listings.find((listing: any) => listing.id === listingId);
         await new Promise(resolve => setTimeout(resolve, 100));
-
+         console.log("listingToUpdate--->", listingToUpdate)
         if (listingToUpdate) {
             setNewListing({
                 title: listingToUpdate.title || "",
@@ -860,6 +936,157 @@ const Profile = () => {
         setCurrentFeaturesListingId(null);
     };
 
+    const handleManageCoordinates = async (listingId: any) => {
+        try {
+            setCurrentCoordinatesListingId(listingId);
+            setCoordinatesLoading(true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Find the specific property by listingId
+            const property = userProperties.find((prop: any) => prop.id === listingId);
+
+            // Set existing coordinates or empty array if none exist
+            const existingCoordinates = property?.market_coordinates || [];
+            setCurrentCoordinates(existingCoordinates);
+
+            setIsCoordinatesDialogOpen(true);
+            setCoordinatesLoading(false);
+        } catch (error) {
+            console.error("Error fetching coordinates:", error);
+            setCoordinatesLoading(false);
+            toast.error("Failed to load coordinates");
+        }
+    };
+
+    const handleAddCoordinate = async () => {
+        if (!newCoordinate.latitude || !newCoordinate.longitude) {
+            toast.error("Please enter both latitude and longitude");
+            return;
+        }
+
+        // Validate coordinate values
+        const lat = parseFloat(newCoordinate.latitude);
+        const lng = parseFloat(newCoordinate.longitude);
+
+        if (isNaN(lat) || isNaN(lng)) {
+            toast.error("Please enter valid numeric coordinates");
+            return;
+        }
+
+        if (lat < -90 || lat > 90) {
+            toast.error("Latitude must be between -90 and 90");
+            return;
+        }
+
+        if (lng < -180 || lng > 180) {
+            toast.error("Longitude must be between -180 and 180");
+            return;
+        }
+
+        try {
+            setCoordinatesLoading(true);
+
+            const coordinateData = {
+                property: currentCoordinatesListingId,
+                coordinates: [
+                    {
+                        latitude: lat,
+                        longitude: lng
+                    }
+                ]
+            };
+
+            const response = await api.post(
+                `/market/property/coordinates/`,
+                coordinateData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                    }
+                }
+            );
+
+            if (response.data) {
+                fetchProfile();
+                toast.success("Coordinate added successfully!");
+                setIsCoordinatesDialogOpen(false);
+            }
+
+            // Update current coordinates list
+            const newCoord = { latitude: lat, longitude: lng };
+            setCurrentCoordinates((prev: any) => [...prev, newCoord]);
+
+            // Update the property in userProperties
+            setUserProperties((prev: any) => prev.map((prop: any) =>
+                prop.id === currentCoordinatesListingId
+                    ? { ...prop, coordinates: [...(prop.coordinates || []), newCoord] }
+                    : prop
+            ));
+
+            // Reset form
+            setNewCoordinate({ latitude: '', longitude: '' });
+
+            setCoordinatesLoading(false);
+        } catch (error: any) {
+            console.error("Error adding coordinate:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Failed to add coordinate";
+            toast.error(errorMessage);
+            setCoordinatesLoading(false);
+        }
+    };
+
+    // Function to delete a coordinate
+    const handleDeleteCoordinate = async (coordinateIndex: any) => {
+        try {
+            setCoordinatesLoading(true);
+
+            const coordinateToDelete = currentCoordinates[coordinateIndex];
+
+            const deleteData = {
+                id: currentCoordinatesListingId
+            };
+
+            await api.delete(
+                `/market/market/coordinates/delete/`,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                    },
+                    data: deleteData
+                }
+            );
+
+            // Update current coordinates list
+            const updatedCoordinates = currentCoordinates.filter((_: any, index: number) => index !== coordinateIndex);
+            setCurrentCoordinates(updatedCoordinates);
+
+            // Update the property in userProperties
+            setUserProperties((prev: any) => prev.map((prop: any) =>
+                prop.id === currentCoordinatesListingId
+                    ? { ...prop, coordinates: updatedCoordinates }
+                    : prop
+            ));
+
+            toast.success("Coordinate deleted successfully!");
+            setCoordinatesLoading(false);
+        } catch (error: any) {
+            console.error("Error deleting coordinate:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Failed to delete coordinate";
+            toast.error(errorMessage);
+            setCoordinatesLoading(false);
+        }
+    };
+
+
+    // Function to reset coordinates form
+    const resetCoordinatesForm = () => {
+        setNewCoordinate({ latitude: '', longitude: '' });
+        setCurrentCoordinates([]);
+        setCurrentCoordinatesListingId(null);
+    };
+
 
     // Reset form function
     const resetListingForm = () => {
@@ -891,22 +1118,29 @@ const Profile = () => {
         try {
             setLoading(true);
 
-            // Create the update data object using the proper property names
-            const updateData = {
-                phone_number: editableProfile.phone_number || "",
-                country_of_residence: editableProfile.country_of_residence || "Nigeria",
-                state: editableProfile.state || "",
-                city: editableProfile.city || "",
-                street: editableProfile.street || "",
-                house_number: editableProfile.house_number || "",
-                postal_code: editableProfile.postal_code || "",
-                birth_date: editableProfile.birth_date || ""
-            };
+            // Create FormData to handle both file and text data
+            const formData = new FormData();
+
+            // Add text fields
+            formData.append('phone_number', editableProfile.phone_number || "");
+            formData.append('country_of_residence', editableProfile.country_of_residence || "Nigeria");
+            formData.append('state', editableProfile.state || "");
+            formData.append('city', editableProfile.city || "");
+            formData.append('street', editableProfile.street || "");
+            formData.append('house_number', editableProfile.house_number || "");
+            formData.append('postal_code', editableProfile.postal_code || "");
+            formData.append('birth_date', editableProfile.birth_date || "");
+            formData.append('bio', editableProfile.bio || "");
+
+            // Add avatar file if selected
+            if (selectedFile) {
+                formData.append('avatar', selectedFile);
+            }
 
             // Make API call to update profile
-            const response = await api.put("/accounts/profile/create/", updateData, {
+            const response = await api.put("/accounts/profile/create/", formData, {
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "multipart/form-data",
                     Authorization: `Token ${token}`
                 }
             });
@@ -921,11 +1155,15 @@ const Profile = () => {
                 street: editableProfile.street,
                 house_number: editableProfile.house_number,
                 postal_code: editableProfile.postal_code,
-                birth_date: editableProfile.birth_date
+                birth_date: editableProfile.birth_date,
+                bio: editableProfile.bio,
+                photo: response.data.photo || response.data.avatar || editableProfile.photo // Update photo from response
             }));
 
+            // Clear selected file after successful update
+            setSelectedFile(null);
             setIsEditing(false);
-            setIsEditDialogOpen(false)
+            setIsEditDialogOpen(false);
             setLoading(false);
             toast.success("Profile updated successfully!");
         } catch (err) {
@@ -934,6 +1172,54 @@ const Profile = () => {
             toast.error("Failed to update profile. Please try again later.");
         }
     };
+
+    // const handleProfileUpdate = async () => {
+    //     try {
+    //         setLoading(true);
+
+    //         // Create the update data object using the proper property names
+    //         const updateData = {
+    //             phone_number: editableProfile.phone_number || "",
+    //             country_of_residence: editableProfile.country_of_residence || "Nigeria",
+    //             state: editableProfile.state || "",
+    //             city: editableProfile.city || "",
+    //             street: editableProfile.street || "",
+    //             house_number: editableProfile.house_number || "",
+    //             postal_code: editableProfile.postal_code || "",
+    //             birth_date: editableProfile.birth_date || ""
+    //         };
+
+    //         // Make API call to update profile
+    //         const response = await api.put("/accounts/profile/create/", updateData, {
+    //             headers: {
+    //                 "Content-Type": "application/json",
+    //                 Authorization: `Token ${token}`
+    //             }
+    //         });
+
+    //         // Update the local state with the response data
+    //         setProfileData((prev: any) => ({
+    //             ...prev,
+    //             phone: editableProfile.phone_number,
+    //             city: editableProfile.city,
+    //             state: editableProfile.state,
+    //             country_of_residence: editableProfile.country_of_residence,
+    //             street: editableProfile.street,
+    //             house_number: editableProfile.house_number,
+    //             postal_code: editableProfile.postal_code,
+    //             birth_date: editableProfile.birth_date
+    //         }));
+
+    //         setIsEditing(false);
+    //         setIsEditDialogOpen(false)
+    //         setLoading(false);
+    //         toast.success("Profile updated successfully!");
+    //     } catch (err) {
+    //         console.error("Error updating profile:", err);
+    //         setLoading(false);
+    //         toast.error("Failed to update profile. Please try again later.");
+    //     }
+    // };
 
     const handleAddListing = async () => {
         try {
@@ -1427,11 +1713,12 @@ const Profile = () => {
                                             setIsEditing(true);
                                             setEditableProfile((prevEditableProfile: any) => ({
                                                 ...prevEditableProfile,
-
                                                 name: profileData.name,
                                                 email: profileData.email,
                                                 phone: profileData.phone,
+                                                phone_number: profileData.phone, // Add this mapping
                                                 photo: profileData.photo,
+                                                bio: profileData.bio || "", // Add bio field
                                             }));
                                         }}>
                                             <Edit className="h-4 w-4 mr-1" /> Edit Profile
@@ -1462,9 +1749,18 @@ const Profile = () => {
                                                             <AvatarImage src={editableProfile.photo} alt={editableProfile.name} />
                                                             <AvatarFallback>{getUserInitials()}</AvatarFallback>
                                                         </Avatar>
-                                                        <Button variant="outline" size="sm">
-                                                            <Upload className="h-4 w-4 mr-1" /> Upload
-                                                        </Button>
+                                                        <div className="relative cursor-pointer">
+                                                            <input
+                                                                type="file"
+                                                                id="avatar-upload"
+                                                                accept="image/*"
+                                                                onChange={handleEditFileSelect}
+                                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                            />
+                                                            <Button variant="outline" size="sm" className="cursor-pointer">
+                                                                <Upload className="h-4 w-4 mr-1" /> Upload
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1485,9 +1781,25 @@ const Profile = () => {
                                                         type="tel"
                                                         value={editableProfile.phone}
                                                         placeholder='+2348061752152"'
-                                                        onChange={(e) => setEditableProfile({ ...editableProfile, phone: e.target.value })}
+                                                        onChange={(e) => setEditableProfile({
+                                                            ...editableProfile,
+                                                            phone: e.target.value,
+                                                            phone_number: e.target.value
+                                                        })}
                                                     />
                                                 </div>
+                                            </div>
+                                            {/* Bio field - Added here */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bio">Bio</Label>
+                                                <textarea
+                                                    id="bio"
+                                                    value={editableProfile.bio || ""}
+                                                    onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
+                                                    placeholder="Tell us about yourself..."
+                                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    rows={3}
+                                                />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="birth_date">Date of Birth</Label>
@@ -1560,7 +1872,6 @@ const Profile = () => {
                                             </div>
                                         </div>
                                         <DialogFooter>
-                                            {/* <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button> */}
                                             <Button className='cursor-pointer bg-teal-600 hover:bg-teal-700' onClick={handleProfileUpdate} disabled={loading}>
                                                 {loading ? "Saving..." : "Save Changes"}
                                             </Button>
@@ -1875,7 +2186,7 @@ const Profile = () => {
                                                             <Label htmlFor="currency">Currency</Label>
                                                             <Select
                                                                 onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
-                                                                defaultValue="NGN"
+                                                                value={newListing.currency}
                                                             >
                                                                 <SelectTrigger id="currency" className='w-full'>
                                                                     <SelectValue placeholder="Select currency" />
@@ -1980,7 +2291,7 @@ const Profile = () => {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="lot_size">Lot Size (sq ft)</Label>
+                                                            <Label htmlFor="lot_size">Plot Size (sq ft)</Label>
                                                             <Input
                                                                 id="lot_size"
                                                                 type="number"
@@ -2138,6 +2449,17 @@ const Profile = () => {
                                                                     <DropdownMenuItem
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
+                                                                            handleManageCoordinates(listing.id);
+                                                                        }}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <MapPin className="h-4 w-4 mr-2" />
+                                                                        Manage Coordinates
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
                                                                             handleAddFiles(listing.id);
                                                                         }}
                                                                         className="cursor-pointer"
@@ -2161,13 +2483,13 @@ const Profile = () => {
                                                         </div>
 
                                                         <div className="pr-10">
-                                                            <CardTitle className="text-xl font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
+                                                            <CardTitle className="text-base font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
                                                             <CardDescription className="flex items-center text-gray-600 mb-3">
                                                                 <MapPin className="h-4 w-4 mr-2 text-blue-500" />
                                                                 <span>{listing.address}</span>
                                                             </CardDescription>
                                                             <div className="space-y-1">
-                                                                <p className="text-2xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
+                                                                <p className="text-xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
                                                                 <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
                                                             </div>
                                                         </div>
@@ -2755,7 +3077,7 @@ const Profile = () => {
                                                         <Badge variant="secondary">{listing.type}</Badge>
                                                     </div>
 
-                                                    <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
+                                                    {/* <div className="grid grid-cols-3 gap-2 text-center py-2 border-t border-b border-gray-100">
                                                         <div>
                                                             <p className="text-xs text-gray-500">Views</p>
                                                             <p className="font-semibold">{listing.views}</p>
@@ -2768,7 +3090,7 @@ const Profile = () => {
                                                             <p className="text-xs text-gray-500">Favorites</p>
                                                             <p className="font-semibold">{listing.favorites}</p>
                                                         </div>
-                                                    </div>
+                                                    </div> */}
                                                 </CardContent>
                                             </Card>
                                         ))}
@@ -3118,6 +3440,19 @@ const Profile = () => {
                                                     </div>
                                                 )}
                                             </div>
+                                            {/* Delete button for existing files */}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteFile(file.id);
+                                                }}
+                                                disabled={filesLoading}
+                                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Delete file"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
                                             <p className="text-xs text-gray-500 truncate mt-1">
                                                 {file.file_name}
                                             </p>
@@ -3234,11 +3569,125 @@ const Profile = () => {
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                     </span>
-                                    Uploading...
+                                    {existingFiles?.some((file: any) => filesLoading) ? 'Deleting...' : 'Uploading...'}
                                 </>
                             ) : (
-                                `Upload ${selectedFiles.length} File${selectedFiles.length !== 1 ? 's' : ''}`
+                                selectedFiles.length > 0
+                                    ? `Upload ${selectedFiles.length} File${selectedFiles.length !== 1 ? 's' : ''}`
+                                    : 'Close'
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isCoordinatesDialogOpen} onOpenChange={setIsCoordinatesDialogOpen}>
+                <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Manage Property Coordinates</DialogTitle>
+                        <DialogDescription>
+                            Add or remove coordinates for your property listing. These help buyers locate your property accurately.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        {/* Add New Coordinate */}
+                        <div className="space-y-4 p-4 border rounded-lg bg-slate-50">
+                            <Label className="text-base font-semibold">Add New Coordinate</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="new_latitude">Latitude</Label>
+                                    <Input
+                                        id="new_latitude"
+                                        type="number"
+                                        step="any"
+                                        placeholder="e.g., 6.5244"
+                                        value={newCoordinate.latitude}
+                                        onChange={(e) => setNewCoordinate({ ...newCoordinate, latitude: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new_longitude">Longitude</Label>
+                                    <Input
+                                        id="new_longitude"
+                                        type="number"
+                                        step="any"
+                                        placeholder="e.g., 3.3792"
+                                        value={newCoordinate.longitude}
+                                        onChange={(e) => setNewCoordinate({ ...newCoordinate, longitude: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                onClick={handleAddCoordinate}
+                                disabled={coordinatesLoading || !newCoordinate.latitude || !newCoordinate.longitude}
+                                className="w-full cursor-pointer"
+                            >
+                                {coordinatesLoading ? (
+                                    <>
+                                        <span className="mr-2">
+                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        </span>
+                                        Adding...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Coordinate
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+
+                        {/* Existing Coordinates */}
+                        <div className="space-y-4">
+                            <Label className="text-base font-semibold">Existing Coordinates</Label>
+                            {currentCoordinates.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <MapPin className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                                    <p>No coordinates added yet</p>
+                                    <p className="text-sm">Add coordinates to help buyers locate your property</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 max-h-60 overflow-y-auto">
+                                    {currentCoordinates.map((coord: any, index: number) => (
+                                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                                            <div className="flex items-center space-x-3">
+                                                <MapPin className="h-4 w-4 text-blue-500" />
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        Lat: {coord.latitude}, Lng: {coord.longitude}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">Coordinate {index + 1}</p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDeleteCoordinate(index)}
+                                                disabled={coordinatesLoading}
+                                                className="text-red-600 cursor-pointer hover:text-red-700 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsCoordinatesDialogOpen(false);
+                                resetCoordinatesForm();
+                            }}
+                        >
+                            Close
                         </Button>
                     </DialogFooter>
                 </DialogContent>

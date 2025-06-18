@@ -7,6 +7,7 @@ import {
     SquareIcon,
     Heart,
     ChevronLeft,
+    ChevronRight,
     Share2,
     Check,
     Phone,
@@ -44,9 +45,6 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import api from '@/config/apiClient';
 
 // Import shadcn components
 import {
@@ -60,34 +58,177 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { FaWhatsapp } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
+import api from '@/config/apiClient';
+import { toast } from 'sonner';
+import { useParams, useRouter } from 'next/navigation';
 
 const PropertyDetailsPage = () => {
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [listing, setListing] = useState<any>(null);
-    const [vendorListings, setVendorListings] = useState<any[]>([]);
-    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
-    const params = useParams();
-    const router = useRouter()
+    const router = useRouter();
+    const params = useParams()
     const id = params.id;
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [listing, setListing] = useState<any>(null);
+    const [vendorListings, setVendorListings] = useState([]);
+    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
     const [shareUrl, setShareUrl] = useState('');
+    const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
+    const [token, setToken] = useState('');
+
+    // Image Lightbox State
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+
+    // Get token from localStorage or your auth context
+    useEffect(() => {
+        const authToken = localStorage.getItem('token') || localStorage.getItem('authToken');
+        if (authToken) {
+            setToken(authToken);
+        }
+    }, []);
+
+    // Fetch property details
+    useEffect(() => {
+        const fetchPropertyDetails = async () => {
+            if (!id) return;
+
+            try {
+                setLoading(true);
+                const response = await api.get(`/market/properties/${id}/`);
+
+                if (response.status === 200) {
+                    setListing(response.data);
+                } else {
+                    console.error('Failed to fetch property details');
+                }
+            } catch (error) {
+                console.error('Error fetching property details:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPropertyDetails();
+    }, [id]);
+
+    // Fetch user bookmarks
+    useEffect(() => {
+        const fetchUserBookmarks = async () => {
+            if (!token) return;
+
+            try {
+                const response = await api.get('/market/user-bookmarks/', {
+                    headers: {
+                        Authorization: `Token ${token}`
+                    }
+                });
+
+                if (response.status === 200) {
+                    // Create a mapping of property_id to bookmark_id for efficient lookup
+                    const bookmarkMap: Record<number, number> = {};
+                    response.data.forEach((bookmark: any) => {
+                        bookmarkMap[bookmark.property_id] = bookmark.bookmark_id;
+                    });
+                    setBookmarks(bookmarkMap);
+                }
+            } catch (error) {
+                console.error('Error fetching bookmarks:', error);
+            }
+        };
+
+        fetchUserBookmarks();
+    }, [token]);
+
+    // Fetch vendor listings
+    useEffect(() => {
+        const fetchVendorListings = async () => {
+            if (!listing?.owner?.email) return;
+
+            try {
+                const response = await api.get(`/market/properties/owner/${listing.owner.email}`);
+                if (response.status === 200) {
+                    setVendorListings(response.data.filter((prop: any) => prop.id !== parseInt(id as string)));
+                }
+            } catch (error) {
+                console.error("Error fetching vendor listings:", error);
+            }
+        };
+
+        fetchVendorListings();
+    }, [listing, id]);
 
     // Update shareUrl when the component mounts and when listing changes
     useEffect(() => {
         if (typeof window !== 'undefined' && listing?.owner) {
-            // Construct agent profile URL with the pattern /agents/[id]
             const baseUrl = window.location.origin;
-            // Assuming you're using the owner/agent ID
             const agentId = listing.owner.id || 2;
             setShareUrl(`${baseUrl}/agents/${agentId}`);
         }
     }, [listing]);
 
-    const handleShare = (platform: string) => {
+    const isBookmarked = (propertyId: any) => {
+        return propertyId in bookmarks;
+    };
+
+    const toggleFavorite = async (propertyId: any) => {
+        if (!token) {
+            console.error('Authentication required to manage favorites');
+            router.push("/sign-in");
+            return;
+        }
+
+        try {
+            let response;
+            const isFavorite = isBookmarked(propertyId);
+
+            if (isFavorite) {
+                // Use bookmark_id for removal
+                const bookmarkId = bookmarks[propertyId];
+                response = await api.post(`/market/remove-bookmark/${bookmarkId}/`, {}, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Token ${token}`
+                    }
+                });
+
+                // If removal was successful, update the state
+                if (response.status === 200) {
+                    setBookmarks(prev => {
+                        const updated = { ...prev };
+                        delete updated[propertyId];
+                        return updated;
+                    });
+                }
+            } else {
+                // Add to favorites using property_id
+                response = await api.post(`/market/bookmark-property/${propertyId}/`, {}, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Token ${token}`
+                    }
+                });
+
+                // If successful, update the bookmarks map with the new bookmark_id
+                if (response.status === 201) {
+                    const newBookmarkId = response.data.bookmark_id;
+                    setBookmarks(prev => ({
+                        ...prev,
+                        [propertyId]: newBookmarkId
+                    }));
+                }
+            }
+
+            if (response && (response.status === 200 || response.status === 201)) {
+                toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
+            }
+        } catch (error: any) {
+            console.error('Error toggling favorite status:', error);
+            toast.error('Failed to update favorites. Please try again.');
+        }
+    };
+
+    const handleShare = (platform: any) => {
         let shareLink = '';
         const vendorName = listing?.owner?.owner_name || 'Real Estate Vendor';
         const shareText = `Check out ${vendorName}'s real estate profile!`;
@@ -109,14 +250,12 @@ const PropertyDetailsPage = () => {
                 return;
         }
 
-        // First close the dialog
         setIsShareDialogOpen(false);
-
-        // Then open the share link in a new window/tab
         setTimeout(() => {
             window.open(shareLink, '_blank', 'noopener,noreferrer');
         }, 100);
     };
+
     const getShareUrl = () => {
         if (typeof window !== 'undefined') {
             return window.location.href;
@@ -124,34 +263,14 @@ const PropertyDetailsPage = () => {
         return '';
     };
 
-    useEffect(() => {
-        const getListing = async () => {
-            setLoading(true);
-            try {
-                const response = await api.get(`/market/properties/${id}`);
-                setListing(response.data);
-            } catch (error) {
-                console.error("Error fetching property:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        getListing();
-    }, [id]);
-
     const copyToClipboard = () => {
         const url = getShareUrl();
         navigator.clipboard.writeText(url)
             .then(() => {
-                toast("Link copied", {
-                    description: "Property link has been copied to clipboard",
-                })
+                toast.success("Link copied to clipboard");
             })
             .catch(err => {
-                toast(
-                    "Failed to copy", {
-                    description: "Could not copy the link. Please try again.",
-                });
+                toast.error("Failed to copy link");
             });
     };
 
@@ -184,36 +303,60 @@ const PropertyDetailsPage = () => {
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareUrl);
         setIsShareDialogOpen(false);
-        toast("Link copied!", {
-            description: "The agent's profile link has been copied to your clipboard.",
-        });
+        toast.success("Agent profile link copied!");
     };
 
-    // Fetch vendor's other listings when dialog opens
-    const fetchVendorListings = async () => {
-        if (!listing) return;
-
-        try {
-            const response = await api.get(`/market/properties/owner/${listing.owner.email}`);
-            setVendorListings(response.data.filter((prop: any) => prop.id !== parseInt(id as string)));
-        } catch (error) {
-            console.error("Error fetching vendor listings:", error);
-        }
+    // Image Lightbox Functions
+    const openLightbox = (index: any) => {
+        setLightboxImageIndex(index);
+        setIsLightboxOpen(true);
     };
 
-    // Format price with commas
+    const closeLightbox = () => {
+        setIsLightboxOpen(false);
+    };
+
+    const nextImage = () => {
+        setLightboxImageIndex((prev) =>
+            prev === propertyImages.length - 1 ? 0 : prev + 1
+        );
+    };
+
+    const prevImage = () => {
+        setLightboxImageIndex((prev) =>
+            prev === 0 ? propertyImages.length - 1 : prev - 1
+        );
+    };
+
+    // Handle keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: any) => {
+            if (!isLightboxOpen) return;
+
+            if (e.key === 'Escape') {
+                closeLightbox();
+            } else if (e.key === 'ArrowRight') {
+                nextImage();
+            } else if (e.key === 'ArrowLeft') {
+                prevImage();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isLightboxOpen]);
+
     const formatPrice = (price: any) => {
         return parseFloat(price).toLocaleString();
     };
 
-    // Format date to readable format
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString: any) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
     const handlePhoneCall = () => {
-        if (listing.owner.phone_number) {
+        if (listing?.owner.phone_number) {
             window.location.href = `tel:${listing.owner.phone_number}`
         }
     }
@@ -234,42 +377,116 @@ const PropertyDetailsPage = () => {
         }
     }
 
+    // Loading state
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-teal-50">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-700">Loading property details...</p>
+                <div className="text-center p-8 bg-white rounded-lg shadow-md">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-500 mx-auto"></div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4 mt-4">Loading Property Details...</h2>
+                    <p className="text-gray-600">Please wait while we fetch the property information.</p>
                 </div>
             </div>
         );
     }
 
+    // Property not found state
     if (!listing) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-teal-50">
                 <div className="text-center p-8 bg-white rounded-lg shadow-md">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Property Not Found</h2>
-                    <p className="text-gray-600 mb-6">The property you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-                    <Link href="/listings" className="bg-teal-500 text-white px-6 py-3 rounded-lg hover:bg-teal-600 transition-colors">
+                    <p className="text-gray-600 mb-6">The property you're looking for doesn't exist or has been removed.</p>
+                    <button
+                        onClick={() => router.push('/properties')}
+                        className="bg-teal-500 text-white px-6 py-3 rounded-lg hover:bg-teal-600 transition-colors"
+                    >
                         Browse Listings
-                    </Link>
+                    </button>
                 </div>
             </div>
         );
     }
 
-    const propertyImages = listing.image_files.map((img: any) => img.file);
-    const features = listing.features[0];
+    const propertyImages = listing.image_files?.map((img:any) => img.file) || [];
+    const features = listing.features?.[0] || {};
 
     return (
         <div className="bg-teal-50 min-h-screen">
+            {/* Image Lightbox Overlay */}
+            {isLightboxOpen && propertyImages.length > 0 && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                    {/* Close Button */}
+                    <button
+                        onClick={closeLightbox}
+                        className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+
+                    {/* Image Counter */}
+                    <div className="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full z-10">
+                        {lightboxImageIndex + 1} / {propertyImages.length}
+                    </div>
+
+                    {/* Previous Button */}
+                    <button
+                        onClick={prevImage}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
+                    >
+                        <ChevronLeft className="w-8 h-8" />
+                    </button>
+
+                    {/* Next Button */}
+                    <button
+                        onClick={nextImage}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
+                    >
+                        <ChevronRight className="w-8 h-8" />
+                    </button>
+
+                    {/* Main Image */}
+                    <div className="max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center p-8">
+                        <img
+                            src={propertyImages[lightboxImageIndex]}
+                            alt={`${listing.title} - Image ${lightboxImageIndex + 1}`}
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                    </div>
+
+                    {/* Thumbnail Navigation */}
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-4xl overflow-x-auto">
+                        {propertyImages.map((img:any, index:any) => (
+                            <button
+                                key={index}
+                                onClick={() => setLightboxImageIndex(index)}
+                                className={`
+                                    flex-shrink-0 w-16 h-12 rounded overflow-hidden border-2 transition-all
+                                    ${lightboxImageIndex === index
+                                        ? 'border-white opacity-100'
+                                        : 'border-transparent opacity-60 hover:opacity-80'}
+                                `}
+                            >
+                                <img
+                                    src={img}
+                                    alt={`Thumbnail ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Top Banner Section */}
             <div className="bg-white shadow-sm">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link href="/listings" className="text-gray-700 cursor-pointer flex items-center hover:text-teal-600">
+                    <button
+                        onClick={() => router.back()}
+                        className="text-gray-700 cursor-pointer flex items-center hover:text-teal-600"
+                    >
                         <ChevronLeft className="mr-2" /> Back to Listings
-                    </Link>
+                    </button>
                     <div className="flex items-center space-x-4">
                         {/* Share dropdown menu */}
                         <DropdownMenu>
@@ -293,7 +510,7 @@ const PropertyDetailsPage = () => {
                                     <Linkedin className="w-4 h-4 mr-2" /> LinkedIn
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => shareOnSocialMedia('whatsapp')} className="cursor-pointer">
-                                    <FaWhatsapp className="w-4 h-4 mr-2" /> WhatsApp
+                                    <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -319,7 +536,8 @@ const PropertyDetailsPage = () => {
                                 <img
                                     src={propertyImages[activeImageIndex]}
                                     alt={listing.title}
-                                    className="w-full h-96 object-cover"
+                                    className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                                    onClick={() => openLightbox(activeImageIndex)}
                                 />
                             ) : (
                                 <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
@@ -330,16 +548,26 @@ const PropertyDetailsPage = () => {
                             <div className="absolute top-4 left-4 bg-teal-500 text-white px-3 py-1 rounded-full flex items-center">
                                 {listing.listing_purpose === 'sale' ? 'For Sale' : 'For Rent'}
                             </div>
+
+                            {/* Expand Icon */}
+                            {propertyImages.length > 0 && (
+                                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
+                                    Click to expand
+                                </div>
+                            )}
                         </div>
 
                         {propertyImages.length > 0 && (
                             <div className="grid grid-cols-4 gap-4">
-                                {propertyImages.map((img: any, index: number) => (
+                                {propertyImages.map((img:any, index:any) => (
                                     <button
                                         key={index}
-                                        onClick={() => setActiveImageIndex(index)}
+                                        onClick={() => {
+                                            setActiveImageIndex(index);
+                                            openLightbox(index);
+                                        }}
                                         className={`
-                                            overflow-hidden rounded-lg 
+                                            overflow-hidden rounded-lg cursor-pointer hover:scale-105 transition-transform duration-200
                                             ${activeImageIndex === index
                                                 ? 'border-2 border-teal-500'
                                                 : 'border border-gray-200 opacity-70 hover:opacity-100'}
@@ -359,7 +587,7 @@ const PropertyDetailsPage = () => {
                         <div className="mt-8 bg-white rounded-2xl shadow-md p-6">
                             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Property Details</h2>
                             <p className="text-gray-600 leading-relaxed mb-6">
-                                {listing.description || "This beautiful property is located in a prime area offering comfort and convenience. Perfect for families looking for their dream home."}
+                                {listing.description}
                             </p>
 
                             <div className="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
@@ -393,7 +621,6 @@ const PropertyDetailsPage = () => {
                                     <span className="font-semibold">{listing.availability}</span>
                                     <span className="text-sm text-gray-500">Availability</span>
                                 </div>
-                                {/* Price per Square Meter */}
                                 <div className="flex flex-col items-center">
                                     <Calculator className="text-teal-500 mb-2 w-8 h-8" />
                                     <span className="font-semibold">
@@ -404,18 +631,20 @@ const PropertyDetailsPage = () => {
                                     </span>
                                     <span className="text-sm text-gray-500">Price per sq m</span>
                                 </div>
-                             
                             </div>
 
-                            {listing.payment_plans.length > 0 && (<h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>)}
-
-                            <div className='w-full flex gap-8 mb-4'>
-                                {listing.payment_plans && listing.payment_plans.map((plan: string, index: number) => (
-                                    <p key={index} className='text-base'>
-                                        {plan}
-                                    </p>
-                                ))}
-                            </div>
+                            {listing.payment_plans && listing.payment_plans.length > 0 && (
+                                <>
+                                    <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>
+                                    <div className='w-full flex gap-8 mb-4'>
+                                        {listing.payment_plans.map((plan:any, index:any) => (
+                                            <p key={index} className='text-base'>
+                                                {plan}
+                                            </p>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
 
                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Features & Amenities</h3>
                             <div className="grid md:grid-cols-3 grid-cols-2 gap-3 mb-4">
@@ -475,490 +704,209 @@ const PropertyDetailsPage = () => {
                                     )}
                                     <span>Water Supply</span>
                                 </div>
-                                <div className="flex items-center">
-                                    <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Road Network: {features?.road_network}</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Development: {features?.development_level}</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <Check className="text-teal-500 mr-2 w-5 h-5" />
-                                    <span>Electricity: {features?.electricity_proximity}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center text-gray-600 mt-6">
-                                <Clock className="mr-2 text-teal-500 w-5 h-5" />
-                                <span>Available: {listing?.availability === 'now' ? 'Immediately' : formatDate(listing.availability_date)}</span>
-                            </div>
-
-                            <div className="flex items-center text-gray-600 mt-2">
-                                <Calendar className="mr-2 text-teal-500 w-5 h-5" />
-                                <span>Listed on: {formatDate(listing.listed_date)}</span>
-                            </div>
-                        </div>
-                        {listing?.market_coordinates?.length > 0 && (<div className='mt-8'>
-                            <div className="h-96 w-full bg-gray-100 rounded-lg overflow-hidden">
-                                <iframe
-                                    title="Property Location"
-                                    width="100%"
-                                    height="100%"
-                                    frameBorder="0"
-                                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API}&q=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
-                                    allowFullScreen
-                                ></iframe>
-                            </div>
-                            <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                                <div className="flex items-center">
-                                    <MapPin className="text-teal-500 mr-1 w-4 h-4" />
-                                    Coordinates: {listing?.market_coordinates[0]?.latitude.toFixed(6)}, {listing?.market_coordinates[0]?.longitude.toFixed(6)}
-                                </div>
-                                <a
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center text-teal-600 hover:underline"
-                                >
-                                    Get Directions
-                                    <ChevronLeft className="rotate-180 ml-1 w-4 h-4" />
-                                </a>
-                            </div>
-                        </div>)}
-
-                    </div>
-
-                    {/* Right Sidebar */}
-                    <div className="md:col-span-1">
-                        {/* Price Card */}
-                        <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-2">Price</h2>
-                            <div className="text-3xl font-bold text-teal-600 mb-2">
-                                {listing?.currency} {formatPrice(listing?.price)}
-                            </div>
-                            {features?.negotiable && (
-                                <span className="text-sm bg-teal-100 text-teal-700 px-3 py-1 rounded-full">
-                                    {features.negotiable === 'yes' ? 'Negotiable' :
-                                        features.negotiable === 'slightly' ? 'Slightly Negotiable' : 'Fixed Price'}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Map Button Card - ADD THIS NEW SECTION */}
-                        {listing.market_coordinates && listing.market_coordinates.length > 0 && (
-                            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Location</h2>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        {listing?.market_coordinates?.length > 0 && (<button className="flex cursor-pointer items-center justify-center w-full bg-teal-500 text-white py-3 px-4 rounded-lg hover:bg-teal-600 transition-colors">
-                                            <MapPin className="mr-2 w-5 h-5" /> View on Map
-                                        </button>)}
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-4xl max-h-[85vh]">
-                                        <DialogHeader>
-                                            <DialogTitle className="text-2xl font-bold">Property Location</DialogTitle>
-                                            <DialogDescription>
-                                                {listing.address}, {listing.city}, {listing.state}
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="h-96 w-full bg-gray-100 rounded-lg overflow-hidden">
-                                            <iframe
-                                                title="Property Location"
-                                                width="100%"
-                                                height="100%"
-                                                frameBorder="0"
-                                                src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API}&q=${listing.market_coordinates[0].latitude},${listing.market_coordinates[0].longitude}`}
-                                                allowFullScreen
-                                            ></iframe>
-                                        </div>
-                                        <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                                            <div className="flex items-center">
-                                                <MapPin className="text-teal-500 mr-1 w-4 h-4" />
-                                                Coordinates: {listing?.market_coordinates[0]?.latitude.toFixed(6)}, {listing?.market_coordinates[0]?.longitude.toFixed(6)}
-                                            </div>
-                                            <a
-                                                href={`https://www.google.com/maps/dir/?api=1&destination=${listing?.market_coordinates[0]?.latitude},${listing?.market_coordinates[0]?.longitude}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center text-teal-600 hover:underline"
-                                            >
-                                                Get Directions
-                                                <ChevronLeft className="rotate-180 ml-1 w-4 h-4" />
-                                            </a>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
-                        )}
-
-                        {/* Agent/Owner Info Card */}
-                        <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Vendor</h2>
-                            <div className="flex items-center mb-4">
-                                {listing?.owner.owner_photo ? (
-                                    <img
-                                        src={listing.owner.owner_photo}
-                                        alt={listing.owner.owner_name}
-                                        className="w-16 h-16 rounded-full object-cover mr-4"
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mr-4">
-                                        <User className="w-8 h-8 text-teal-500" />
+                                {features?.road_network && (
+                                    <div className="flex items-center">
+                                        <Check className="text-teal-500 mr-2 w-5 h-5" />
+                                        <span>Road Network: {features.road_network}</span>
                                     </div>
                                 )}
+                                {features?.development_level && (
+                                    <div className="flex items-center">
+                                        <Check className="text-teal-500 mr-2 w-5 h-5" />
+                                        <span>Development Level: {features.development_level}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="space-y-6">
+                        {/* Price Card */}
+                        <div className="bg-white rounded-2xl shadow-md p-6">
+                            <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 className="font-semibold text-gray-800">{listing?.owner.owner_name}</h3>
-                                    <p className="text-sm text-gray-600">
-                                        {listing?.owner.base_city}, {listing.owner.base_state}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        Active since {new Date(listing.owner.active_since).getFullYear()}
+                                    <h3 className="text-3xl font-bold text-gray-800">
+                                        {listing.currency}{formatPrice(listing.price)}
+                                    </h3>
+                                    <p className="text-gray-600">
+                                        {listing.listing_purpose === 'sale' ? 'Total Price' : 'Monthly Rent'}
                                     </p>
                                 </div>
+                                <button
+                                    onClick={() => toggleFavorite(listing.id)}
+                                    className={`p-2 rounded-full transition-colors ${isBookmarked(listing.id)
+                                            ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    <Heart className={`w-6 h-6 ${isBookmarked(listing.id) ? 'fill-current' : ''}`} />
+                                </button>
                             </div>
 
-                            {/* Vendor Details Dialog */}
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <button
-                                        className="flex cursor-pointer items-center justify-center w-full bg-teal-50 border border-teal-500 text-teal-600 py-3 px-4 rounded-lg hover:bg-teal-100 transition-colors mb-3"
-                                        onClick={fetchVendorListings}
-                                    >
-                                        <User className="mr-2 w-5 h-5" /> View Vendor Details
-                                    </button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
-                                    {listing && (
-                                        <>
-                                            <DialogHeader>
-                                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                                                    <DialogTitle className="text-2xl font-bold">{listing.owner.owner_name}</DialogTitle>
-                                                    <div className="flex gap-2">
-                                                        {features?.verified_user && (
-                                                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                                                <Check className="w-3 h-3 mr-1" /> Verified Vendor
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <DialogDescription>
-                                                    {listing?.owner.base_city}, {listing.owner.base_state} • Active since {new Date(listing.owner.active_since).getFullYear()}
-                                                </DialogDescription>
-                                            </DialogHeader>
-
-                                            <div className="flex flex-col md:flex-row gap-8 py-6">
-                                                <div className="md:w-1/3 flex flex-col items-center">
-                                                    <Avatar className="w-32 h-32 mb-6 border-4 border-white shadow-md">
-                                                        {listing.owner.owner_photo ? (
-                                                            <AvatarImage src={listing.owner.owner_photo} alt={listing.owner.owner_name} />
-                                                        ) : (
-                                                            <AvatarFallback style={{ backgroundColor: "#0F766E20", color: "#0F766E" }}>
-                                                                <User className="w-10 h-10 text-teal-500" />
-                                                            </AvatarFallback>
-                                                        )}
-                                                    </Avatar>
-                                                    <div className="w-full p-4 flex items-center justify-center mt-[-10px] gap-2 rounded-lg">
-                                                        <h2>Ratings:</h2>
-                                                        <div className="flex items-center">
-                                                            <Star className="text-yellow-500 mr-1" />
-                                                            <span className="font-semibold">{listing?.owner?.owner_rating || 0.0}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-3 w-full bg-gray-50 p-4 rounded-lg">
-                                                        <h4 className="font-medium mb-2 text-center text-teal-600">Contact Information</h4>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-full bg-teal-100">
-                                                                <Phone className="h-4 w-4 text-teal-600" />
-                                                            </div>
-                                                            <span className="text-sm">{listing.owner.phone_number}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-full bg-teal-100">
-                                                                <Mail className="h-4 w-4 text-teal-600" />
-                                                            </div>
-                                                            <span className="text-sm">{listing.owner.email}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-full bg-teal-100">
-                                                                <MapPin className="h-4 w-4 text-teal-600" />
-                                                            </div>
-                                                            <span className="text-sm">{listing.owner.base_city}, {listing.owner.base_state}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-full bg-teal-100">
-                                                                <Clock className="h-4 w-4 text-teal-600" />
-                                                            </div>
-                                                            <span className="text-sm">Active since {new Date(listing.owner.active_since).getFullYear()}</span>
-                                                        </div>
-                                                    </div>
-
-
-                                                    <div className="mt-6 w-full">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-full flex cursor-pointer items-center justify-center gap-2 border-dashed border-gray-300"
-                                                            onClick={() => setIsShareDialogOpen(true)}
-                                                        >
-                                                            <Share2 className="h-4 w-4" />
-                                                            Share Profile
-                                                        </Button>
-                                                        <Button
-                                                            className="w-full bg-teal-500 hover:bg-teal-700 flex mt-4 cursor-pointer items-center justify-center gap-2 h-11"
-                                                            onClick={() => router.push(`/agents/${listing.owner.id}`)}
-                                                        >
-                                                            <Star className="h-4 w-4" />
-                                                            Rate This Agent
-                                                        </Button>
-                                                    </div>
-                                                    <div className="mt-6 w-full">
-                                                        <h4 className="font-medium mb-2">Preferred Contact Method</h4>
-                                                        <div className="flex space-x-2 text-sm justify-start">
-                                                            {listing.owner.contact_by_phone && (
-                                                                <Badge
-                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
-                                                                    onClick={handlePhoneCall}
-                                                                >
-                                                                    <Phone className="h-3 w-3 mr-1" /> Phone
-                                                                </Badge>
-                                                            )}
-
-                                                            {listing.owner.contact_by_whatsapp && (
-                                                                <Badge
-                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
-                                                                    onClick={handleWhatsApp}
-                                                                >
-                                                                    <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                                                                </Badge>
-                                                            )}
-
-                                                            {listing.owner.contact_by_email && (
-                                                                <Badge
-                                                                    className="py-2 bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
-                                                                    onClick={handleEmail}
-                                                                >
-                                                                    <Mail className="h-3 w-3 mr-1" /> Email
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="md:w-2/3">
-                                                    <Tabs defaultValue="about">
-                                                        <TabsList className="grid w-full grid-cols-1" style={{ backgroundColor: "#0F766E20" }}>
-                                                            <TabsTrigger
-                                                                value="about"
-                                                                className="data-[state=active]:text-white"
-                                                                style={{
-                                                                    color: "#0F766E"
-                                                                }}
-                                                            >
-                                                                About the Agent
-                                                            </TabsTrigger>
-                                                        </TabsList>
-
-                                                        <TabsContent value="about" className="mt-6">
-                                                            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                                                                <h4 className="font-medium mb-3 text-lg text-teal-600">Agent Bio</h4>
-                                                                <p className="text-gray-700 mb-4 leading-relaxed">
-                                                                    {listing.owner.bio || "No agent bio at the moment"}
-                                                                </p>
-                                                            </div>
-
-                                                            <div className="bg-gray-50 p-4 rounded-lg">
-                                                                <h4 className="font-medium mb-3 text-lg text-teal-600">Specialization</h4>
-                                                                <div className="flex flex-wrap gap-2 mb-4">
-                                                                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Residential</Badge>
-                                                                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Commercial</Badge>
-                                                                    {/* {listing.owner.specialties && listing.owner.specialties.map((specialty, index) => (
-                                                                        <Badge key={index} className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-                                                                            {specialty}
-                                                                        </Badge>
-                                                                    ))} */}
-                                                                </div>
-
-                                                                {listing.owner.descriptions && (
-                                                                    <>
-                                                                        <h4 className="font-medium mb-3 text-lg text-teal-600 mt-6">Business Philosophy</h4>
-                                                                        <p className="text-gray-700 leading-relaxed">
-                                                                            {listing.owner.descriptions}
-                                                                        </p>
-                                                                    </>
-                                                                )}
-                                                            </div>
-
-                                                            {listing.owner.achievements && listing.owner.achievements.length > 0 && (
-                                                                <div className="bg-gray-50 p-4 rounded-lg mt-6">
-                                                                    <h4 className="font-medium mb-3 text-lg text-teal-600">Achievements</h4>
-                                                                    <ul className="list-disc pl-5 space-y-2">
-                                                                        {listing.owner.achievements.map((achievement: any, index: number) => (
-                                                                            <li key={index} className="text-gray-700">{achievement}</li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </div>
-                                                            )}
-
-                                                            <div className="bg-gray-50 p-4 rounded-lg mt-6">
-                                                                <h4 className="font-medium mb-3 text-lg text-teal-600">Service Areas</h4>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                                                        {listing.owner.base_city}
-                                                                    </Badge>
-                                                                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                                                        {listing.owner.base_state}
-                                                                    </Badge>
-                                                                    {listing.owner.service_areas && listing.owner.service_areas.map((area: any, index: number) => (
-                                                                        <Badge key={index} className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                                                            {area}
-                                                                        </Badge>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        </TabsContent>
-                                                    </Tabs>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </DialogContent>
-                            </Dialog>
-
-                            {/* Contact Buttons */}
                             <div className="space-y-3">
-                                <a
-                                    href={`tel:${listing.owner.phone_number}`}
-                                    className="flex items-center justify-center w-full bg-teal-500 text-white py-3 px-4 rounded-lg hover:bg-teal-600 transition-colors"
+                                <button
+                                    onClick={handlePhoneCall}
+                                    className="w-full bg-teal-500 text-white py-3 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center"
                                 >
-                                    <Phone className="mr-2 w-5 h-5" /> Call
-                                </a>
-                                <a
-                                    href={`https://wa.me/${listing.owner.phone_number.replace(/\+/g, '')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors"
+                                    <Phone className="mr-2 w-5 h-5" />
+                                    Call Agent
+                                </button>
+                                <button
+                                    onClick={handleWhatsApp}
+                                    className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
                                 >
-                                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.03 19.18c-1.731 0-3.434-.446-4.936-1.285l-5.091 1.33 1.36-4.967C2.496 12.662 2 10.84 2 8.923 2 4.005 6.505 0 12.03 0c2.683 0 5.207 1.045 7.102 2.942C21.025 4.835 22 7.399 22 10.177c0 5.518-4.505 9.003-9.97 9.003z" fill="currentColor" />
-                                    </svg>
+                                    <MessageCircle className="mr-2 w-5 h-5" />
                                     WhatsApp
-                                </a>
-                                <a
-                                    href={`mailto:${listing.owner.email}`}
-                                    className="flex items-center justify-center w-full bg-white border-2 border-teal-500 text-teal-600 py-3 px-4 rounded-lg hover:bg-teal-50 transition-colors"
+                                </button>
+                                <button
+                                    onClick={handleEmail}
+                                    className="w-full border-2 border-teal-500 text-teal-500 py-3 rounded-lg hover:bg-teal-50 transition-colors flex items-center justify-center"
                                 >
-                                    <Mail className="mr-2 w-5 h-5" /> Email
-                                </a>
+                                    <Mail className="mr-2 w-5 h-5" />
+                                    Send Email
+                                </button>
                             </div>
                         </div>
 
-                        {/* Property Features Card - Replaced Stats */}
+                        {/* Agent Information Card */}
                         <div className="bg-white rounded-2xl shadow-md p-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Property Features</h2>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Furnished</span>
-                                    <span className={`font-semibold ${features?.furnished ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features?.furnished ? 'Yes' : 'No'}
-                                    </span>
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Listed by</h3>
+                            <div className="flex items-center mb-4">
+                                <Avatar className="w-16 h-16 mr-4">
+                                    <AvatarImage src={listing.owner?.profile_picture} alt={listing.owner?.owner_name} />
+                                    <AvatarFallback className="bg-teal-100 text-teal-600 text-lg font-semibold">
+                                        {listing.owner?.owner_name?.charAt(0) || 'A'}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h4 className="font-semibold text-gray-800">{listing.owner?.owner_name}</h4>
+                                    <p className="text-gray-600 text-sm">{listing.owner?.business_name}</p>
+                                    <div className="flex items-center mt-1">
+                                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                        <span className="text-sm text-gray-600 ml-1">4.8 (24 reviews)</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Pet Friendly</span>
-                                    <span className={`font-semibold ${features?.pet_friendly ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features?.pet_friendly ? 'Yes' : 'No'}
-                                    </span>
+                            </div>
+
+                            <div className="space-y-2 text-sm text-gray-600">
+                                <div className="flex items-center">
+                                    <Phone className="w-4 h-4 mr-2" />
+                                    <span>{listing.owner?.phone_number}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Parking Available</span>
-                                    <span className={`font-semibold ${features?.parking_available ? 'text-green-600' : 'text-red-600'}`}>
-                                        {features?.parking_available ? 'Yes' : 'No'}
-                                    </span>
+                                <div className="flex items-center">
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    <span>{listing.owner?.email}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Electricity</span>
-                                    <span className="font-semibold capitalize">{features?.electricity_proximity}</span>
+                                <div className="flex items-center">
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    <span>{listing.owner?.address}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Road Network</span>
-                                    <span className="font-semibold capitalize">{features?.road_network}</span>
+                            </div>
+
+                            <button
+                                onClick={() => router.push(`/agents/${listing.owner?.id}`)}
+                                className="w-full mt-4 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                View Agent Profile
+                            </button>
+                        </div>
+
+                        {/* Property Stats */}
+                        <div className="bg-white rounded-2xl shadow-md p-6">
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Property Stats</h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Listed on</span>
+                                    <span className="font-semibold">{formatDate(listing.created_at)}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Negotiable</span>
-                                    <span className="font-semibold capitalize">{features?.negotiable || 'No'}</span>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Property Type</span>
+                                    <span className="font-semibold">{listing.property_type}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Status</span>
+                                    <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
+                                        {listing.status}
+                                    </Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Property ID</span>
+                                    <span className="font-semibold">#{listing.id}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            {/* Share Dialog */}
-            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Share Agent Profile</DialogTitle>
-                        <DialogDescription>
-                            Choose a platform to share this agent's profile
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-6 py-4">
-                        <div className="flex justify-center gap-6">
-                            <button
-                                onClick={() => handleShare('facebook')}
-                                className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on Facebook"
-                            >
-                                <Facebook className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('twitter')}
-                                className="p-3 rounded-full bg-sky-500 text-white hover:bg-sky-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on Twitter"
-                            >
-                                <Twitter className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('linkedin')}
-                                className="p-3 rounded-full bg-blue-700 text-white hover:bg-blue-800 transition-colors flex items-center justify-center"
-                                aria-label="Share on LinkedIn"
-                            >
-                                <Linkedin className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={() => handleShare('whatsapp')}
-                                className="p-3 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center justify-center"
-                                aria-label="Share on WhatsApp"
-                            >
-                                <FaWhatsapp className="h-6 w-6" />
-                            </button>
-                        </div>
 
-                        <div className="flex flex-col gap-2">
-                            <label htmlFor="share-url" className="text-sm font-medium">
-                                Or copy this link
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="share-url"
-                                    type="text"
-                                    value={shareUrl}
-                                    readOnly
-                                    className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-                                />
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={handleCopyLink}
-                                    className="shrink-0"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                </Button>
-                            </div>
+                {/* More Properties from this Agent */}
+                {vendorListings.length > 0 && (
+                    <div className="mt-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                            More Properties by {listing.owner?.owner_name}
+                        </h2>
+                        <div className="grid md:grid-cols-3 grid-cols-1 gap-6">
+                            {vendorListings.slice(0, 3).map((property:any) => (
+                                <div key={property.id} className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                                    <div className="relative">
+                                        <img
+                                            src={property.image_files?.[0]?.file || '/api/placeholder/300/200'}
+                                            alt={property.title}
+                                            className="w-full h-48 object-cover"
+                                        />
+                                        <div className="absolute top-4 left-4 bg-teal-500 text-white px-2 py-1 rounded-full text-xs">
+                                            {property.listing_purpose === 'sale' ? 'For Sale' : 'For Rent'}
+                                        </div>
+                                        <button
+                                            onClick={() => toggleFavorite(property.id)}
+                                            className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isBookmarked(property.id)
+                                                    ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                                                    : 'bg-white bg-opacity-80 text-gray-600 hover:bg-opacity-100'
+                                                }`}
+                                        >
+                                            <Heart className={`w-4 h-4 ${isBookmarked(property.id) ? 'fill-current' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-semibold text-gray-800 mb-2 truncate">{property.title}</h3>
+                                        <div className="flex items-center text-gray-600 mb-2">
+                                            <MapPin className="w-4 h-4 mr-1" />
+                                            <span className="text-sm truncate">{property.address}, {property.city}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                                <div className="flex items-center">
+                                                    <BedDouble className="w-4 h-4 mr-1" />
+                                                    <span>{property.bedrooms}</span>
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <Bath className="w-4 h-4 mr-1" />
+                                                    <span>{property.bathrooms}</span>
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <SquareIcon className="w-4 h-4 mr-1" />
+                                                    <span>{property.square_feet}sq m</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xl font-bold text-teal-600">
+                                                {property.currency}{formatPrice(property.price)}
+                                            </span>
+                                            <button
+                                                onClick={() => router.push(`/properties/${property.id}`)}
+                                                className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors text-sm"
+                                            >
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                )}
+            </div>
         </div>
     );
 };
