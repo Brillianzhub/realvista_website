@@ -608,7 +608,7 @@ const PropertyDetailsPage = () => {
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <MapPinCheckInside className="text-teal-500 mb-2 w-8 h-8" />
-                                    <span className="font-semibold">{listing.lot_size}</span>
+                                    <span className="font-semibold">{listing.lot_size}sq m</span>
                                     <span className="text-sm text-gray-500">Plot size</span>
                                 </div>
                                 <div className="flex flex-col items-center">

@@ -198,6 +198,9 @@ const Profile = () => {
     const [existingFiles, setExistingFiles] = useState<any>([]);
     const [selectedFiles, setSelectedFiles] = useState<any>([]);
 
+
+    console.log("currentCordinates--->", currentCoordinates)
+
     const handlePasswordChange = async () => {
         // Validation
         if (!currentPassword || !newPassword || !confirmPassword) {
@@ -1043,18 +1046,14 @@ const Profile = () => {
 
             const coordinateToDelete = currentCoordinates[coordinateIndex];
 
-            const deleteData = {
-                id: currentCoordinatesListingId
-            };
-
             await api.delete(
-                `/market/market/coordinates/delete/`,
+                `/market/coordinates/delete/`,
                 {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Token ${token}`,
                     },
-                    data: deleteData
+                    data: coordinateToDelete
                 }
             );
 
@@ -2281,7 +2280,7 @@ const Profile = () => {
 
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="square_feet">Square Feet (Interior)</Label>
+                                                            <Label htmlFor="square_feet">Square Meter (Interior)</Label>
                                                             <Input
                                                                 id="square_feet"
                                                                 type="number"
@@ -2291,7 +2290,7 @@ const Profile = () => {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="lot_size">Plot Size (sq ft)</Label>
+                                                            <Label htmlFor="lot_size">Plot Size (sq m)</Label>
                                                             <Input
                                                                 id="lot_size"
                                                                 type="number"
@@ -2504,7 +2503,7 @@ const Profile = () => {
                                                                 {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
                                                             </Badge>
                                                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                {listing.area} sqft
+                                                                {listing.area} sqm
                                                             </Badge>
                                                             <Badge variant="secondary" className="bg-gray-100 text-gray-700">
                                                                 {listing.type}
