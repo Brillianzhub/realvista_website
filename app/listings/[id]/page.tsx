@@ -915,7 +915,7 @@ const PropertyDetailsPage = () => {
                         </div>
 
                         {/* Property Stats */}
-                        <div className="bg-white rounded-2xl shadow-md p-6">
+                        {/* <div className="bg-white rounded-2xl shadow-md p-6">
                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Property Stats</h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
@@ -937,7 +937,7 @@ const PropertyDetailsPage = () => {
                                     <span className="font-semibold">#{listing.id}</span>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
