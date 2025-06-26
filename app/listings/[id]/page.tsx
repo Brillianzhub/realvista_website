@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     MapPin,
     BedDouble,
@@ -34,34 +34,22 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuPortal,
-    DropdownMenuSeparator,
-    DropdownMenuShortcut,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Import shadcn components
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import api from '@/config/apiClient';
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
+
+declare global {
+    interface Window {
+      google: any;
+    }
+  }
 
 const PropertyDetailsPage = () => {
     const router = useRouter();
@@ -222,6 +210,7 @@ const PropertyDetailsPage = () => {
             if (response && (response.status === 200 || response.status === 201)) {
                 toast(`Property ${isFavorite ? 'removed from' : 'added to'} favorites successfully`);
             }
+            window.location.reload()
         } catch (error: any) {
             console.error('Error toggling favorite status:', error);
             toast.error('Failed to update favorites. Please try again.');
@@ -408,8 +397,110 @@ const PropertyDetailsPage = () => {
         );
     }
 
-    const propertyImages = listing.image_files?.map((img:any) => img.file) || [];
+    const propertyImages = listing.image_files?.map((img: any) => img.file) || [];
     const features = listing.features?.[0] || {};
+
+    const PropertyMap = ({ coordinates, title }: any) => {
+        const mapRef = useRef(null);
+        const mapInstanceRef = useRef(null);
+
+        useEffect(() => {
+            if (!coordinates || coordinates.length === 0) return;
+
+            // Load Google Maps script if not already loaded
+            if (!window.google as any) {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API}&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                script.onload = initializeMap;
+                document.head.appendChild(script);
+            } else {
+                initializeMap();
+            }
+
+            function initializeMap() {
+                if (!mapRef.current || coordinates.length === 0) return;
+
+                // Use first coordinate as center
+                const center = {
+                    lat: parseFloat(coordinates[0].latitude),
+                    lng: parseFloat(coordinates[0].longitude)
+                };
+
+                // Initialize map
+                mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+                    zoom: 15,
+                    center: center,
+                    mapTypeId: 'roadmap',
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ]
+                });
+
+                // Add markers for each coordinate
+                coordinates.forEach((coord: any, index: number) => {
+                    const marker = new window.google.maps.Marker({
+                        position: {
+                            lat: parseFloat(coord.latitude),
+                            lng: parseFloat(coord.longitude)
+                        },
+                        map: mapInstanceRef.current,
+                        title: coord.name || `Location ${index + 1}`,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                            scaledSize: new window.google.maps.Size(32, 32)
+                        }
+                    });
+
+                    // Add info window
+                    const infoWindow = new window.google.maps.InfoWindow({
+                        content: `
+                  <div style="padding: 8px;">
+                    <h4 style="margin: 0 0 8px 0; color: #333;">${coord.name || title}</h4>
+                    <p style="margin: 0; color: #666; font-size: 14px;">
+                      ${coord.description || 'Property location'}
+                    </p>
+                  </div>
+                `
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(mapInstanceRef.current, marker);
+                    });
+                });
+            }
+
+            return () => {
+                // Cleanup if needed
+                if (mapInstanceRef.current) {
+                    mapInstanceRef.current = null;
+                }
+            };
+        }, [coordinates, title]);
+
+        if (!coordinates || coordinates.length === 0) {
+            return null;
+        }
+        return (
+            <div className="w-full">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">Location</h3>
+                <div
+                    ref={mapRef}
+                    className="w-full h-64 md:h-80 rounded-lg border border-gray-300 bg-gray-100"
+                    style={{ minHeight: '300px' }}
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                    📍 {coordinates.length} location{coordinates.length > 1 ? 's' : ''} marked
+                </p>
+            </div>
+        );
+    };
+
 
     return (
         <div className="bg-teal-50 min-h-screen">
@@ -456,7 +547,7 @@ const PropertyDetailsPage = () => {
 
                     {/* Thumbnail Navigation */}
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-4xl overflow-x-auto">
-                        {propertyImages.map((img:any, index:any) => (
+                        {propertyImages.map((img: any, index: any) => (
                             <button
                                 key={index}
                                 onClick={() => setLightboxImageIndex(index)}
@@ -559,7 +650,7 @@ const PropertyDetailsPage = () => {
 
                         {propertyImages.length > 0 && (
                             <div className="grid grid-cols-4 gap-4">
-                                {propertyImages.map((img:any, index:any) => (
+                                {propertyImages.map((img: any, index: any) => (
                                     <button
                                         key={index}
                                         onClick={() => {
@@ -637,7 +728,7 @@ const PropertyDetailsPage = () => {
                                 <>
                                     <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Plans</h3>
                                     <div className='w-full flex gap-8 mb-4'>
-                                        {listing.payment_plans.map((plan:any, index:any) => (
+                                        {listing.payment_plans.map((plan: any, index: any) => (
                                             <p key={index} className='text-base'>
                                                 {plan}
                                             </p>
@@ -718,6 +809,17 @@ const PropertyDetailsPage = () => {
                                 )}
                             </div>
                         </div>
+                        {/* Map */}
+
+                        {listing.market_coordinates && listing.market_coordinates.length > 0 && (
+                            <div className="mt-6">
+                                <PropertyMap
+                                    coordinates={listing.market_coordinates}
+                                    title={listing.title}
+                                />
+                            </div>
+                        )}
+
                     </div>
 
                     {/* Sidebar */}
@@ -735,9 +837,9 @@ const PropertyDetailsPage = () => {
                                 </div>
                                 <button
                                     onClick={() => toggleFavorite(listing.id)}
-                                    className={`p-2 rounded-full transition-colors ${isBookmarked(listing.id)
-                                            ? 'bg-red-100 text-red-500 hover:bg-red-200'
-                                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    className={`p-2 cursor-pointer rounded-full transition-colors ${isBookmarked(listing.id)
+                                        ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                         }`}
                                 >
                                     <Heart className={`w-6 h-6 ${isBookmarked(listing.id) ? 'fill-current' : ''}`} />
@@ -784,7 +886,7 @@ const PropertyDetailsPage = () => {
                                     <p className="text-gray-600 text-sm">{listing.owner?.business_name}</p>
                                     <div className="flex items-center mt-1">
                                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                        <span className="text-sm text-gray-600 ml-1">4.8 (24 reviews)</span>
+                                        <span className="text-sm text-gray-600 ml-1">{listing.owner?.owner_rating || 0}</span>
                                     </div>
                                 </div>
                             </div>
@@ -800,13 +902,13 @@ const PropertyDetailsPage = () => {
                                 </div>
                                 <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-2" />
-                                    <span>{listing.owner?.address}</span>
+                                    <span>{listing.owner?.base_city}, {listing.owner?.base_state} </span>
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => router.push(`/agents/${listing.owner?.id}`)}
-                                className="w-full mt-4 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                                className="w-full cursor-pointer mt-4 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 View Agent Profile
                             </button>
@@ -846,7 +948,7 @@ const PropertyDetailsPage = () => {
                             More Properties by {listing.owner?.owner_name}
                         </h2>
                         <div className="grid md:grid-cols-3 grid-cols-1 gap-6">
-                            {vendorListings.slice(0, 3).map((property:any) => (
+                            {vendorListings.slice(0, 3).map((property: any) => (
                                 <div key={property.id} className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                                     <div className="relative">
                                         <img
@@ -860,8 +962,8 @@ const PropertyDetailsPage = () => {
                                         <button
                                             onClick={() => toggleFavorite(property.id)}
                                             className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isBookmarked(property.id)
-                                                    ? 'bg-red-100 text-red-500 hover:bg-red-200'
-                                                    : 'bg-white bg-opacity-80 text-gray-600 hover:bg-opacity-100'
+                                                ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                                                : 'bg-white bg-opacity-80 text-gray-600 hover:bg-opacity-100'
                                                 }`}
                                         >
                                             <Heart className={`w-4 h-4 ${isBookmarked(property.id) ? 'fill-current' : ''}`} />
