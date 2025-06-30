@@ -12,7 +12,7 @@ import {
     ArrowLeft,
     AlertCircle
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios'; // Make sure to install axios if not already installed
 import api from '@/config/apiClient';
@@ -57,6 +57,8 @@ const SignUpPage = () => {
     const [formErrors, setFormErrors] = useState<any>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
+    const params = useSearchParams()
+    const ref = params.get("ref")
 
     const handleBack = () => {
         if (formStage === 'details') {
@@ -159,7 +161,7 @@ const SignUpPage = () => {
                     };
 
                 // Make API call
-                const response = await api.post('/accounts/register_user/', payload);
+                const response = await api.post(`/accounts/register_user/?ref=${ref}`, payload);
                 console.log('API Response:', response.data);
                 router.push(`verify-email?id=${response.data.id}`)
             } catch (error: any) {

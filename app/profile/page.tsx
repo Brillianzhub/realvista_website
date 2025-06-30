@@ -159,6 +159,7 @@ const Profile = () => {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const router = useRouter()
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isWithdrawOpen, setIsWithdrawOpen] = useState(false)
     const [referrerCode, setReferrerCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -197,6 +198,12 @@ const Profile = () => {
     const [filesLoading, setFilesLoading] = useState(false);
     const [existingFiles, setExistingFiles] = useState<any>([]);
     const [selectedFiles, setSelectedFiles] = useState<any>([]);
+    const [withdrawalAmount, setWithdrawalAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('bank');
+    const [accountDetails, setAccountDetails] = useState('');
+    const [withdrawalError, setWithdrawalError] = useState('');
+    const [isWithdrawalSubmitting, setIsWithdrawalSubmitting] = useState(false);
+
 
 
     console.log("currentCordinates--->", currentCoordinates)
@@ -482,6 +489,58 @@ const Profile = () => {
             total_listings: 0
         }
     });
+
+    const handleWithdrawalSubmit = async (e: any) => {
+        e.preventDefault();
+        setWithdrawalError('');
+
+        // Basic validation
+        if (!withdrawalAmount || !accountDetails.trim()) {
+            setWithdrawalError('Please fill in all required fields');
+            return;
+        }
+
+        if (parseFloat(withdrawalAmount) <= 0) {
+            setWithdrawalError('Amount must be greater than 0');
+            return;
+        }
+
+        setIsWithdrawalSubmitting(true);
+
+        try {
+            const payload = {
+                amount: withdrawalAmount,
+                payment_method: paymentMethod,
+                account_details: accountDetails
+            };
+
+            const response = await api.post("/accounts/referrals/payout/", payload, {
+                headers: {
+                    Authorization: `Token ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                }
+            });
+
+            // Success handling
+            toast.success("Withdrawal request submitted successfully!");
+            setIsWithdrawOpen(false);
+
+            // Reset form
+            setWithdrawalAmount('');
+            setPaymentMethod('bank');
+            setAccountDetails('');
+
+        } catch (error: any) {
+            console.error('Withdrawal request failed:', error);
+            setWithdrawalError(
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                'Failed to submit withdrawal request. Please try again.'
+            );
+        } finally {
+            setIsWithdrawalSubmitting(false);
+        }
+    };
 
 
     const handleCardClick = (listingId: string) => {
@@ -812,7 +871,7 @@ const Profile = () => {
     const handleUpdateDetails = async (listingId: any) => {
         const listingToUpdate = listings.find((listing: any) => listing.id === listingId);
         await new Promise(resolve => setTimeout(resolve, 100));
-         console.log("listingToUpdate--->", listingToUpdate)
+        console.log("listingToUpdate--->", listingToUpdate)
         if (listingToUpdate) {
             setNewListing({
                 title: listingToUpdate.title || "",
@@ -1929,10 +1988,19 @@ const Profile = () => {
                                         <p className="text-sm text-gray-500">Your Referral Code</p>
                                         <div className="flex items-center space-x-2 mt-1">
                                             <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">{profileData.referral_code}</code>
-                                            <Button variant="outline" size="sm" onClick={() => {
-                                                navigator.clipboard.writeText(profileData.referral_code);
-                                                toast.success("Referral code copied to clipboard!");
-                                            }}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const baseUrl = process.env.NODE_ENV === 'development'
+                                                        ? 'localhost:3000'
+                                                        : 'realvistaproperties.com';
+                                                    const referralUrl = `${baseUrl}/register?ref=${profileData.referral_code}`;
+
+                                                    navigator.clipboard.writeText(referralUrl);
+                                                    toast.success("Referral link copied to clipboard!");
+                                                }}
+                                            >
                                                 Copy
                                             </Button>
                                         </div>
@@ -1965,7 +2033,7 @@ const Profile = () => {
                                     <Button
 
                                         className="w-full flex items-center bg-orange-400 cursor-pointer hover:bg-orange-500 font-bold text-white justify-center hover:text-teal-70"
-                                    // onClick={() => setIsDialogOpen(true)}
+                                        onClick={() => setIsWithdrawOpen(true)}
                                     >
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         Withdraw Earnings
@@ -3689,6 +3757,92 @@ const Profile = () => {
                             Close
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isWithdrawOpen} onOpenChange={setIsWithdrawOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Request Withdrawal</DialogTitle>
+                        <DialogDescription>
+                            Enter your withdrawal details and payment information
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleWithdrawalSubmit}>
+                        <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">Amount</Label>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    placeholder="Enter amount"
+                                    value={withdrawalAmount}
+                                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                                    className={withdrawalError ? "border-red-300 focus-visible:ring-teal-500" : ""}
+                                    min="1"
+                                    step="0.01"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="paymentMethod">Payment Method</Label>
+                                <select
+                                    id="paymentMethod"
+                                    value={paymentMethod}
+                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="bank">Bank Transfer</option>
+                                    <option value="mobile_money">Mobile Money</option>
+                                    <option value="paypal">PayPal</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="accountDetails">Account Details</Label>
+                                <Textarea
+                                    id="accountDetails"
+                                    placeholder="e.g. Access, 12345678, John Doe"
+                                    value={accountDetails}
+                                    onChange={(e) => setAccountDetails(e.target.value)}
+                                    className={withdrawalError ? "border-red-300 focus-visible:ring-teal-500" : ""}
+                                    rows={4}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Include all necessary details like bank name, account number, and account name
+                                </p>
+                            </div>
+
+                            {withdrawalError && (
+                                <div className="text-sm text-red-500 flex items-center">
+                                    <X className="h-4 w-4 mr-1" /> {withdrawalError}
+                                </div>
+                            )}
+                        </div>
+
+                        <DialogFooter className="sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsWithdrawOpen(false)}
+                                disabled={isWithdrawalSubmitting}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isWithdrawalSubmitting}
+                                className='bg-teal-600 hover:bg-teal-700 cursor-pointer'
+                            >
+                                {isWithdrawalSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : 'Request Withdrawal'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </div>
