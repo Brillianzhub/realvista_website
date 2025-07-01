@@ -79,9 +79,25 @@ const PayoutRequests: React.FC = () => {
         adminNotes: ''
     });
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [userData, setUserData] = useState<any>(null)
 
     // Mock token - replace with your actual token logic
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+   
+
+    useEffect(() => {
+        const loadUserData = () => {
+            try {
+                const storedUserData = localStorage.getItem('userData');
+                if (storedUserData) {
+                    setUserData(JSON.parse(storedUserData));
+                }
+            } catch (error) {
+                console.error('Error loading user data from localStorage:', error);
+            }
+        };
+         loadUserData()
+    }, [])
 
     // Fetch payout requests on component mount
     useEffect(() => {
@@ -176,7 +192,7 @@ const PayoutRequests: React.FC = () => {
         try {
             setIsProcessing(true);
             const newStatus = modal.action === 'approve' ? 'approved' : 'rejected';
-            
+
             const response = await api.patch(`/accounts/referrals/payouts-requests/${modal.requestId}/`, {
                 status: newStatus,
                 admin_notes: modal.adminNotes
@@ -314,7 +330,7 @@ const PayoutRequests: React.FC = () => {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-blue-100 text-sm font-medium">Total Requested</p>
+                                    <p className="text-blue-100 text-sm font-medium">Total Amount Requested</p>
                                     <p className="text-2xl font-bold">{formatCurrency(stats.total_amount_requested)}</p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-blue-200" />
@@ -345,22 +361,22 @@ const PayoutRequests: React.FC = () => {
                                     Review and process user payout requests
                                 </CardDescription>
                             </div>
-                            {/* <div className="flex space-x-2">
-                                <Button
+                            <div className="flex space-x-2">
+                                {/* <Button
                                     onClick={refreshData}
                                     disabled={isRefreshing}
                                     className="bg-white/20 hover:bg-white/30 cursor-pointer text-white border-white/30"
                                 >
                                     <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                                     Refresh
-                                </Button>
+                                </Button> */}
                                 <Button
                                     className="bg-white/20 hover:bg-white/30 cursor-pointer text-white border-white/30"
                                 >
                                     <Download className="h-4 w-4 mr-2" />
                                     Export
                                 </Button>
-                            </div> */}
+                            </div>
                         </div>
                     </CardHeader>
 
@@ -469,6 +485,7 @@ const PayoutRequests: React.FC = () => {
                                                         <div className="mb-4 p-3 bg-gray-50 rounded-md">
                                                             <p className="text-sm text-gray-500 mb-1">Admin Notes</p>
                                                             <p className="text-sm">{request.admin_notes}</p>
+                                                            <p className="text-sm">Admin Email: {userData?.email}</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -498,7 +515,7 @@ const PayoutRequests: React.FC = () => {
                                                     </Button>
                                                 </div>
                                             )}
-
+                                            {/* 
                                             {request.status === 'approved' && (
                                                 <div className="flex justify-end space-x-2">
                                                     <Button
@@ -511,7 +528,7 @@ const PayoutRequests: React.FC = () => {
                                                         Reject
                                                     </Button>
                                                 </div>
-                                            )}
+                                            )} */}
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -531,15 +548,15 @@ const PayoutRequests: React.FC = () => {
                                 Please provide admin notes for this {modal.action === 'approve' ? 'approval' : 'rejection'}.
                             </DialogDescription>
                         </DialogHeader>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <Label className='mb-2' htmlFor="admin-notes">Admin Notes</Label>
                                 <Textarea
                                     id="admin-notes"
                                     placeholder={
-                                        modal.action === 'approve' 
-                                            ? "e.g., Verified bank details, payment approved" 
+                                        modal.action === 'approve'
+                                            ? "e.g., Verified bank details, payment approved"
                                             : "e.g., Invalid bank details, request rejected"
                                     }
                                     value={modal.adminNotes}
@@ -551,18 +568,18 @@ const PayoutRequests: React.FC = () => {
                         </div>
 
                         <DialogFooter className="gap-2">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={closeModal}
                                 disabled={isProcessing}
                             >
                                 Cancel
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={updateRequestStatus}
                                 disabled={isProcessing || !modal.adminNotes.trim()}
-                                className={modal.action === 'approve' 
-                                    ? "bg-teal-600 cursor-pointer hover:bg-teal-700" 
+                                className={modal.action === 'approve'
+                                    ? "bg-teal-600 cursor-pointer hover:bg-teal-700"
                                     : "bg-red-600 hover:bg-red-700"
                                 }
                             >

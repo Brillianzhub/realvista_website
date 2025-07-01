@@ -297,13 +297,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           {property.square_feet !== null && (
             <div className="flex flex-col items-center">
               <SquareIcon className="text-[#348b8b] mb-1 w-5 h-5" />
-              <span className="text-xs font-medium">{property.square_feet} SQ FT</span>
+              <span className="text-xs font-medium">{property.square_feet} SQ M</span>
             </div>
           )}
           {property.lot_size !== null && (
             <div className="flex flex-col items-center">
               <SquareIcon className="text-[#348b8b] mb-1 w-5 h-5" />
-              <span className="text-xs font-medium">{property.lot_size} LOT</span>
+              <span className="text-xs font-medium">{property.lot_size} PLOT SIZE</span>
             </div>
           )}
         </div>

@@ -1985,6 +1985,23 @@ const Profile = () => {
                                 </CardHeader>
                                 <CardContent className="pt-2 space-y-4">
                                     <div>
+                                        <p className="text-sm text-gray-500">Your Referral Code</p>
+                                        <div className="flex flex-col gap-3 mt-1">
+                                            <p>{profileData.referral_code}</p>
+                                            <Button
+                                                variant="outline"
+                                                className='w-max'
+                                                size="sm"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(profileData.referral_code);
+                                                    toast.success("Referral link copied to clipboard!");
+                                                }}
+                                            >
+                                                Copy
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div>
                                         <p className="text-sm text-gray-500">Your Referral Link</p>
                                         <div className="flex flex-col gap-3 mt-1">
                                             <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">
