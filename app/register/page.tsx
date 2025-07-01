@@ -10,7 +10,9 @@ import {
     MapPin,
     CheckCircle2,
     ArrowLeft,
-    AlertCircle
+    AlertCircle,
+    EyeOff,
+    Eye
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -57,6 +59,8 @@ const SignUpPage = () => {
     const [formErrors, setFormErrors] = useState<any>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const params = useSearchParams()
     const ref = params.get("ref")
 
@@ -370,20 +374,27 @@ const SignUpPage = () => {
                             <Lock size={18} />
                         </div>
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             id="password"
                             name="password"
                             value={formData.password}
                             onChange={handleInputChange}
                             className={`
-                                w-full pl-10 pr-4 py-3
-                                border rounded-xl focus:outline-none 
-                                focus:ring-2 focus:ring-[#348b8b]
-                                transition-all duration-200
-                                ${formErrors.password ? 'border-red-500 bg-red-50' : 'border-gray-300'}
-                            `}
+                    w-full pl-10 pr-12 py-3
+                    border rounded-xl focus:outline-none 
+                    focus:ring-2 focus:ring-[#348b8b]
+                    transition-all duration-200
+                    ${formErrors.password ? 'border-red-500 bg-red-50' : 'border-gray-300'}
+                `}
                             placeholder="Password"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#348b8b] transition-colors duration-200"
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                         {formErrors.password && (
                             <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>
                         )}
@@ -399,20 +410,27 @@ const SignUpPage = () => {
                             <Lock size={18} />
                         </div>
                         <input
-                            type="password"
+                            type={showConfirmPassword ? "text" : "password"}
                             id="confirmPassword"
                             name="confirmPassword"
                             value={formData.confirmPassword}
                             onChange={handleInputChange}
                             className={`
-                                w-full pl-10 pr-4 py-3
-                                border rounded-xl focus:outline-none 
-                                focus:ring-2 focus:ring-[#348b8b]
-                                transition-all duration-200
-                                ${formErrors.confirmPassword ? 'border-red-500 bg-red-50' : 'border-gray-300'}
-                            `}
+                    w-full pl-10 pr-12 py-3
+                    border rounded-xl focus:outline-none 
+                    focus:ring-2 focus:ring-[#348b8b]
+                    transition-all duration-200
+                    ${formErrors.confirmPassword ? 'border-red-500 bg-red-50' : 'border-gray-300'}
+                `}
                             placeholder="Confirm Password"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#348b8b] transition-colors duration-200"
+                        >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                         {formErrors.confirmPassword && (
                             <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
                         )}

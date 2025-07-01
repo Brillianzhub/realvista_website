@@ -17,7 +17,8 @@ import {
   Send,
   RefreshCw,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Coins
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,6 +95,12 @@ const navigationItems = [
     icon: TrendingUp,
     exact: false,
   },
+  {
+    name: "Payout",
+    href: "/dashboard/payout",
+    icon: Coins,
+    exact: false,
+},
 ];
 
 export default function DashboardWithNotifications() {

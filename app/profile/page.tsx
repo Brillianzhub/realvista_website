@@ -1985,18 +1985,21 @@ const Profile = () => {
                                 </CardHeader>
                                 <CardContent className="pt-2 space-y-4">
                                     <div>
-                                        <p className="text-sm text-gray-500">Your Referral Code</p>
-                                        <div className="flex items-center space-x-2 mt-1">
-                                            <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">{profileData.referral_code}</code>
+                                        <p className="text-sm text-gray-500">Your Referral Link</p>
+                                        <div className="flex flex-col gap-3 mt-1">
+                                            <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">
+                                                {(() => {
+                                                    const baseUrl = process.env.NODE_ENV === 'development' ? 'localhost:3000' : 'realvistaproperties.com';
+                                                    return `${baseUrl}/register?ref=${profileData.referral_code}`;
+                                                })()}
+                                            </code>
                                             <Button
                                                 variant="outline"
+                                                className='w-max'
                                                 size="sm"
                                                 onClick={() => {
-                                                    const baseUrl = process.env.NODE_ENV === 'development'
-                                                        ? 'localhost:3000'
-                                                        : 'realvistaproperties.com';
+                                                    const baseUrl = process.env.NODE_ENV === 'development' ? 'localhost:3000' : 'realvistaproperties.com';
                                                     const referralUrl = `${baseUrl}/register?ref=${profileData.referral_code}`;
-
                                                     navigator.clipboard.writeText(referralUrl);
                                                     toast.success("Referral link copied to clipboard!");
                                                 }}

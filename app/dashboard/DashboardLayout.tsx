@@ -10,7 +10,8 @@ import {
     X,
     DollarSign,
     LucideIcon,
-    TrendingUp
+    TrendingUp,
+    Coins
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +25,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
+import { FaMoneyBill } from "react-icons/fa";
 
 // Navigation item type
 interface NavigationItem {
@@ -57,6 +59,12 @@ const navigationItems: NavigationItem[] = [
         name: "Trends",
         href: "/dashboard/trends",
         icon: TrendingUp,
+        exact: false,
+    },
+    {
+        name: "Payout",
+        href: "/dashboard/payout",
+        icon: Coins,
         exact: false,
     },
 
