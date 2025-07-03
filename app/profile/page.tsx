@@ -1297,7 +1297,7 @@ const Profile = () => {
                 zip_code: newListing.zip_code,
                 bedrooms: newListing.bedrooms,
                 bathrooms: newListing.bathrooms,
-                square_feet: newListing.square_feet,
+                square_feet: newListing.square_feet || null,
                 lot_size: newListing.lot_size,
                 year_built: newListing.year_built,
                 availability: newListing.availability,
