@@ -1231,53 +1231,6 @@ const Profile = () => {
         }
     };
 
-    // const handleProfileUpdate = async () => {
-    //     try {
-    //         setLoading(true);
-
-    //         // Create the update data object using the proper property names
-    //         const updateData = {
-    //             phone_number: editableProfile.phone_number || "",
-    //             country_of_residence: editableProfile.country_of_residence || "Nigeria",
-    //             state: editableProfile.state || "",
-    //             city: editableProfile.city || "",
-    //             street: editableProfile.street || "",
-    //             house_number: editableProfile.house_number || "",
-    //             postal_code: editableProfile.postal_code || "",
-    //             birth_date: editableProfile.birth_date || ""
-    //         };
-
-    //         // Make API call to update profile
-    //         const response = await api.put("/accounts/profile/create/", updateData, {
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 Authorization: `Token ${token}`
-    //             }
-    //         });
-
-    //         // Update the local state with the response data
-    //         setProfileData((prev: any) => ({
-    //             ...prev,
-    //             phone: editableProfile.phone_number,
-    //             city: editableProfile.city,
-    //             state: editableProfile.state,
-    //             country_of_residence: editableProfile.country_of_residence,
-    //             street: editableProfile.street,
-    //             house_number: editableProfile.house_number,
-    //             postal_code: editableProfile.postal_code,
-    //             birth_date: editableProfile.birth_date
-    //         }));
-
-    //         setIsEditing(false);
-    //         setIsEditDialogOpen(false)
-    //         setLoading(false);
-    //         toast.success("Profile updated successfully!");
-    //     } catch (err) {
-    //         console.error("Error updating profile:", err);
-    //         setLoading(false);
-    //         toast.error("Failed to update profile. Please try again later.");
-    //     }
-    // };
 
     const handleAddListing = async () => {
         try {
@@ -1293,14 +1246,14 @@ const Profile = () => {
                 listing_purpose: newListing.listing_purpose,
                 address: newListing.address,
                 city: newListing.city,
-                state: newListing.state,
-                zip_code: newListing.zip_code,
-                bedrooms: newListing.bedrooms,
-                bathrooms: newListing.bathrooms,
+                state: newListing.state || null,
+                zip_code: newListing.zip_code || null,
+                bedrooms: newListing.bedrooms || null,
+                bathrooms: newListing.bathrooms || null,
                 square_feet: newListing.square_feet || null,
-                lot_size: newListing.lot_size,
-                year_built: newListing.year_built,
-                availability: newListing.availability,
+                lot_size: newListing.lot_size || null,
+                year_built: newListing.year_built || null,
+                availability: newListing.availability || null,
             };
 
             // Only add availability_date to the payload if availability is "date"
