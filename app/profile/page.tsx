@@ -1236,7 +1236,6 @@ const Profile = () => {
         try {
             setLoading(true);
 
-            // Prepare the payload according to the required format
             const payload: any = {
                 title: newListing.title,
                 description: newListing.description,
