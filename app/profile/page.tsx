@@ -24,6 +24,8 @@ import {
     BarChart,
     Calendar,
     FileEdit,
+    Play,
+    Music,
     Upload,
     CheckCircle,
     HeartIcon,
@@ -136,6 +138,41 @@ interface UpdateData {
         preferred_contact_mode: string;
     };
 }
+
+
+const VideoPreview = ({ file, className }: any) => {
+    const [videoUrl, setVideoUrl] = useState(null);
+
+    useEffect(() => {
+        if (file && file.type.startsWith('video/')) {
+            const url = URL.createObjectURL(file);
+            setVideoUrl(url as any);
+
+            // Cleanup function to revoke the URL
+            return () => {
+                URL.revokeObjectURL(url);
+            };
+        }
+    }, [file]);
+
+    if (!videoUrl) return null;
+
+    return (
+        <div className="h-full w-full relative">
+            <video
+                src={videoUrl}
+                className={className}
+                controls={false}
+                muted
+                playsInline
+                preload="metadata"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                <Play className="h-8 w-8 text-white" />
+            </div>
+        </div>
+    );
+};
 
 const Profile = () => {
 
@@ -258,6 +295,39 @@ const Profile = () => {
         }
     };
 
+    const combineAllFiles = (property: any) => {
+        const allFiles = [];
+
+        // Add images
+        if (property.image_files && property.image_files.length > 0) {
+            allFiles.push(...property.image_files.map((file: any) => ({
+                ...file,
+                file_name: file.name,
+                file_type: 'image/' + (file.name.split('.').pop()?.toLowerCase() || 'jpeg')
+            })));
+        }
+
+        // Add videos
+        if (property.videos && property.videos.length > 0) {
+            allFiles.push(...property.videos.map((file: any) => ({
+                ...file,
+                file_name: file.name,
+                file_type: 'video/' + (file.name.split('.').pop()?.toLowerCase() || 'mp4')
+            })));
+        }
+
+        // Add documents
+        if (property.documents && property.documents.length > 0) {
+            allFiles.push(...property.documents.map((file: any) => ({
+                ...file,
+                file_name: file.name,
+                file_type: 'application/' + (file.name.split('.').pop()?.toLowerCase() || 'pdf')
+            })));
+        }
+
+        return allFiles;
+    };
+
     const handleAddFiles = async (listingId: any) => {
         try {
             setCurrentFilesListingId(listingId);
@@ -266,9 +336,10 @@ const Profile = () => {
             await new Promise(resolve => setTimeout(resolve, 100));
             const property = userProperties.find((prop: any) => prop.id === listingId);
 
-            const existingImages = property.image_files
+            // Combine all files (images, videos, documents) instead of just images
+            const allExistingFiles = combineAllFiles(property);
 
-            setExistingFiles(existingImages);
+            setExistingFiles(allExistingFiles);
 
             setIsFilesDialogOpen(true);
             setFilesLoading(false);
@@ -284,7 +355,7 @@ const Profile = () => {
 
     const handleDeleteFile = async (fileId: number) => {
         try {
-            setFilesLoading(true);
+            // setFilesLoading(true);
 
             const response = await api.delete('/market/property-file/delete/', {
                 data: { id: fileId },
@@ -300,13 +371,18 @@ const Profile = () => {
                     prevFiles.filter((file: any) => file.id !== fileId)
                 );
 
-                // Update the userProperties state to reflect the change
+                // Update the userProperties state to reflect the change in all file arrays
                 setUserProperties((prevProperties: any[]) =>
                     prevProperties.map((property: any) => {
                         if (property.id === currentFilesListingId) {
                             return {
                                 ...property,
-                                image_files: property.image_files.filter((file: any) => file.id !== fileId)
+                                // Remove from image_files array
+                                image_files: property.image_files?.filter((file: any) => file.id !== fileId) || [],
+                                // Remove from videos array
+                                videos: property.videos?.filter((file: any) => file.id !== fileId) || [],
+                                // Remove from documents array
+                                documents: property.documents?.filter((file: any) => file.id !== fileId) || []
                             };
                         }
                         return property;
@@ -319,7 +395,7 @@ const Profile = () => {
             console.error("Error deleting file:", error);
             // toast.error("Failed to delete file");
         } finally {
-            setFilesLoading(false);
+            // setFilesLoading(false);
         }
     };
 
@@ -3450,7 +3526,7 @@ const Profile = () => {
                     <DialogHeader>
                         <DialogTitle>Upload Files & Images</DialogTitle>
                         <DialogDescription>
-                            Add photos and documents for your property listing.
+                            Add photos, videos, and documents for your property listing.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -3469,13 +3545,27 @@ const Profile = () => {
                                                         alt={file.file_name}
                                                         className="h-full w-full object-cover"
                                                     />
+                                                ) : file.file_type?.startsWith('video/') ? (
+                                                    <div className="h-full w-full relative">
+                                                        <video
+                                                            src={file.file}
+                                                            className="h-full w-full object-cover"
+                                                            controls={false}
+                                                            muted
+                                                            playsInline
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                                                            <Play className="h-8 w-8 text-white" />
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <div className="h-full w-full flex items-center justify-center bg-gray-50">
-                                                        <img
-                                                            src={file.file}
-                                                            alt={file.file_name}
-                                                            className="h-full w-full object-cover"
-                                                        />
+                                                        <div className="text-center">
+                                                            <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                                            <p className="text-xs text-gray-500 truncate px-2">
+                                                                {file.file_name}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -3503,7 +3593,7 @@ const Profile = () => {
 
                         {/* File Upload Area */}
                         <div className="space-y-2">
-                            <Label htmlFor="files">Upload Videos/Images</Label>
+                            <Label htmlFor="files">Upload Videos/Images/Documents</Label>
                             <div
                                 className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                 onClick={() => document.getElementById('file-input')?.click()}
@@ -3515,7 +3605,7 @@ const Profile = () => {
                                     Drag and drop files here or click to browse
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                    Supported: Images (JPG, PNG, GIF), videos (MP3, MP4) and Documents (PDF, DOC, DOCX) <br></br>
+                                    Supported: Images (JPG, PNG, GIF), Videos (MP4), Audio (MP3) and Documents (PDF, DOC, DOCX) <br></br>
                                     Size: 10MB (max)
                                 </p>
                                 <Button
@@ -3533,7 +3623,7 @@ const Profile = () => {
                                     id="file-input"
                                     type="file"
                                     multiple
-                                    accept="image/*,.pdf,.doc,.docx"
+                                    accept="image/*,video/mp4,audio/mp3,.pdf,.doc,.docx"
                                     className="hidden"
                                     onChange={handleImagePick}
                                 />
@@ -3553,6 +3643,21 @@ const Profile = () => {
                                                             alt={file.name}
                                                             className="h-full w-full object-cover"
                                                         />
+                                                    ) : file.type.startsWith('video/') ? (
+                                                        <VideoPreview
+                                                            file={file}
+                                                            className="h-full w-full object-cover"
+                                                        />
+
+                                                    ) : file.type.startsWith('audio/') ? (
+                                                        <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                                                            <div className="text-center">
+                                                                <Music className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                                                <p className="text-xs text-gray-500 truncate px-2">
+                                                                    {file.name}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <div className="h-full w-full flex items-center justify-center bg-gray-50">
                                                             <div className="text-center">
@@ -3608,12 +3713,12 @@ const Profile = () => {
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                     </span>
-                                    {existingFiles?.some((file: any) => filesLoading) ? 'Deleting...' : 'Uploading...'}
+                                    Uploading
                                 </>
                             ) : (
                                 selectedFiles.length > 0
                                     ? `Upload ${selectedFiles.length} File${selectedFiles.length !== 1 ? 's' : ''}`
-                                    : 'Close'
+                                    : 'Upload'
                             )}
                         </Button>
                     </DialogFooter>

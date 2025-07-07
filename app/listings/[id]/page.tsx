@@ -47,15 +47,15 @@ import { useParams, useRouter } from 'next/navigation';
 
 declare global {
     interface Window {
-      google: any;
+        google: any;
     }
-  }
+}
 
 const PropertyDetailsPage = () => {
     const router = useRouter();
     const params = useParams()
     const id = params.id;
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [listing, setListing] = useState<any>(null);
     const [vendorListings, setVendorListings] = useState([]);
@@ -64,9 +64,9 @@ const PropertyDetailsPage = () => {
     const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
     const [token, setToken] = useState('');
 
-    // Image Lightbox State
+    // Media Lightbox State
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+    const [lightboxMediaIndex, setLightboxMediaIndex] = useState(0);
 
     // Get token from localStorage or your auth context
     useEffect(() => {
@@ -295,9 +295,26 @@ const PropertyDetailsPage = () => {
         toast.success("Agent profile link copied!");
     };
 
-    // Image Lightbox Functions
+    // Combine images and videos into a single media array
+    const getAllMedia = () => {
+        const images = listing?.image_files?.map((img: any) => ({
+            ...img,
+            type: 'image'
+        })) || [];
+
+        const videos = listing?.videos?.map((video: any) => ({
+            ...video,
+            type: 'video'
+        })) || [];
+
+        return [...images, ...videos];
+    };
+
+    const allMedia = getAllMedia();
+
+    // Media Lightbox Functions
     const openLightbox = (index: any) => {
-        setLightboxImageIndex(index);
+        setLightboxMediaIndex(index);
         setIsLightboxOpen(true);
     };
 
@@ -305,15 +322,15 @@ const PropertyDetailsPage = () => {
         setIsLightboxOpen(false);
     };
 
-    const nextImage = () => {
-        setLightboxImageIndex((prev) =>
-            prev === propertyImages.length - 1 ? 0 : prev + 1
+    const nextMedia = () => {
+        setLightboxMediaIndex((prev) =>
+            prev === allMedia.length - 1 ? 0 : prev + 1
         );
     };
 
-    const prevImage = () => {
-        setLightboxImageIndex((prev) =>
-            prev === 0 ? propertyImages.length - 1 : prev - 1
+    const prevMedia = () => {
+        setLightboxMediaIndex((prev) =>
+            prev === 0 ? allMedia.length - 1 : prev - 1
         );
     };
 
@@ -325,9 +342,9 @@ const PropertyDetailsPage = () => {
             if (e.key === 'Escape') {
                 closeLightbox();
             } else if (e.key === 'ArrowRight') {
-                nextImage();
+                nextMedia();
             } else if (e.key === 'ArrowLeft') {
-                prevImage();
+                prevMedia();
             }
         };
 
@@ -366,6 +383,43 @@ const PropertyDetailsPage = () => {
         }
     }
 
+    // Component to render media (image or video)
+    const MediaComponent = ({ media, className = "", onClick = null, showPlayIcon = true }: any) => {
+        if (media.type === 'video') {
+            return (
+                <div className={`relative ${className}`} onClick={onClick}>
+                    <video
+                        className="w-full h-full object-cover"
+                        poster={media.image_url || undefined}
+                        preload="metadata"
+                        muted
+                    >
+                        <source src={media.file} type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                    {showPlayIcon && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-40 transition-all">
+                            <div className="bg-white bg-opacity-90 rounded-full p-3">
+                                <svg className="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        } else {
+            return (
+                <img
+                    src={media.file}
+                    alt={media.name}
+                    className={className}
+                    onClick={onClick}
+                />
+            );
+        }
+    };
+
     // Loading state
     if (loading) {
         return (
@@ -397,7 +451,6 @@ const PropertyDetailsPage = () => {
         );
     }
 
-    const propertyImages = listing.image_files?.map((img: any) => img.file) || [];
     const features = listing.features?.[0] || {};
 
     const PropertyMap = ({ coordinates, title }: any) => {
@@ -501,11 +554,10 @@ const PropertyDetailsPage = () => {
         );
     };
 
-
     return (
         <div className="bg-teal-50 min-h-screen">
-            {/* Image Lightbox Overlay */}
-            {isLightboxOpen && propertyImages.length > 0 && (
+            {/* Media Lightbox Overlay */}
+            {isLightboxOpen && allMedia.length > 0 && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                     {/* Close Button */}
                     <button
@@ -515,14 +567,14 @@ const PropertyDetailsPage = () => {
                         <X className="w-8 h-8" />
                     </button>
 
-                    {/* Image Counter */}
+                    {/* Media Counter */}
                     <div className="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full z-10">
-                        {lightboxImageIndex + 1} / {propertyImages.length}
+                        {lightboxMediaIndex + 1} / {allMedia.length}
                     </div>
 
                     {/* Previous Button */}
                     <button
-                        onClick={prevImage}
+                        onClick={prevMedia}
                         className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
                     >
                         <ChevronLeft className="w-8 h-8" />
@@ -530,39 +582,60 @@ const PropertyDetailsPage = () => {
 
                     {/* Next Button */}
                     <button
-                        onClick={nextImage}
+                        onClick={nextMedia}
                         className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
                     >
                         <ChevronRight className="w-8 h-8" />
                     </button>
 
-                    {/* Main Image */}
+                    {/* Main Media */}
                     <div className="max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center p-8">
-                        <img
-                            src={propertyImages[lightboxImageIndex]}
-                            alt={`${listing.title} - Image ${lightboxImageIndex + 1}`}
-                            className="max-w-full max-h-full object-contain rounded-lg"
-                        />
+                        {allMedia[lightboxMediaIndex]?.type === 'video' ? (
+                            <video
+                                className="max-w-full max-h-full object-contain rounded-lg"
+                                controls
+                                autoPlay
+                                preload="metadata"
+                            >
+                                <source src={allMedia[lightboxMediaIndex].file} type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        ) : (
+                            <img
+                                src={allMedia[lightboxMediaIndex]?.file}
+                                alt={`${listing.title} - Media ${lightboxMediaIndex + 1}`}
+                                className="max-w-full max-h-full object-contain rounded-lg"
+                            />
+                        )}
                     </div>
 
                     {/* Thumbnail Navigation */}
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-4xl overflow-x-auto">
-                        {propertyImages.map((img: any, index: any) => (
+                        {allMedia.map((media: any, index: any) => (
                             <button
                                 key={index}
-                                onClick={() => setLightboxImageIndex(index)}
+                                onClick={() => setLightboxMediaIndex(index)}
                                 className={`
-                                    flex-shrink-0 w-16 h-12 rounded overflow-hidden border-2 transition-all
-                                    ${lightboxImageIndex === index
+                                    flex-shrink-0 w-16 h-12 rounded overflow-hidden border-2 transition-all relative
+                                    ${lightboxMediaIndex === index
                                         ? 'border-white opacity-100'
                                         : 'border-transparent opacity-60 hover:opacity-80'}
                                 `}
                             >
-                                <img
-                                    src={img}
-                                    alt={`Thumbnail ${index + 1}`}
+                                <MediaComponent
+                                    media={media}
                                     className="w-full h-full object-cover"
+                                    showPlayIcon={false}
                                 />
+                                {media.type === 'video' && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="bg-black bg-opacity-50 rounded-full p-1">
+                                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -620,15 +693,14 @@ const PropertyDetailsPage = () => {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8">
-                    {/* Image Gallery Section */}
+                    {/* Media Gallery Section */}
                     <div className="md:col-span-2">
                         <div className="relative mb-4 rounded-2xl overflow-hidden shadow-lg">
-                            {propertyImages.length > 0 ? (
-                                <img
-                                    src={propertyImages[activeImageIndex]}
-                                    alt={listing.title}
+                            {allMedia.length > 0 ? (
+                                <MediaComponent
+                                    media={allMedia[activeMediaIndex]}
                                     className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                                    onClick={() => openLightbox(activeImageIndex)}
+                                    onClick={() => openLightbox(activeMediaIndex)}
                                 />
                             ) : (
                                 <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
@@ -640,39 +712,67 @@ const PropertyDetailsPage = () => {
                                 {listing.listing_purpose === 'sale' ? 'For Sale' : 'For Rent'}
                             </div>
 
-                            {/* Expand Icon */}
-                            {propertyImages.length > 0 && (
-                                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
-                                    Click to expand
+                            {/* Media Type Indicator */}
+                            {allMedia.length > 0 && (
+                                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                                    {allMedia[activeMediaIndex]?.type === 'video' && (
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    )}
+                                    Click to {allMedia[activeMediaIndex]?.type === 'video' ? 'play' : 'expand'}
                                 </div>
                             )}
                         </div>
 
-                        {propertyImages.length > 0 && (
+                        {allMedia.length > 0 && (
                             <div className="grid grid-cols-4 gap-4">
-                                {propertyImages.map((img: any, index: any) => (
+                                {allMedia.map((media: any, index: any) => (
                                     <button
                                         key={index}
                                         onClick={() => {
-                                            setActiveImageIndex(index);
+                                            setActiveMediaIndex(index);
                                             openLightbox(index);
                                         }}
                                         className={`
-                                            overflow-hidden rounded-lg cursor-pointer hover:scale-105 transition-transform duration-200
-                                            ${activeImageIndex === index
+                                            overflow-hidden rounded-lg cursor-pointer hover:scale-105 transition-transform duration-200 relative
+                                            ${activeMediaIndex === index
                                                 ? 'border-2 border-teal-500'
                                                 : 'border border-gray-200 opacity-70 hover:opacity-100'}
                                         `}
                                     >
-                                        <img
-                                            src={img}
-                                            alt={`Property view ${index + 1}`}
+                                        <MediaComponent
+                                            media={media}
                                             className="w-full h-24 object-cover"
+                                            showPlayIcon={false}
                                         />
+                                        {media.type === 'video' && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="bg-black bg-opacity-50 rounded-full p-1">
+                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M8 5v14l11-7z" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        )}
                                     </button>
                                 ))}
                             </div>
                         )}
+
+                        {/* Media Stats */}
+                        {allMedia.length > 0 && (
+                            <div className="mt-2 text-sm text-gray-600 flex gap-4">
+                                <span>{listing.image_files?.length || 0} Photos</span>
+                                <span>{listing.videos?.length || 0} Videos</span>
+                            </div>
+                        )}
+
+                        {/* Property Description */}
+                        <div className="mt-8">
+                            <h2 className="text-xl font-semibold mb-4 text-gray-800">Description</h2>
+                            <p className="text-gray-600 leading-relaxed">{listing.description}</p>
+                        </div>
 
                         {/* Property Description Section */}
                         <div className="mt-8 bg-white rounded-2xl shadow-md p-6">
