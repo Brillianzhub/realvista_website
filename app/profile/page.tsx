@@ -701,6 +701,43 @@ const Profile = () => {
         setStatusMessage("");
     };
 
+    const [errors, setErrors] = useState<any>({});
+
+    const validateForm = () => {
+        const newErrors: any = {};
+
+        if (!newListing.title?.trim()) {
+            newErrors.title = "Property title is required";
+        }
+
+        if (!newListing.property_type) {
+            newErrors.property_type = "Property type is required";
+        }
+
+        if (!newListing.price) {
+            newErrors.price = "Price is required";
+        }
+
+        if (!newListing.description?.trim()) {
+            newErrors.description = "Description is required";
+        }
+
+        if (!newListing.address?.trim()) {
+            newErrors.address = "Street address is required";
+        }
+
+        if (!newListing.city?.trim()) {
+            newErrors.city = "City is required";
+        }
+
+        if (!newListing.state?.trim()) {
+            newErrors.state = "State is required";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
 
     console.log("editableProfile--->", editableProfile)
 
@@ -1246,6 +1283,7 @@ const Profile = () => {
         setIsAddingListing(false);
         setIsUpdatingListing(false);
         setCurrentListingId(null);
+        setErrors({});
     };
 
     const handleProfileUpdate = async () => {
@@ -1309,6 +1347,9 @@ const Profile = () => {
 
 
     const handleAddListing = async () => {
+        if (!validateForm()) {
+            return;
+        }
         try {
             setLoading(true);
 
@@ -1377,6 +1418,8 @@ const Profile = () => {
             toast.error(`Failed to ${action} property. Please try again.`);
         }
     };
+
+    console.log("errors", errors)
 
 
     const handleEmailNotificationToggle = async (checked: any) => {
@@ -1707,6 +1750,15 @@ const Profile = () => {
             other: "Other reason"
         };
         return reasons[type] || type;
+    };
+
+    const handleInputChange = (field: any, value: any) => {
+        setNewListing({ ...newListing, [field]: value });
+
+        // Clear error for this field when user starts typing
+        if (errors[field]) {
+            setErrors({ ...errors, [field]: '' });
+        }
     };
 
 
@@ -2239,10 +2291,14 @@ const Profile = () => {
                                                         <Input
                                                             id="title"
                                                             value={newListing.title}
-                                                            onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
+                                                            onChange={(e) => handleInputChange('title', e.target.value)}
+                                                            // onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
                                                             placeholder="e.g. Modern 3 Bedroom Apartment"
                                                             required
                                                         />
+                                                          {errors.title && (
+                                                            <p className="text-sm text-red-500 mt-1">{errors.title}</p>
+                                                        )}
                                                     </div>
 
                                                     <div className="grid grid-cols-2 gap-4">
@@ -2262,8 +2318,8 @@ const Profile = () => {
                                                                     <SelectItem value="villa">Villa</SelectItem>
                                                                     <SelectItem value="commercial">Commercial</SelectItem>
                                                                     <SelectItem value="land">Land</SelectItem>
-                                                                    <SelectItem value="condo">Condo</SelectItem>
-                                                                    <SelectItem value="townhouse">Townhouse</SelectItem>
+                                                                    {/* <SelectItem value="service apartment">Service Apartment</SelectItem> */}
+                                                                    {/* <SelectItem value="townhouse">Townhouse</SelectItem> */}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -2292,7 +2348,8 @@ const Profile = () => {
                                                                 id="price"
                                                                 type="number"
                                                                 value={newListing.price}
-                                                                onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                                                                onChange={(e) => handleInputChange('price', e.target.value)}
+                                                                // onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
                                                                 placeholder="e.g. 250000"
                                                                 required
                                                             />
@@ -2322,10 +2379,14 @@ const Profile = () => {
                                                         <Input
                                                             id="address"
                                                             value={newListing.address}
-                                                            onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
+                                                            onChange={(e) => handleInputChange('address', e.target.value)}
+                                                            // onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
                                                             placeholder="e.g. 123 Main Street"
                                                             required
                                                         />
+                                                          {errors.address && (
+                                                            <p className="text-sm text-red-500 mt-1">{errors.address}</p>
+                                                        )}
                                                     </div>
 
                                                     <div className="grid grid-cols-2 gap-4">
@@ -2334,7 +2395,8 @@ const Profile = () => {
                                                             <Input
                                                                 id="city"
                                                                 value={newListing.city}
-                                                                onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
+                                                                onChange={(e) => handleInputChange('city', e.target.value)}
+                                                                // onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
                                                                 placeholder="e.g. San Francisco"
                                                                 required
                                                             />
@@ -2344,11 +2406,15 @@ const Profile = () => {
                                                             <Input
                                                                 id="state"
                                                                 value={newListing.state}
-                                                                onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
+                                                                onChange={(e) => handleInputChange('state', e.target.value)}
+                                                                // onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
                                                                 placeholder="e.g. California"
                                                                 required
                                                             />
                                                         </div>
+                                                        {errors.city && (
+                                                            <p className="text-sm text-red-500 mt-1">{errors.city}</p>
+                                                        )}
                                                         {/* <div className="space-y-2">
                                                             <Label htmlFor="zip_code">ZIP Code</Label>
                                                             <Input
@@ -2467,10 +2533,14 @@ const Profile = () => {
                                                             id="description"
                                                             rows={4}
                                                             value={newListing.description}
-                                                            onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                                                            onChange={(e) => handleInputChange('description', e.target.value)}
+                                                            // onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
                                                             placeholder="Describe the property features and highlights"
                                                             required
                                                         />
+                                                        {errors.description && (
+                                                            <p className="text-sm text-red-500 mt-1">{errors.description}</p>
+                                                        )}
                                                     </div>
 
                                                 </div>
