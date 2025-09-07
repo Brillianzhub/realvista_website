@@ -64,11 +64,11 @@ export default function Navbar() {
       type: 'link',
       href: '/about'
     },
-    {
-      label: 'PRICING',
-      type: 'link',
-      href: '/pricing'
-    },
+    // {
+    //   label: 'PRICING',
+    //   type: 'link',
+    //   href: '/pricing'
+    // },
     {
       label: 'LISTINGS',
       type: 'link',

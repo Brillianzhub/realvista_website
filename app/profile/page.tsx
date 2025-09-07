@@ -2020,7 +2020,7 @@ const Profile = () => {
                         </Card>
 
                         {/* Subscription Info */}
-                        <Card>
+                        {/* <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg">Subscription</CardTitle>
                             </CardHeader>
@@ -2055,7 +2055,7 @@ const Profile = () => {
                                     )}
                                 </div>
                             </CardContent>
-                        </Card>
+                        </Card> */}
 
                         {/* Referral Info */}
                         {profileData.referral_code && (

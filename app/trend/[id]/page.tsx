@@ -260,7 +260,7 @@ const ReportDetailPage: React.FC = () => {
                                 <div className="prose prose-teal max-w-none" dangerouslySetInnerHTML={{ __html: report.body }} />
 
                                 {/* External link */}
-                                <div className="mt-8 pt-6 border-t border-gray-100">
+                                {/* <div className="mt-8 pt-6 border-t border-gray-100">
                                     <a
                                         href={report.url}
                                         target="_blank"
@@ -269,19 +269,7 @@ const ReportDetailPage: React.FC = () => {
                                     >
                                         View Original Source <ExternalLink className="ml-2 w-4 h-4" />
                                     </a>
-                                </div>
-
-                                {/* Engagement */}
-                                <div className="mt-8 pt-6 border-t border-gray-100">
-                                    <div className="flex flex-wrap gap-4">
-                                        <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                            <ThumbsUp className="w-4 h-4 mr-2" /> Helpful (23)
-                                        </button>
-                                        {/* <button className="inline-flex items-center bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                            <MessageCircle className="w-4 h-4 mr-2" /> Comment (8)
-                                        </button> */}
-                                    </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
 
