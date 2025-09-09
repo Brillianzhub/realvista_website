@@ -214,10 +214,10 @@ const ReportDetailPage: React.FC = () => {
                                         <Eye className="w-4 h-4 mr-1" />
                                         {report.views.toLocaleString()} views
                                     </div>
-                                    <div className="flex items-center">
+                                    {/* <div className="flex items-center">
                                         <FileText className="w-4 h-4 mr-1" />
                                         Source: {report.source}
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 {/* Action buttons */}

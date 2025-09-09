@@ -1838,11 +1838,11 @@ const Profile = () => {
                                         <Building className="h-4 w-4 mr-1" /> {profileData.agency_name}
                                     </div>
                                 )}
-                                <div className="mt-2">
+                                {/* <div className="mt-2">
                                     <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
                                         {getSubscriptionInfo().plan} Plan
                                     </Badge>
-                                </div>
+                                </div> */}
                             </CardContent>
                             <CardFooter className="flex justify-center pt-2">
                                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

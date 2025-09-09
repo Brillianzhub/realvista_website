@@ -119,14 +119,14 @@ export default function MainHero() {
                         <div className="w-24 h-px bg-white/30 my-2"></div>
 
                         {/* Secondary Actions */}
-                        <div className="flex flex-wrap justify-center gap-4">
+                        {/* <div className="flex flex-wrap justify-center gap-4">
                             <Link href="/pricing" className="text-white hover:text-[#348b8b] bg-white/10 hover:bg-white backdrop-blur-sm px-6 py-3 rounded-lg transition-all duration-300">
                                 See pricing
                             </Link>
                             <Link href="/trend" className="text-white hover:text-[#348b8b] bg-white/10 hover:bg-white backdrop-blur-sm px-6 py-3 rounded-lg transition-all duration-300">
                                 Our trend
                             </Link>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 

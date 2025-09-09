@@ -269,7 +269,8 @@ const TrendsPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Source: {report.source}</span>
+                      {/* <span className="text-sm text-gray-500">Source: {report.source}</span> */}
+                      <div />
                       <Link
                         href={`/trend/${report.id}`}
                         rel="noopener noreferrer"
