@@ -1825,7 +1825,7 @@ const Profile = () => {
                                         <MapPin className="h-4 w-4 mr-1" /> {profileData.location}
                                     </div>
                                 )}
-                                <div className="flex items-center justify-center text-gray-600">
+                                <div className="flex items-center justify-center text-gray-600 flex-wrap break-all">
                                     <Mail className="h-4 w-4 mr-1" /> {profileData.email}
                                 </div>
                                 {profileData.phone && (
@@ -2084,12 +2084,13 @@ const Profile = () => {
                                     <div>
                                         <p className="text-sm text-gray-500">Your Referral Link</p>
                                         <div className="flex flex-col gap-3 mt-1">
-                                            <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1">
+                                            <code className="bg-gray-100 px-2 py-1 rounded text-sm flex-1 break-words overflow-wrap-anywhere">
                                                 {(() => {
                                                     const baseUrl = process.env.NODE_ENV === 'development' ? 'localhost:3000' : 'realvistaproperties.com';
                                                     return `${baseUrl}/register?ref=${profileData.referral_code}`;
                                                 })()}
                                             </code>
+
                                             <Button
                                                 variant="outline"
                                                 className='w-max'
@@ -2296,7 +2297,7 @@ const Profile = () => {
                                                             placeholder="e.g. Modern 3 Bedroom Apartment"
                                                             required
                                                         />
-                                                          {errors.title && (
+                                                        {errors.title && (
                                                             <p className="text-sm text-red-500 mt-1">{errors.title}</p>
                                                         )}
                                                     </div>
@@ -2384,7 +2385,7 @@ const Profile = () => {
                                                             placeholder="e.g. 123 Main Street"
                                                             required
                                                         />
-                                                          {errors.address && (
+                                                        {errors.address && (
                                                             <p className="text-sm text-red-500 mt-1">{errors.address}</p>
                                                         )}
                                                     </div>

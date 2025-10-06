@@ -255,9 +255,12 @@ const TrendsPage: React.FC = () => {
                     <h3 className="text-xl font-bold mb-3 text-gray-800 line-clamp-2 hover:text-teal-600 transition-colors">
                       {report.title}
                     </h3>
-                    <p className="text-gray-600 mb-4 line-clamp-3">
-                      {truncateText(report.body, 150)}
-                    </p>
+                    <div
+                      className="text-gray-600 mb-4 line-clamp-3"
+                      dangerouslySetInnerHTML={{
+                        __html: truncateText(report.body, 150)
+                      }}
+                    />
                     <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1" />
@@ -312,8 +315,8 @@ const TrendsPage: React.FC = () => {
                   <div
                     key={data.name}
                     className={`bg-gradient-to-r ${index === marketData.length - 1
-                        ? 'from-teal-50 to-teal-100 border-l-4 border-teal-500'
-                        : 'from-gray-50 to-gray-100'
+                      ? 'from-teal-50 to-teal-100 border-l-4 border-teal-500'
+                      : 'from-gray-50 to-gray-100'
                       } rounded-lg p-4`}
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between">

@@ -13,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Edit, Eye, EyeOff, Save, X, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Eye, EyeOff, Save, X, Trash2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import DashboardLayout from '../DashboardLayout';
 import api from '@/config/apiClient';
+import TipTapEditor from '@/app/_components/TipTapEditor';
 
 // TypeScript interfaces
 interface Category {
@@ -45,7 +46,7 @@ interface AlertState {
 // Zod validation schema
 const trendSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters').max(200, 'Title must be less than 200 characters'),
-  body: z.string().min(50, 'Body must be at least 50 characters').max(2000, 'Body must be less than 2000 characters'),
+  body: z.string(),
   category: z.string().min(1, 'Category is required'),
   source: z.string().min(1, 'Source is required'),
   url: z.string().url('Must be a valid URL').optional().or(z.literal(''))
@@ -62,6 +63,10 @@ const Trends: React.FC = () => {
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(5);
 
   const {
     register,
@@ -90,6 +95,11 @@ const Trends: React.FC = () => {
     fetchTrends();
   }, []);
 
+  // Reset to first page when trends change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [trends.length]);
+
   const fetchCategories = async (): Promise<void> => {
     try {
       const response = await api.get('/trends/categories/', {
@@ -111,11 +121,10 @@ const Trends: React.FC = () => {
           Authorization: `Token ${token}`
         }
       });
-      // Handle the new response structure - direct array
       setTrends(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       showAlert('Error fetching trends', 'error');
-      setTrends([]); // Set empty array on error
+      setTrends([]);
     } finally {
       setIsLoading(false);
     }
@@ -124,14 +133,12 @@ const Trends: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
         showAlert('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'error');
         return;
       }
 
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         showAlert('File size must be less than 5MB', 'error');
         return;
@@ -139,7 +146,6 @@ const Trends: React.FC = () => {
 
       setSelectedFile(file);
 
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setFilePreview(e.target?.result as string);
@@ -151,7 +157,6 @@ const Trends: React.FC = () => {
   const removeFile = (): void => {
     setSelectedFile(null);
     setFilePreview(null);
-    // Reset the file input
     const fileInput = document.getElementById('attachment') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -165,7 +170,6 @@ const Trends: React.FC = () => {
 
   const onSubmit = async (data: TrendFormData): Promise<void> => {
     try {
-      // Create FormData to handle file upload
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('body', data.body);
@@ -179,7 +183,6 @@ const Trends: React.FC = () => {
       }
 
       if (editingTrend) {
-        // Update existing trend
         const response = await api.put(`/trends/update-trend/${editingTrend.id}/`, formData, {
           headers: {
             Authorization: `Token ${token}`,
@@ -187,7 +190,7 @@ const Trends: React.FC = () => {
           }
         });
 
-        setTrends(prevTrends => 
+        setTrends(prevTrends =>
           prevTrends.map(trend =>
             trend.id === editingTrend.id ? { ...trend, ...response.data } : trend
           )
@@ -196,7 +199,6 @@ const Trends: React.FC = () => {
         showAlert('Trend updated successfully!');
         setEditingTrend(null);
       } else {
-        // Create new trend
         const response = await api.post('/trends/create-trend/', formData, {
           headers: {
             Authorization: `Token ${token}`,
@@ -230,14 +232,12 @@ const Trends: React.FC = () => {
         }
       );
 
-      // Use the response data to update the state instead of assuming the toggle worked
-      setTrends(prevTrends => 
+      setTrends(prevTrends =>
         prevTrends.map(trend =>
           trend.id === trendId ? { ...trend, ...response.data } : trend
         )
       );
 
-      // Use the actual response data for the success message
       const newStatus = response.data.publish;
       showAlert(`Trend ${newStatus ? 'published' : 'unpublished'} successfully!`);
     } catch (error) {
@@ -254,7 +254,6 @@ const Trends: React.FC = () => {
     setValue('source', trend.source);
     setValue('url', trend.url || '');
 
-    // Handle existing attachment
     if (trend.attachment) {
       setFilePreview(trend.attachment);
     }
@@ -276,6 +275,65 @@ const Trends: React.FC = () => {
     setSelectedFile(null);
     setFilePreview(null);
     reset();
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(trends.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTrends = trends.slice(indexOfFirstItem, indexOfLastItem);
+
+  const goToPage = (page: number): void => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToNextPage = (): void => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = (): void => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = (): number[] => {
+    const pages: number[] = [];
+    const maxPagesToShow = 5;
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push(-1); // ellipsis
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push(-1); // ellipsis
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push(-1); // ellipsis
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push(-1); // ellipsis
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
   };
 
   return (
@@ -346,7 +404,7 @@ const Trends: React.FC = () => {
 
                       <div>
                         <Label htmlFor="category">Category *</Label>
-                        <Select onValueChange={(value: string) => setValue('category', value)}>
+                        <Select onValueChange={(value: string) => setValue('category', value)} value={watch('category')}>
                           <SelectTrigger className="mt-1">
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -426,12 +484,15 @@ const Trends: React.FC = () => {
 
                       <div className="md:col-span-2">
                         <Label htmlFor="body">Content *</Label>
-                        <Textarea
-                          id="body"
-                          {...register('body')}
-                          placeholder="Write your trend content here..."
-                          rows={4}
-                          className="mt-1"
+                        <TipTapEditor
+                          content={watch('body') || ''}
+                          onChange={(html: any) => {
+                            setValue('body', html, {
+                              shouldValidate: true,
+                              shouldDirty: true
+                            });
+                          }}
+                          error={errors.body?.message}
                         />
                         {errors.body && (
                           <p className="text-red-500 text-sm mt-1">{errors.body.message}</p>
@@ -479,71 +540,158 @@ const Trends: React.FC = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4">
-                  {trends.map((trend: Trend) => (
-                    <Card key={trend.id} className="hover:shadow-md transition-shadow duration-200">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                {trend.category}
-                              </Badge>
-                              <Badge
-                                variant={trend.publish ? "default" : "secondary"}
-                                className={trend.publish ? "bg-teal-100 text-teal-800" : "bg-gray-100 text-gray-800"}
+                <>
+                  <div className="grid gap-4">
+                    {currentTrends.map((trend: Trend) => (
+                      <Card key={trend.id} className="hover:shadow-md transition-shadow duration-200">
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {trend.category}
+                                </Badge>
+                                <Badge
+                                  variant={trend.publish ? "default" : "secondary"}
+                                  className={trend.publish ? "bg-teal-100 text-teal-800" : "bg-gray-100 text-gray-800"}
+                                >
+                                  {trend.publish ? 'Published' : 'Draft'}
+                                </Badge>
+                              </div>
+                              <h4 className="font-semibold text-lg mb-2 line-clamp-2">{trend.title}</h4>
+                              <div
+                                className="text-gray-600 text-sm mb-3 line-clamp-3"
+                                dangerouslySetInnerHTML={{ __html: trend.body }}
+                              />
+                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <span>Source: {trend.source}</span>
+                                <span>Views: {trend.views}</span>
+                                <span>Updated: {new Date(trend.date_updated).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            {trend.attachment && (
+                              <img
+                                src={trend.attachment}
+                                alt="Trend"
+                                className="w-20 h-20 object-cover rounded-md ml-4"
+                              />
+                            )}
+                          </div>
+
+                          <Separator className="mb-4" />
+
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                              <Label htmlFor={`publish-${trend.id}`} className="text-sm font-medium">
+                                Publish
+                              </Label>
+                              <Switch
+                                id={`publish-${trend.id}`}
+                                checked={trend.publish}
+                                onCheckedChange={() => togglePublish(trend.id, trend.publish)}
+                                className='cursor-pointer'
+                              />
+                            </div>
+
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEdit(trend)}
+                                disabled={editingTrend !== null || showCreateForm}
                               >
-                                {trend.publish ? 'Published' : 'Draft'}
-                              </Badge>
-                            </div>
-                            <h4 className="font-semibold text-lg mb-2 line-clamp-2">{trend.title}</h4>
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-3">{trend.body}</p>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span>Source: {trend.source}</span>
-                              <span>Views: {trend.views}</span>
-                              <span>Updated: {new Date(trend.date_updated).toLocaleDateString()}</span>
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
                             </div>
                           </div>
-                          {trend.attachment && (
-                            <img
-                              src={trend.attachment}
-                              alt="Trend"
-                              className="w-20 h-20 object-cover rounded-md ml-4"
-                            />
-                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg mt-6">
+                      <div className="flex flex-1 justify-between sm:hidden">
+                        <Button
+                          onClick={goToPreviousPage}
+                          disabled={currentPage === 1}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          onClick={goToNextPage}
+                          disabled={currentPage === totalPages}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+                            <span className="font-medium">{Math.min(indexOfLastItem, trends.length)}</span> of{' '}
+                            <span className="font-medium">{trends.length}</span> trends
+                          </p>
                         </div>
-
-                        <Separator className="mb-4" />
-
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <Label htmlFor={`publish-${trend.id}`} className="text-sm font-medium">
-                              Publish
-                            </Label>
-                            <Switch
-                              id={`publish-${trend.id}`}
-                              checked={trend.publish}
-                              onCheckedChange={() => togglePublish(trend.id, trend.publish)}
-                              className='cursor-pointer'
-                            />
-                          </div>
-
-                          <div className="flex space-x-2">
+                        <div>
+                          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                             <Button
+                              onClick={goToPreviousPage}
+                              disabled={currentPage === 1}
                               variant="outline"
                               size="sm"
-                              onClick={() => startEdit(trend)}
-                              disabled={editingTrend !== null || showCreateForm}
+                              className="relative inline-flex items-center rounded-l-md px-2 py-2"
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
+                              <span className="sr-only">Previous</span>
+                              <ChevronLeft className="h-4 w-4" />
                             </Button>
-                          </div>
+
+                            {getPageNumbers().map((pageNumber, index) => (
+                              pageNumber === -1 ? (
+                                <span
+                                  key={`ellipsis-${index}`}
+                                  className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+                                >
+                                  ...
+                                </span>
+                              ) : (
+                                <Button
+                                  key={pageNumber}
+                                  onClick={() => goToPage(pageNumber)}
+                                  variant={currentPage === pageNumber ? "default" : "outline"}
+                                  size="sm"
+                                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === pageNumber
+                                      ? 'bg-teal-600 text-white hover:bg-teal-700'
+                                      : 'text-gray-900 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  {pageNumber}
+                                </Button>
+                              )
+                            ))}
+
+                            <Button
+                              onClick={goToNextPage}
+                              disabled={currentPage === totalPages}
+                              variant="outline"
+                              size="sm"
+                              className="relative inline-flex items-center rounded-r-md px-2 py-2"
+                            >
+                              <span className="sr-only">Next</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </nav>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </CardContent>
