@@ -3416,7 +3416,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="furnished"
                                         checked={featuresData.furnished}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, furnished: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, furnished: checked })}
                                     />
                                     <Label htmlFor="furnished" className="text-sm">Furnished</Label>
                                 </div>
@@ -3425,7 +3425,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="pet_friendly"
                                         checked={featuresData.pet_friendly}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
                                     />
                                     <Label htmlFor="pet_friendly" className="text-sm">Pet Friendly</Label>
                                 </div>
@@ -3434,7 +3434,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="parking_available"
                                         checked={featuresData.parking_available}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, parking_available: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, parking_available: checked })}
                                     />
                                     <Label htmlFor="parking_available" className="text-sm">Parking Available</Label>
                                 </div>
@@ -3443,7 +3443,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="swimming_pool"
                                         checked={featuresData.swimming_pool}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
                                     />
                                     <Label htmlFor="swimming_pool" className="text-sm">Swimming Pool</Label>
                                 </div>
@@ -3452,7 +3452,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="garden"
                                         checked={featuresData.garden}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, garden: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, garden: checked })}
                                     />
                                     <Label htmlFor="garden" className="text-sm">Garden</Label>
                                 </div>
@@ -3461,7 +3461,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="water_supply"
                                         checked={featuresData.water_supply}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, water_supply: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, water_supply: checked })}
                                     />
                                     <Label htmlFor="water_supply" className="text-sm">Water Supply</Label>
                                 </div>
@@ -3470,7 +3470,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="security"
                                         checked={featuresData.security}
-                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, security: checked })}
+                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, security: checked })}
                                     />
                                     <Label htmlFor="security" className="text-sm">Security</Label>
                                 </div>
