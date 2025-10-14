@@ -4,6 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Building2, HomeIcon, Users, BookOpen, PieChart, BadgeCheck } from "lucide-react";
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'About | Realvista Properties',
+    description:
+        'Realvista Properties is your one-stop real estate app—buy and sell property, discover top agents, and track profits in real time. Turn your property goals into reality.',
+    keywords: [
+        'Realvista Properties real estate app',
+        'property listings',
+        'buy and sell property',
+        'real-time profit tracking',
+        'real estate marketplace',
+        'featured properties',
+        'top agents',
+        'property analytics',
+    ],
+    openGraph: {
+        title: 'Realvista Propeties — One-Stop Real Estate App',
+        description:
+            'From buying and selling to real-time profit tracking, Realvista is your one-stop real estate solution.',
+        url: 'https://realvistaproperties.com/',
+        siteName: 'Realvista Properties',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Realvista Properties — Buy & Sell Property, Track Profits',
+        description:
+            'Your one-stop real estate solution with listings, agents, and real-time profit tracking.',
+        images: ['https://realvistaproperties.com/og/realvista-hero.jpg'],
+    },
+}
 
 export default function AboutUs() {
     return (

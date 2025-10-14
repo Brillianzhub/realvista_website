@@ -24,7 +24,8 @@ import {
     Heading1,
     Heading2,
     Code,
-    Heading3
+    Heading3,
+    Type
 } from 'lucide-react';
 
 // Custom resizable image extension
@@ -128,9 +129,20 @@ const MenuBar = ({ editor }: any) => {
 
             <div className="w-px h-6 bg-gray-300 mx-1" />
 
+            {/* Paragraph */}
+            <button
+                onClick={() => editor.chain().focus().setParagraph().run()}
+                className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('paragraph') ? 'bg-gray-300' : ''
+                    }`}
+                title="Paragraph"
+                type="button"
+            >
+                <Type size={18} />
+            </button>
+
             {/* Headings */}
             <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()}
                 className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300' : ''
                     }`}
                 title="Heading 1"
@@ -140,7 +152,7 @@ const MenuBar = ({ editor }: any) => {
             </button>
 
             <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()}
                 className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300' : ''
                     }`}
                 title="Heading 2"
@@ -150,7 +162,7 @@ const MenuBar = ({ editor }: any) => {
             </button>
 
             <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()}
                 className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300' : ''
                     }`}
                 title="Heading 3"
@@ -362,6 +374,24 @@ const TipTapEditor = ({ content, onChange, error }: any) => {
                 }
                 .ProseMirror img:hover {
                     border-color: #3b82f6;
+                }
+                .ProseMirror p {
+                    margin: 0.5rem 0;
+                }
+                .ProseMirror h1 {
+                    font-size: 2em;
+                    font-weight: bold;
+                    margin: 0.67em 0;
+                }
+                .ProseMirror h2 {
+                    font-size: 1.5em;
+                    font-weight: bold;
+                    margin: 0.75em 0;
+                }
+                .ProseMirror h3 {
+                    font-size: 1.17em;
+                    font-weight: bold;
+                    margin: 0.83em 0;
                 }
             `}</style>
         </div>

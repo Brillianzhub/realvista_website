@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/config/apiClient';
 
-// Import shadcn components
 import {
   Pagination,
   PaginationContent,
@@ -33,7 +32,6 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-// Define TypeScript interfaces
 interface PropertyImage {
   file: string;
   id: number;
@@ -88,13 +86,18 @@ interface ActiveFilter {
   value: string;
 }
 
-// Property Card Component
+interface ApiResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Property[];
+}
+
 const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const router = useRouter()
-
 
   useEffect(() => {
     const fetchUserBookmarks = async () => {
@@ -108,7 +111,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
         });
 
         if (response.status === 200) {
-          // Create a mapping of property_id to bookmark_id for efficient lookup
           const bookmarkMap: Record<number, number> = {};
           response.data.forEach((bookmark: any) => {
             bookmarkMap[bookmark.property_id] = bookmark.bookmark_id;
@@ -122,7 +124,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
 
     fetchUserBookmarks();
   }, [token]);
-
 
   const isBookmarked = (propertyId: any) => {
     return propertyId in bookmarks;
@@ -140,7 +141,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
       const isFavorite = isBookmarked(propertyId);
 
       if (isFavorite) {
-        // Use bookmark_id for removal
         const bookmarkId = bookmarks[propertyId];
         response = await api.post(`/market/remove-bookmark/${bookmarkId}/`, {}, {
           headers: {
@@ -149,7 +149,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           }
         });
 
-        // If removal was successful, update the state
         if (response.status === 200) {
           setBookmarks(prev => {
             const updated = { ...prev };
@@ -158,7 +157,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           });
         }
       } else {
-        // Add to favorites using property_id
         response = await api.post(`/market/bookmark-property/${propertyId}/`, {}, {
           headers: {
             "Content-Type": "application/json",
@@ -166,10 +164,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           }
         });
 
-        // If successful, update the bookmarks map with the new bookmark_id
         if (response.status === 201) {
           const newBookmarkId = response.data.bookmark_id;
-          // This is the key fix - immediately update the state with the new bookmark ID
           setBookmarks(prev => ({
             ...prev,
             [propertyId]: newBookmarkId
@@ -187,23 +183,19 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
     }
   };
 
-  // Format property price
   const formatPrice = (price: string) => {
     return parseFloat(price).toLocaleString();
   };
 
-  // Get the first image from property image files or use a default
   const getPropertyImage = () => {
     if (property.image_files && property.image_files.length > 0) {
       return property.image_files[0].file;
     }
-    return "/default-property.jpg"; // Default image if none available
+    return "/default-property.jpg";
   };
-
 
   const handleViewListing = async (id: number) => {
     try {
-      // Make POST request to track the property view
       await api.post(`/market/view-property/${id}`, {}, {
         headers: {
           "Content-Type": "application/json",
@@ -211,15 +203,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
         }
       });
 
-      // Navigate to the listing page
       router.push(`/listings/${id}`);
     } catch (error) {
       console.error('Error tracking property view:', error);
-      // Still navigate even if the tracking fails
       router.push(`/listings/${id}`);
     }
   }
-
 
   return (
     <motion.div
@@ -312,7 +301,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   );
 };
 
-// Filter Badge Component
 const FilterBadge: React.FC<FilterBadgeProps> = ({ label, value, onRemove }) => (
   <div className="flex items-center bg-white rounded-full px-3 py-1 text-sm border border-gray-200 mr-2 mb-2">
     <span className="font-medium text-gray-700 mr-1">{label}:</span>
@@ -323,7 +311,6 @@ const FilterBadge: React.FC<FilterBadgeProps> = ({ label, value, onRemove }) => 
   </div>
 );
 
-// Main Listings Page Component
 const ListingsPage: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -339,136 +326,88 @@ const ListingsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
   const [loading, setLoading] = useState(false);
-  const [listings, setListings] = useState<{ results: Property[] } | null>(null);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
-
-  // Pagination states
+  const [properties, setProperties] = useState<Property[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 8;
-  const [paginatedProperties, setPaginatedProperties] = useState<Property[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
 
+  // Build query params for API call
+  const buildQueryParams = (page: number) => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+
+    if (filters.searchQuery) {
+      params.append('search', filters.searchQuery);
+    }
+    if (filters.minPrice) {
+      params.append('min_price', filters.minPrice);
+    }
+    if (filters.maxPrice) {
+      params.append('max_price', filters.maxPrice);
+    }
+    if (filters.bedrooms) {
+      params.append('bedrooms', filters.bedrooms);
+    }
+    if (filters.purpose) {
+      params.append('purpose', filters.purpose);
+    }
+    if (filters.propertyType) {
+      params.append('property_type', filters.propertyType);
+    }
+    if (filters.yearBuilt) {
+      params.append('year_built', filters.yearBuilt);
+    }
+
+    // Add sorting
+    if (sortBy === 'price_low') {
+      params.append('ordering', 'price');
+    } else if (sortBy === 'price_high') {
+      params.append('ordering', '-price');
+    } else if (sortBy === 'beds') {
+      params.append('ordering', '-bedrooms');
+    } else {
+      params.append('ordering', '-listed_date');
+    }
+
+    return params.toString();
+  };
+
+  // Fetch properties from backend
+  const fetchProperties = async (page: number) => {
+    setLoading(true);
+    try {
+      const queryParams = buildQueryParams(page);
+      const response = await api.get(`/market/fetch-listed-properties/?${queryParams}`);
+      const data: ApiResponse = response.data;
+
+      setProperties(data.results || []);
+      setTotalCount(data.count);
+      setTotalPages(Math.ceil(data.count / itemsPerPage));
+      setCurrentPage(page);
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+      toast.error('Failed to fetch properties');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    const getListings = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get(`/market/fetch-listed-properties/`);
-        setListings(response.data);
-        setFilteredProperties(response.data.results || []);
-      } catch (error) {
-        console.error("Error fetching properties:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getListings();
+    fetchProperties(1);
   }, []);
 
-  // Apply filters, sorting, and search functionality
+  // Refetch when filters or sorting changes
   useEffect(() => {
-    if (!listings?.results) return;
+    fetchProperties(1);
+  }, [filters, sortBy]);
 
-    setLoading(true);
-
-    setTimeout(() => {
-      // Apply filters
-      let result = [...listings.results];
-
-      // Apply search query
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        result = result.filter(property =>
-          property.title.toLowerCase().includes(query) ||
-          property.address.toLowerCase().includes(query) ||
-          property.city.toLowerCase().includes(query) ||
-          property.state.toLowerCase().includes(query) ||
-          property.property_type.toLowerCase().includes(query)
-        );
-      }
-
-      if (filters.minPrice) {
-        result = result.filter(
-          property => parseFloat(property.price) >= parseFloat(filters.minPrice)
-        );
-      }
-
-      if (filters.maxPrice) {
-        result = result.filter(
-          property => parseFloat(property.price) <= parseFloat(filters.maxPrice)
-        );
-      }
-
-      if (filters.bedrooms) {
-        result = result.filter(
-          property => property.bedrooms !== null && property.bedrooms >= parseInt(filters.bedrooms)
-        );
-      }
-
-      if (filters.purpose) {
-        result = result.filter(
-          property => property.listing_purpose === filters.purpose
-        );
-      }
-
-      if (filters.propertyType) {
-        result = result.filter(
-          property => property.property_type === filters.propertyType
-        );
-      }
-
-      if (filters.yearBuilt) {
-        result = result.filter(
-          property => property.year_built !== null && property.year_built >= parseInt(filters.yearBuilt)
-        );
-      }
-
-      // Apply sorting
-      if (sortBy === 'newest') {
-        result.sort((a, b) => new Date(b.listed_date).getTime() - new Date(a.listed_date).getTime());
-      } else if (sortBy === 'price_low') {
-        result.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-      } else if (sortBy === 'price_high') {
-        result.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-      } else if (sortBy === 'beds') {
-        result.sort((a, b) => ((b.bedrooms || 0) - (a.bedrooms || 0)));
-      }
-
-      setFilteredProperties(result);
-
-      // Calculate total pages for pagination
-      const total = Math.ceil(result.length / itemsPerPage);
-      setTotalPages(total > 0 ? total : 1);
-
-      // Reset to first page when filters change
-      setCurrentPage(1);
-
-      setLoading(false);
-    }, 500);
-
-    // Build the active filters display
-    const newActiveFilters: ActiveFilter[] = [];
-    if (filters.searchQuery) newActiveFilters.push({ key: 'searchQuery', label: 'Search', value: filters.searchQuery });
-    if (filters.minPrice) newActiveFilters.push({ key: 'minPrice', label: 'Min Price', value: `${filters.minPrice}` });
-    if (filters.maxPrice) newActiveFilters.push({ key: 'maxPrice', label: 'Max Price', value: `${filters.maxPrice}` });
-    if (filters.bedrooms) newActiveFilters.push({ key: 'bedrooms', label: 'Bedrooms', value: `${filters.bedrooms}+` });
-    if (filters.purpose) newActiveFilters.push({ key: 'purpose', label: 'Purpose', value: filters.purpose });
-    if (filters.propertyType) newActiveFilters.push({
-      key: 'propertyType',
-      label: 'Type',
-      value: filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)
-    });
-    if (filters.yearBuilt) newActiveFilters.push({ key: 'yearBuilt', label: 'Year', value: `Since ${filters.yearBuilt}` });
-
-    setActiveFilters(newActiveFilters);
-  }, [filters, sortBy, listings]);
-
-  // Handle pagination
-  useEffect(() => {
-    // Get current page items
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    setPaginatedProperties(filteredProperties.slice(indexOfFirstItem, indexOfLastItem));
-  }, [currentPage, filteredProperties, itemsPerPage]);
+  // Handle page changes
+  const handlePageChange = (page: number) => {
+    fetchProperties(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -499,21 +438,29 @@ const ListingsPage: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Search is already applied via the useEffect that watches filters
   };
 
-  // Change page
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // Scroll to top when changing page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // Build active filters display
+  useEffect(() => {
+    const newActiveFilters: ActiveFilter[] = [];
+    if (filters.searchQuery) newActiveFilters.push({ key: 'searchQuery', label: 'Search', value: filters.searchQuery });
+    if (filters.minPrice) newActiveFilters.push({ key: 'minPrice', label: 'Min Price', value: `${filters.minPrice}` });
+    if (filters.maxPrice) newActiveFilters.push({ key: 'maxPrice', label: 'Max Price', value: `${filters.maxPrice}` });
+    if (filters.bedrooms) newActiveFilters.push({ key: 'bedrooms', label: 'Bedrooms', value: `${filters.bedrooms}+` });
+    if (filters.purpose) newActiveFilters.push({ key: 'purpose', label: 'Purpose', value: filters.purpose });
+    if (filters.propertyType) newActiveFilters.push({
+      key: 'propertyType',
+      label: 'Type',
+      value: filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)
+    });
+    if (filters.yearBuilt) newActiveFilters.push({ key: 'yearBuilt', label: 'Year', value: `Since ${filters.yearBuilt}` });
 
-  // Generate pagination links
+    setActiveFilters(newActiveFilters);
+  }, [filters]);
+
   const renderPaginationItems = () => {
     const items = [];
 
-    // Always show first page
     items.push(
       <PaginationItem key="first">
         <PaginationLink
@@ -525,7 +472,6 @@ const ListingsPage: React.FC = () => {
       </PaginationItem>
     );
 
-    // Show ellipsis if needed
     if (currentPage > 3) {
       items.push(
         <PaginationItem key="ellipsis-1">
@@ -534,7 +480,6 @@ const ListingsPage: React.FC = () => {
       );
     }
 
-    // Show current page and adjacent pages
     for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
       if (i <= 1 || i >= totalPages) continue;
       items.push(
@@ -549,7 +494,6 @@ const ListingsPage: React.FC = () => {
       );
     }
 
-    // Show ellipsis if needed
     if (currentPage < totalPages - 2) {
       items.push(
         <PaginationItem key="ellipsis-2">
@@ -558,7 +502,6 @@ const ListingsPage: React.FC = () => {
       );
     }
 
-    // Always show last page if there's more than one page
     if (totalPages > 1) {
       items.push(
         <PaginationItem key="last">
@@ -666,7 +609,6 @@ const ListingsPage: React.FC = () => {
                     <div>
                       <label className="block mb-2 text-sm font-medium text-gray-700">Min Price</label>
                       <div className="relative">
-                        {/* <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" /> */}
                         <input
                           type="number"
                           name="minPrice"
@@ -680,7 +622,6 @@ const ListingsPage: React.FC = () => {
                     <div>
                       <label className="block mb-2 text-sm font-medium text-gray-700">Max Price</label>
                       <div className="relative">
-                        {/* <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" /> */}
                         <input
                           type="number"
                           name="maxPrice"
@@ -777,10 +718,10 @@ const ListingsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <div className="mb-4 sm:mb-0">
             <h2 className="text-2xl font-bold text-gray-800">
-              {loading ? 'Finding properties...' : `${filteredProperties.length} Properties Available`}
+              {loading ? 'Finding properties...' : `${totalCount} Properties Available`}
             </h2>
             <p className="text-gray-600 text-sm">
-              {!loading && totalPages > 0 ? `Showing ${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProperties.length)} of ${filteredProperties.length}` : 'Showing all available properties'}
+              {!loading && totalCount > 0 ? `Showing ${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, totalCount)} of ${totalCount}` : 'No properties found'}
             </p>
           </div>
 
@@ -805,9 +746,9 @@ const ListingsPage: React.FC = () => {
                   <line x1="8" y1="6" x2="21" y2="6"></line>
                   <line x1="8" y1="12" x2="21" y2="12"></line>
                   <line x1="8" y1="18" x2="21" y2="18"></line>
-                  <line x1="3" y1="6" x2="3" y2="6"></line>
-                  <line x1="3" y1="12" x2="3" y2="12"></line>
-                  <line x1="3" y1="18" x2="3" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
                 </svg>
               </button>
             </div>
@@ -816,54 +757,57 @@ const ListingsPage: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="pl-4 pr-10 py-2 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-1 focus:ring-[#348b8b] focus:border-[#348b8b] text-gray-700 bg-white"
+                className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-1 focus:ring-[#348b8b] focus:border-[#348b8b] cursor-pointer"
               >
                 <option value="newest">Newest First</option>
-                <option value="price_low">Price (Low to High)</option>
-                <option value="price_high">Price (High to Low)</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
                 <option value="beds">Most Bedrooms</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none w-5 h-5" />
             </div>
           </div>
         </div>
 
-        {/* Property Listings */}
+        {/* Properties Grid/List */}
         {loading ? (
-          <div className="flex justify-center items-center py-20">
+          <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#348b8b]"></div>
           </div>
-        ) : !loading && paginatedProperties.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No properties found</h3>
-            <p className="mt-2 text-sm text-gray-500">Try adjusting your search or filter criteria to find properties.</p>
+        ) : properties.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-gray-400 mb-4">
+              <MapPin className="w-16 h-16 mx-auto" />
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No Properties Found</h3>
+            <p className="text-gray-500 mb-6">Try adjusting your filters or search criteria</p>
             <button
               onClick={handleClearAllFilters}
-              className="mt-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#348b8b] hover:bg-[#2d7a7a]"
+              className="bg-[#348b8b] text-white px-6 py-3 rounded-lg hover:bg-[#2d7a7a] transition-colors"
             >
               Clear All Filters
             </button>
           </div>
         ) : (
           <>
-            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'flex flex-col space-y-6'}>
-              {paginatedProperties.map((property) => (
+            <div className={viewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+              : 'space-y-6'
+            }>
+              {properties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-12">
+              <div className="mt-12 flex justify-center">
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
                       <PaginationPrevious
                         onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                       />
                     </PaginationItem>
 
@@ -872,7 +816,7 @@ const ListingsPage: React.FC = () => {
                     <PaginationItem>
                       <PaginationNext
                         onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                       />
                     </PaginationItem>
                   </PaginationContent>
@@ -881,22 +825,6 @@ const ListingsPage: React.FC = () => {
             )}
           </>
         )}
-      </div>
-
-      {/* Call to Action */}
-      <div className="bg-[#348b8b] py-16 mt-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Looking to sell or rent out your property?</h2>
-          <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
-            Connect with thousands of potential buyers and tenants by listing your property on our platform.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-[#348b8b] bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/50 transition-colors"
-          >
-            Contact Us
-          </Link>
-        </div>
       </div>
     </div>
   );
