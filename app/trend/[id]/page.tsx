@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
+import parse from 'html-react-parser';
 import {
     TrendingUp,
     Calendar,
@@ -153,6 +154,121 @@ const ReportDetailPage: React.FC = () => {
 
     return (
         <div className="bg-gradient-to-b from-teal-50 to-white min-h-screen">
+            <style jsx>{`
+                .report-content {
+                    line-height: 1.75;
+                    color: #374151;
+                }
+
+                .report-content h1,
+                .report-content h2,
+                .report-content h3,
+                .report-content h4,
+                .report-content h5,
+                .report-content h6 {
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin-top: 2rem;
+                    margin-bottom: 1rem;
+                    line-height: 1.3;
+                }
+
+                .report-content h1 {
+                    font-size: 2.25rem;
+                }
+
+                .report-content h2 {
+                    font-size: 1.875rem;
+                }
+
+                .report-content h3 {
+                    font-size: 1.5rem;
+                }
+
+                .report-content h4 {
+                    font-size: 1.25rem;
+                }
+
+                .report-content p {
+                    margin-bottom: 1.25rem;
+                    margin-top: 1.25rem;
+                }
+
+                .report-content ul,
+                .report-content ol {
+                    margin-top: 1.25rem;
+                    margin-bottom: 1.25rem;
+                    padding-left: 1.5rem;
+                }
+
+                .report-content li {
+                    margin-top: 0.5rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                .report-content a {
+                    color: #0d9488;
+                    text-decoration: underline;
+                }
+
+                .report-content a:hover {
+                    color: #0f766e;
+                }
+
+                .report-content strong {
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .report-content blockquote {
+                    border-left: 4px solid #0d9488;
+                    padding-left: 1rem;
+                    margin: 1.5rem 0;
+                    font-style: italic;
+                    color: #4b5563;
+                }
+
+                .report-content img {
+                    max-width: 100%;
+                    height: auto;
+                    margin: 1.5rem 0;
+                    border-radius: 0.5rem;
+                }
+
+                .report-content code {
+                    background-color: #f3f4f6;
+                    padding: 0.125rem 0.25rem;
+                    border-radius: 0.25rem;
+                    font-size: 0.875em;
+                }
+
+                .report-content pre {
+                    background-color: #f3f4f6;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    overflow-x: auto;
+                    margin: 1.5rem 0;
+                }
+
+                .report-content table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1.5rem 0;
+                }
+
+                .report-content th,
+                .report-content td {
+                    border: 1px solid #e5e7eb;
+                    padding: 0.75rem;
+                    text-align: left;
+                }
+
+                .report-content th {
+                    background-color: #f9fafb;
+                    font-weight: 600;
+                }
+            `}</style>
+
             {/* Navigation breadcrumb */}
             <div className="bg-white border-b border-gray-100 shadow-sm">
                 <div className="container mx-auto px-4 py-4">
@@ -214,27 +330,7 @@ const ReportDetailPage: React.FC = () => {
                                         <Eye className="w-4 h-4 mr-1" />
                                         {report.views.toLocaleString()} views
                                     </div>
-                                    {/* <div className="flex items-center">
-                                        <FileText className="w-4 h-4 mr-1" />
-                                        Source: {report.source}
-                                    </div> */}
                                 </div>
-
-                                {/* Action buttons */}
-                                {/* <div className="flex flex-wrap gap-3 mb-8">
-                                    <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                        <Bookmark className="w-4 h-4 mr-2" /> Save
-                                    </button>
-                                    <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                        <Share2 className="w-4 h-4 mr-2" /> Share
-                                    </button>
-                                    <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                        <Download className="w-4 h-4 mr-2" /> Download PDF
-                                    </button>
-                                    <button className="inline-flex items-center bg-teal-50 hover:bg-teal-100 text-teal-700 px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                                        <Printer className="w-4 h-4 mr-2" /> Print
-                                    </button>
-                                </div> */}
 
                                 {/* Tags */}
                                 {report.tags && report.tags.length > 0 && (
@@ -256,24 +352,12 @@ const ReportDetailPage: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* Report content */}
-                                <div className="prose prose-teal max-w-none" dangerouslySetInnerHTML={{ __html: report.body }} />
-
-                                {/* External link */}
-                                {/* <div className="mt-8 pt-6 border-t border-gray-100">
-                                    <a
-                                        href={report.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center text-teal-600 font-medium hover:text-teal-700 transition-colors"
-                                    >
-                                        View Original Source <ExternalLink className="ml-2 w-4 h-4" />
-                                    </a>
-                                </div> */}
+                                {/* Report content - WITH PROPER STYLING */}
+                                <div className="report-content">
+                                    {parse(report.body)}
+                                </div>
                             </div>
                         </div>
-
-                        {/* Comments section could go here */}
                     </div>
 
                     {/* Sidebar - 1/3 width */}

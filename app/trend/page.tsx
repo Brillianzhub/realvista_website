@@ -36,6 +36,7 @@ interface Report {
   category: string;
   title: string;
   body: string;
+  slug: string;
   source: string;
   url: string;
   date_created: string;
@@ -275,7 +276,7 @@ const TrendsPage: React.FC = () => {
                       {/* <span className="text-sm text-gray-500">Source: {report.source}</span> */}
                       <div />
                       <Link
-                        href={`/trend/${report.id}`}
+                        href={`/trend/${report.slug}`}
                         rel="noopener noreferrer"
                         className="flex items-center text-teal-600 font-medium hover:text-teal-700 transition-colors"
                       >
