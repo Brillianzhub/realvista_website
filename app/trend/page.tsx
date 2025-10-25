@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import api from '@/config/apiClient';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // TypeScript interfaces
 interface MarketTrend {
@@ -81,6 +82,7 @@ const TrendsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter()
 
   const categories: string[] = [
     'All',
@@ -117,6 +119,12 @@ const TrendsPage: React.FC = () => {
       year: 'numeric'
     });
   };
+
+  const handleViewPost = async (slug: string) => {
+    const res = await api.post(`/trends/reports/${slug}/increment-views/`)
+    router.push(`/trend/${slug}`)
+
+  }
 
   // Truncate text function
   const truncateText = (text: string, maxLength: number): string => {
@@ -275,13 +283,13 @@ const TrendsPage: React.FC = () => {
                     <div className="flex justify-between items-center">
                       {/* <span className="text-sm text-gray-500">Source: {report.source}</span> */}
                       <div />
-                      <Link
-                        href={`/trend/${report.slug}`}
+                      <button
+                        onClick={() => handleViewPost(report.slug)}
                         rel="noopener noreferrer"
-                        className="flex items-center text-teal-600 font-medium hover:text-teal-700 transition-colors"
+                        className="flex cursor-pointer items-center text-teal-600 font-medium hover:text-teal-700 transition-colors"
                       >
                         Read More
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>

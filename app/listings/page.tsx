@@ -78,6 +78,7 @@ interface FilterState {
   propertyType: string;
   yearBuilt: string;
   searchQuery: string;
+  listingCategory: string;
 }
 
 interface ActiveFilter {
@@ -320,7 +321,8 @@ const ListingsPage: React.FC = () => {
     purpose: '',
     propertyType: '',
     yearBuilt: '',
-    searchQuery: ''
+    searchQuery: '',
+    listingCategory: '' // Add this
   });
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [sortBy, setSortBy] = useState('newest');
@@ -360,7 +362,11 @@ const ListingsPage: React.FC = () => {
     }
 
     // Add sorting
-    if (sortBy === 'price_low') {
+    if (sortBy === 'corporate') {
+      params.append('listing_category', 'corporate');
+    } else if (sortBy === 'p2p') {
+      params.append('listing_category', 'p2p');
+    } else if (sortBy === 'price_low') {
       params.append('ordering', 'price');
     } else if (sortBy === 'price_high') {
       params.append('ordering', '-price');
@@ -432,7 +438,8 @@ const ListingsPage: React.FC = () => {
       purpose: '',
       propertyType: '',
       yearBuilt: '',
-      searchQuery: ''
+      searchQuery: '',
+      listingCategory: ''
     });
   };
 
@@ -759,6 +766,8 @@ const ListingsPage: React.FC = () => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-1 focus:ring-[#348b8b] focus:border-[#348b8b] cursor-pointer"
               >
+                <option value="corporate">Corporate</option>
+                <option value="p2p">P2P</option>
                 <option value="newest">Newest First</option>
                 <option value="price_low">Price: Low to High</option>
                 <option value="price_high">Price: High to Low</option>

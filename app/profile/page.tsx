@@ -497,7 +497,7 @@ const Profile = () => {
 
         setIsDeleting(true);
         try {
-            await api.delete(`/market/delete-property/${pendingDeleteId}`, {
+            await api.delete(`/market/delete-property/${pendingDeleteId}/`, {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Token ${token}`
@@ -2255,477 +2255,177 @@ const Profile = () => {
                                             </CardContent>
                                         </Card>)}
 
+
+
                                     </TabsContent>
                                 }
-                                {/* Listings Tab */}
-                                <TabsContent value="listings" className="space-y-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold">My Properties</h2>
-                                        <Dialog open={isListingDialogOpen}
-                                            onOpenChange={(open) => {
-                                                setIsListingDialogOpen(open);
-                                                if (!open) {
-                                                    resetListingFormState();
-                                                }
-                                            }}>
-                                            <DialogTrigger asChild>
-                                                <Button className='bg-teal-600 cursor-pointer hover:bg-teal-700' onClick={() => setIsAddingListing(true)}>
-                                                    <Plus className="h-4 w-4 mr-1" /> Add New Property
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
-                                                <DialogHeader>
-                                                    <DialogTitle>
-                                                        {isUpdatingListing ? "Update Property" : "Add New Property"}
-                                                    </DialogTitle>
-                                                    <DialogDescription>
-                                                        {isUpdatingListing
-                                                            ? "Update the details for your property listing."
-                                                            : "Enter details for your new property listing."
-                                                        }
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="grid gap-4 py-4">
-                                                    {/* Basic Property Information */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="title">Property Title*</Label>
-                                                        <Input
-                                                            id="title"
-                                                            value={newListing.title}
-                                                            onChange={(e) => handleInputChange('title', e.target.value)}
-                                                            // onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
-                                                            placeholder="e.g. Modern 3 Bedroom Apartment"
-                                                            required
-                                                        />
-                                                        {errors.title && (
-                                                            <p className="text-sm text-red-500 mt-1">{errors.title}</p>
-                                                        )}
-                                                    </div>
+                                {profileData?.agent && (
+                                    <TabsContent value="listings" className="space-y-6">
+                                        <div className='flex justify-end mb-6 w-full'>
 
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2 w-full">
-                                                            <Label htmlFor="property_type">Property Type*</Label>
-                                                            <Select
-                                                                onValueChange={(value) => setNewListing({ ...newListing, property_type: value })}
-                                                                value={newListing.property_type}
+                                            <Button onClick={() => router.push("/add-listing")} className='bg-teal-600 py-5 cursor-pointer hover:bg-teal-700'>
+                                                <Plus className="h-4 w-4 mr-1" /> Add New Property
+                                            </Button>
 
-                                                            >
-                                                                <SelectTrigger id="property_type" className="w-full">
-                                                                    <SelectValue placeholder="Select type" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="apartment">Apartment</SelectItem>
-                                                                    <SelectItem value="house">House</SelectItem>
-                                                                    <SelectItem value="villa">Villa</SelectItem>
-                                                                    <SelectItem value="commercial">Commercial</SelectItem>
-                                                                    <SelectItem value="land">Land</SelectItem>
-                                                                    {/* <SelectItem value="service apartment">Service Apartment</SelectItem> */}
-                                                                    {/* <SelectItem value="townhouse">Townhouse</SelectItem> */}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        <div className="space-y-2 w-full">
-                                                            <Label htmlFor="listing_purpose">Listing Purpose*</Label>
-                                                            <Select
-                                                                onValueChange={(value) => setNewListing({ ...newListing, listing_purpose: value })}
-                                                                defaultValue="sale"
-                                                            >
-                                                                <SelectTrigger id="listing_purpose" className='w-full'>
-                                                                    <SelectValue placeholder="Select purpose" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="sale">For Sale</SelectItem>
-                                                                    <SelectItem value="rent">For Rent</SelectItem>
-                                                                    <SelectItem value="lease">For Lease</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="price">Price*</Label>
-                                                            <Input
-                                                                id="price"
-                                                                type="number"
-                                                                value={newListing.price}
-                                                                onChange={(e) => handleInputChange('price', e.target.value)}
-                                                                // onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
-                                                                placeholder="e.g. 250000"
-                                                                required
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="currency">Currency</Label>
-                                                            <Select
-                                                                onValueChange={(value) => setNewListing({ ...newListing, currency: value })}
-                                                                value={newListing.currency}
-                                                            >
-                                                                <SelectTrigger id="currency" className='w-full'>
-                                                                    <SelectValue placeholder="Select currency" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="USD">USD ($)</SelectItem>
-                                                                    <SelectItem value="NGN">NGN (₦)</SelectItem>
-                                                                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                                                                    <SelectItem value="GBP">GBP (£)</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Location Information */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="address">Street Address*</Label>
-                                                        <Input
-                                                            id="address"
-                                                            value={newListing.address}
-                                                            onChange={(e) => handleInputChange('address', e.target.value)}
-                                                            // onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
-                                                            placeholder="e.g. 123 Main Street"
-                                                            required
-                                                        />
-                                                        {errors.address && (
-                                                            <p className="text-sm text-red-500 mt-1">{errors.address}</p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="city">City*</Label>
-                                                            <Input
-                                                                id="city"
-                                                                value={newListing.city}
-                                                                onChange={(e) => handleInputChange('city', e.target.value)}
-                                                                // onChange={(e) => setNewListing({ ...newListing, city: e.target.value })}
-                                                                placeholder="e.g. San Francisco"
-                                                                required
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="state">State*</Label>
-                                                            <Input
-                                                                id="state"
-                                                                value={newListing.state}
-                                                                onChange={(e) => handleInputChange('state', e.target.value)}
-                                                                // onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
-                                                                placeholder="e.g. California"
-                                                                required
-                                                            />
-                                                        </div>
-                                                        {errors.city && (
-                                                            <p className="text-sm text-red-500 mt-1">{errors.city}</p>
-                                                        )}
-                                                        {/* <div className="space-y-2">
-                                                            <Label htmlFor="zip_code">ZIP Code</Label>
-                                                            <Input
-                                                                id="zip_code"
-                                                                value={newListing.zip_code}
-                                                                onChange={(e) => setNewListing({ ...newListing, zip_code: e.target.value })}
-                                                                placeholder="e.g. 94103"
-                                                            />
-                                                        </div> */}
-                                                    </div>
-
-                                                    {/* Property Details */}
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="bedrooms">Bedrooms</Label>
-                                                            <Input
-                                                                id="bedrooms"
-                                                                type="number"
-                                                                value={newListing.bedrooms}
-                                                                onChange={(e) => setNewListing({ ...newListing, bedrooms: e.target.value })}
-                                                                placeholder="e.g. 3"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="bathrooms">Bathrooms</Label>
-                                                            <Input
-                                                                id="bathrooms"
-                                                                type="number"
-                                                                value={newListing.bathrooms}
-                                                                onChange={(e) => setNewListing({ ...newListing, bathrooms: e.target.value })}
-                                                                placeholder="e.g. 2"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="year_built">Year Built</Label>
-                                                            <Input
-                                                                id="year_built"
-                                                                type="number"
-                                                                value={newListing.year_built}
-                                                                onChange={(e) => setNewListing({ ...newListing, year_built: e.target.value })}
-                                                                placeholder="e.g. 2015"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="square_feet">Square Meter (Interior)</Label>
-                                                            <Input
-                                                                id="square_feet"
-                                                                type="number"
-                                                                value={newListing.square_feet}
-                                                                onChange={(e) => setNewListing({ ...newListing, square_feet: e.target.value })}
-                                                                placeholder="e.g. 1200"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="lot_size">Plot Size (sq m)</Label>
-                                                            <Input
-                                                                id="lot_size"
-                                                                type="number"
-                                                                value={newListing.lot_size}
-                                                                onChange={(e) => setNewListing({ ...newListing, lot_size: e.target.value })}
-                                                                placeholder="e.g. 1500"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Availability */}
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="availability">Availability</Label>
-                                                            <Select
-                                                                onValueChange={(value) => {
-                                                                    if (value === "now") {
-                                                                        // Remove the availability_date field when "Available Now" is selected
-                                                                        const { availability_date, ...restOfNewListing } = newListing;
-                                                                        setNewListing({ ...restOfNewListing, availability: value });
-                                                                    } else {
-                                                                        // Keep or initialize the availability_date when "Available From Date" is selected
-                                                                        setNewListing({
-                                                                            ...newListing,
-                                                                            availability: value,
-                                                                            availability_date: newListing.availability_date || new Date().toISOString().split('T')[0]
-                                                                        });
-                                                                    }
-                                                                }}
-                                                                defaultValue="now"
-                                                            >
-                                                                <SelectTrigger id="availability">
-                                                                    <SelectValue placeholder="Select availability" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="now">Available Now</SelectItem>
-                                                                    <SelectItem value="date">Available From Date</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        {newListing.availability === "date" && (
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="availability_date">Available From</Label>
-                                                                <Input
-                                                                    id="availability_date"
-                                                                    type="date"
-                                                                    value={newListing.availability_date}
-                                                                    onChange={(e) => setNewListing({ ...newListing, availability_date: e.target.value })}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Description */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="description">Description*</Label>
-                                                        <Textarea
-                                                            id="description"
-                                                            rows={4}
-                                                            value={newListing.description}
-                                                            onChange={(e) => handleInputChange('description', e.target.value)}
-                                                            // onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
-                                                            placeholder="Describe the property features and highlights"
-                                                            required
-                                                        />
-                                                        {errors.description && (
-                                                            <p className="text-sm text-red-500 mt-1">{errors.description}</p>
-                                                        )}
-                                                    </div>
-
-                                                </div>
-                                                <DialogFooter>
-                                                    <Button variant="outline" onClick={() => setIsListingDialogOpen(false)}>Cancel</Button>
-                                                    <Button
-                                                        onClick={handleAddListing}
-                                                        className='cursor-pointer'
-                                                        disabled={loading || !newListing.title || !newListing.property_type || !newListing.price}
-                                                    >
-                                                        {loading ? (
-                                                            <>
-                                                                <span className="mr-2">
-                                                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                    </svg>
-                                                                </span>
-                                                                {isUpdatingListing ? "Updating Property..." : "Adding Property..."}
-                                                            </>
-                                                        ) : (
-                                                            isUpdatingListing ? "Update Property" : "Add Property"
-                                                        )}
-                                                    </Button>
-                                                </DialogFooter>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
-
-                                    {/* Listing Cards */}
-                                    {listings?.length === 0 ? (
-                                        <EmptyState />
-                                    ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {listings?.map((listing: any) => (
-                                                <Card
-                                                    key={listing.id}
-                                                    className="h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-white rounded-xl"
-                                                >
-                                                    <div
-                                                        className="relative h-62 mt-[-1.8rem] overflow-hidden"
-                                                        onClick={() => handleCardClick(listing.id)}
-                                                    >
-                                                        <img
-                                                            src={listing?.image_files[0]?.file}
-                                                            alt={listing.title}
-                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                        />
-                                                        <Badge
-                                                            className={`absolute top-4 right-4 ${getStatusColor(listing.property_type)} text-white px-3 py-1 text-sm font-medium`}
-                                                        >
-                                                            {listing.property_type}
-                                                        </Badge>
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                    </div>
-
-                                                    <CardHeader className="pb-3 relative">
-                                                        <div className="absolute right-4 top-4">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                    >
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end" className="w-48 shadow-lg">
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleUpdateDetails(listing.id);
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <Edit className="h-4 w-4 mr-2" />
-                                                                        Update Details
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleUpdateFeatures(listing.id);
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <Settings className="h-4 w-4 mr-2" />
-                                                                        Update Features
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleManageCoordinates(listing.id);
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <MapPin className="h-4 w-4 mr-2" />
-                                                                        Manage Coordinates
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleAddFiles(listing.id);
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <ImagePlus className="h-4 w-4 mr-2" />
-                                                                        Add Files/Images
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteClick(e, listing.id);
-                                                                        }}
-                                                                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                                        Delete Listing
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </div>
-
-                                                        <div className="pr-10">
-                                                            <CardTitle className="text-base font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
-                                                            <CardDescription className="flex items-center text-gray-600 mb-3">
-                                                                <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-                                                                <span>{listing.address}</span>
-                                                            </CardDescription>
-                                                            <div className="space-y-1">
-                                                                <p className="text-xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
-                                                                <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardHeader>
-
-                                                    <CardContent className="pt-0 space-y-4">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                            </Badge>
-                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                            </Badge>
-                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                {listing.area} sqm
-                                                            </Badge>
-                                                            <Badge variant="secondary" className="bg-gray-100 text-gray-700">
-                                                                {listing.type}
-                                                            </Badge>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
-                                                            <div className="text-center">
-                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                    <Eye className="h-4 w-4 mr-1" />
-                                                                    <p className="text-sm">Views</p>
-                                                                </div>
-                                                                <p className="text-lg font-semibold text-gray-900">{listing.views}</p>
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                    <MessageSquare className="h-4 w-4 mr-1" />
-                                                                    <p className="text-sm">Inquiries</p>
-                                                                </div>
-                                                                <p className="text-lg font-semibold text-gray-900">{listing.inquiries}</p>
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                    <Heart className="h-4 w-4 mr-1" />
-                                                                    <p className="text-sm">Favorites</p>
-                                                                </div>
-                                                                <p className="text-lg font-semibold text-gray-900">{listing.bookmarked}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
                                         </div>
-                                    )}
-                                </TabsContent>
+
+                                        {listings?.length === 0 ? (
+                                            <EmptyState />
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {listings?.map((listing: any) => (
+                                                    <Card
+                                                        key={listing.id}
+                                                        className="h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-white rounded-xl"
+                                                    >
+                                                        <div
+                                                            className="relative h-62 mt-[-1.8rem] overflow-hidden"
+                                                            onClick={() => handleCardClick(listing.id)}
+                                                        >
+                                                            <img
+                                                                src={listing?.image_files[0]?.file}
+                                                                alt={listing.title}
+                                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                            />
+                                                            <Badge
+                                                                className={`absolute top-4 right-4 ${getStatusColor(listing.property_type)} text-white px-3 py-1 text-sm font-medium`}
+                                                            >
+                                                                {listing.property_type}
+                                                            </Badge>
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                                        </div>
+
+                                                        <CardHeader className="pb-3 relative">
+                                                            <div className="absolute right-4 top-4">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <MoreVertical className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end" className="w-48 shadow-lg">
+                                                                        {/* <DropdownMenuItem
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleUpdateDetails(listing.id);
+                                                                            }}
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <Edit className="h-4 w-4 mr-2" />
+                                                                            Update Details
+                                                                        </DropdownMenuItem> */}
+                                                                        <DropdownMenuItem
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleUpdateFeatures(listing.id);
+                                                                            }}
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <Settings className="h-4 w-4 mr-2" />
+                                                                            Update Features
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleManageCoordinates(listing.id);
+                                                                            }}
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <MapPin className="h-4 w-4 mr-2" />
+                                                                            Manage Coordinates
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleAddFiles(listing.id);
+                                                                            }}
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <ImagePlus className="h-4 w-4 mr-2" />
+                                                                            Update Files/Images
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteClick(e, listing.id);
+                                                                            }}
+                                                                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                                            Delete Listing
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
+
+                                                            <div className="pr-10">
+                                                                <CardTitle className="text-base font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
+                                                                <CardDescription className="flex items-center text-gray-600 mb-3">
+                                                                    <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+                                                                    <span>{listing.address}</span>
+                                                                </CardDescription>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
+                                                                    <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardHeader>
+
+                                                        <CardContent className="pt-0 space-y-4">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                    {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                                </Badge>
+                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                    {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                                </Badge>
+                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                    {listing.area} sqm
+                                                                </Badge>
+                                                                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                                                                    {listing.type}
+                                                                </Badge>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+                                                                <div className="text-center">
+                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                        <Eye className="h-4 w-4 mr-1" />
+                                                                        <p className="text-sm">Views</p>
+                                                                    </div>
+                                                                    <p className="text-lg font-semibold text-gray-900">{listing.views}</p>
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                        <MessageSquare className="h-4 w-4 mr-1" />
+                                                                        <p className="text-sm">Inquiries</p>
+                                                                    </div>
+                                                                    <p className="text-lg font-semibold text-gray-900">{listing.inquiries}</p>
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                        <Heart className="h-4 w-4 mr-1" />
+                                                                        <p className="text-sm">Favorites</p>
+                                                                    </div>
+                                                                    <p className="text-lg font-semibold text-gray-900">{listing.bookmarked}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                    </TabsContent>
+                                )
+                                }
 
                                 {/* Profile Tab */}
                                 <TabsContent value="profile" className="space-y-6">
@@ -3416,7 +3116,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="furnished"
                                         checked={featuresData.furnished}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, furnished: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, furnished: checked })}
                                     />
                                     <Label htmlFor="furnished" className="text-sm">Furnished</Label>
                                 </div>
@@ -3425,7 +3125,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="pet_friendly"
                                         checked={featuresData.pet_friendly}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
                                     />
                                     <Label htmlFor="pet_friendly" className="text-sm">Pet Friendly</Label>
                                 </div>
@@ -3434,7 +3134,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="parking_available"
                                         checked={featuresData.parking_available}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, parking_available: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, parking_available: checked })}
                                     />
                                     <Label htmlFor="parking_available" className="text-sm">Parking Available</Label>
                                 </div>
@@ -3443,7 +3143,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="swimming_pool"
                                         checked={featuresData.swimming_pool}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
                                     />
                                     <Label htmlFor="swimming_pool" className="text-sm">Swimming Pool</Label>
                                 </div>
@@ -3452,7 +3152,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="garden"
                                         checked={featuresData.garden}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, garden: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, garden: checked })}
                                     />
                                     <Label htmlFor="garden" className="text-sm">Garden</Label>
                                 </div>
@@ -3461,7 +3161,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="water_supply"
                                         checked={featuresData.water_supply}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, water_supply: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, water_supply: checked })}
                                     />
                                     <Label htmlFor="water_supply" className="text-sm">Water Supply</Label>
                                 </div>
@@ -3470,7 +3170,7 @@ const Profile = () => {
                                     <Checkbox
                                         id="security"
                                         checked={featuresData.security}
-                                        onCheckedChange={(checked:any) => setFeaturesData({ ...featuresData, security: checked })}
+                                        onCheckedChange={(checked: any) => setFeaturesData({ ...featuresData, security: checked })}
                                     />
                                     <Label htmlFor="security" className="text-sm">Security</Label>
                                 </div>
