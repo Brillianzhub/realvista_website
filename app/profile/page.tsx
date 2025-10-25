@@ -190,6 +190,7 @@ const Profile = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+    const [listingFilter, setListingFilter] = useState('published'); // 'published' or 'draft'
     const fileInputRef = useRef<any>(null);
     const [selectedImages, setSelectedImages] = useState<any>([]);
     const [favorites, setFavorites] = useState<any>(null)
@@ -661,6 +662,7 @@ const Profile = () => {
     const [isUpdatingListing, setIsUpdatingListing] = useState(false);
     const [currentListingId, setCurrentListingId] = useState(null);
     const [userProperties, setUserProperties] = useState<any>(null)
+    const [draftListings, setDraftListings] = useState<any>([]);
     const [newListing, setNewListing] = useState<any>({
         title: "",
         description: "",
@@ -736,6 +738,30 @@ const Profile = () => {
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    const fetchDraftListings = () => {
+        try {
+            const savedDraft = localStorage.getItem('property_listing_draft');
+            console.log("saved-->", savedDraft)
+            if (savedDraft) {
+                const parsed = JSON.parse(savedDraft);
+                // Create a draft object with an ID and the saved data
+                if (parsed.propertyDetails && parsed.propertyDetails.title) {
+                    setDraftListings([{
+                        id: 'draft-1',
+                        ...parsed.propertyDetails,
+                        status: 'draft',
+                        isDraft: true,
+                        lastSaved: parsed.lastSaved,
+                        completedSteps: parsed.completedSteps || [],
+                        currentStep: parsed.currentStep || 1
+                    }]);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching draft:", error);
+        }
     };
 
 
@@ -952,7 +978,25 @@ const Profile = () => {
         fetchProfile();
         fetchUserFavorites()
         fetchUserProperties()
+        fetchDraftListings();
     }, [token]);
+
+    // Add this function (around line 1200, near other handler functions)
+    const handleContinueDraft = () => {
+        // Navigate to add-listing page - the draft will be loaded automatically there
+        router.push("/add-listing");
+    };
+
+    const handleDeleteDraft = () => {
+        try {
+            localStorage.removeItem('property_listing_draft');
+            setDraftListings([]);
+            toast.success("Draft deleted successfully");
+        } catch (error) {
+            console.error("Error deleting draft:", error);
+            toast.error("Failed to delete draft");
+        }
+    };
 
     const handleEditFileSelect = (event: any) => {
         const file = event.target.files[0];
@@ -2261,167 +2305,239 @@ const Profile = () => {
                                 }
                                 {profileData?.agent && (
                                     <TabsContent value="listings" className="space-y-6">
-                                        <div className='flex justify-end mb-6 w-full'>
+                                        <div className='flex justify-between w-full mb-14'>
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={() => setListingFilter('published')}
+                                                    className={`px-3 py-2 cursor-pointer rounded-md text-white transition-colors ${listingFilter === 'published'
+                                                        ? 'bg-teal-700'
+                                                        : 'bg-gray-400 hover:bg-gray-500'
+                                                        }`}
+                                                >
+                                                    Published ({listings?.length || 0})
+                                                </button>
+                                                <button
+                                                    onClick={() => setListingFilter('draft')}
+                                                    className={`px-3 py-2 cursor-pointer rounded-md text-white transition-colors ${listingFilter === 'draft'
+                                                        ? 'bg-amber-500'
+                                                        : 'bg-gray-400 hover:bg-gray-500'
+                                                        }`}
+                                                >
+                                                    Draft ({draftListings?.length || 0})
+                                                </button>
+                                            </div>
 
                                             <Button onClick={() => router.push("/add-listing")} className='bg-teal-600 py-5 cursor-pointer hover:bg-teal-700'>
                                                 <Plus className="h-4 w-4 mr-1" /> Add New Property
                                             </Button>
-
                                         </div>
 
-                                        {listings?.length === 0 ? (
-                                            <EmptyState />
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {listings?.map((listing: any) => (
-                                                    <Card
-                                                        key={listing.id}
-                                                        className="h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-white rounded-xl"
-                                                    >
-                                                        <div
-                                                            className="relative h-62 mt-[-1.8rem] overflow-hidden"
-                                                            onClick={() => handleCardClick(listing.id)}
+                                        {(() => {
+                                            const filteredListings = listingFilter === 'published'
+                                                ? listings || []
+                                                : draftListings || [];
+
+                                            return filteredListings?.length === 0 ? (
+                                                <EmptyState />
+                                            ) : (
+                                                <div className="grid grid-cols-1 mt-6 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {filteredListings?.map((listing: any) => (
+                                                        <Card
+                                                            key={listing.id}
+                                                            className="h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-white rounded-xl"
                                                         >
-                                                            <img
-                                                                src={listing?.image_files[0]?.file}
-                                                                alt={listing.title}
-                                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                            />
-                                                            <Badge
-                                                                className={`absolute top-4 right-4 ${getStatusColor(listing.property_type)} text-white px-3 py-1 text-sm font-medium`}
-                                                            >
-                                                                {listing.property_type}
-                                                            </Badge>
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        </div>
-
-                                                        <CardHeader className="pb-3 relative">
-                                                            <div className="absolute right-4 top-4">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                        >
-                                                                            <MoreVertical className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end" className="w-48 shadow-lg">
-                                                                        {/* <DropdownMenuItem
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleUpdateDetails(listing.id);
-                                                                            }}
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            <Edit className="h-4 w-4 mr-2" />
-                                                                            Update Details
-                                                                        </DropdownMenuItem> */}
-                                                                        <DropdownMenuItem
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleUpdateFeatures(listing.id);
-                                                                            }}
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            <Settings className="h-4 w-4 mr-2" />
-                                                                            Update Features
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleManageCoordinates(listing.id);
-                                                                            }}
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            <MapPin className="h-4 w-4 mr-2" />
-                                                                            Manage Coordinates
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleAddFiles(listing.id);
-                                                                            }}
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            <ImagePlus className="h-4 w-4 mr-2" />
-                                                                            Update Files/Images
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleDeleteClick(e, listing.id);
-                                                                            }}
-                                                                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4 mr-2" />
-                                                                            Delete Listing
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </div>
-
-                                                            <div className="pr-10">
-                                                                <CardTitle className="text-base font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
-                                                                <CardDescription className="flex items-center text-gray-600 mb-3">
-                                                                    <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-                                                                    <span>{listing.address}</span>
-                                                                </CardDescription>
-                                                                <div className="space-y-1">
-                                                                    <p className="text-xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
-                                                                    <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
-                                                                </div>
-                                                            </div>
-                                                        </CardHeader>
-
-                                                        <CardContent className="pt-0 space-y-4">
-                                                            <div className="flex flex-wrap gap-2">
-                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                    {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
-                                                                </Badge>
-                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                    {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
-                                                                </Badge>
-                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                                    {listing.area} sqm
-                                                                </Badge>
-                                                                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
-                                                                    {listing.type}
-                                                                </Badge>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
-                                                                <div className="text-center">
-                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                        <Eye className="h-4 w-4 mr-1" />
-                                                                        <p className="text-sm">Views</p>
+                                                            {listing.isDraft ? (
+                                                                // Draft Card Design
+                                                                <>
+                                                                    <div className="relative h-62 mt-[-1.8rem] overflow-hidden bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                                                                        <div className="text-center p-8">
+                                                                            <FileEdit className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+                                                                            <Badge className="bg-amber-500 text-white px-3 py-1 text-sm font-medium">
+                                                                                Draft
+                                                                            </Badge>
+                                                                        </div>
                                                                     </div>
-                                                                    <p className="text-lg font-semibold text-gray-900">{listing.views}</p>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                        <MessageSquare className="h-4 w-4 mr-1" />
-                                                                        <p className="text-sm">Inquiries</p>
+
+                                                                    <CardHeader className="pb-3">
+                                                                        <div className="space-y-3">
+                                                                            <CardTitle className="text-base font-bold text-gray-900">
+                                                                                {listing.title || "Untitled Property"}
+                                                                            </CardTitle>
+
+                                                                        </div>
+                                                                    </CardHeader>
+
+                                                                    <CardContent className="pt-0 space-y-4">
+                                                                        <div className="space-y-2">
+                                                                            <p className="text-sm text-gray-600">
+                                                                                <span className="font-medium">Property Type:</span> {listing.property_type || "Not specified"}
+                                                                            </p>
+                                                                            <p className="text-sm text-gray-600">
+                                                                                <span className="font-medium">Price:</span> {listing.currency} {listing.price ? parseFloat(listing.price).toLocaleString() : "Not specified"}
+                                                                            </p>
+                                                                            <p className="text-sm text-gray-600">
+                                                                                <span className="font-medium">Location:</span> {listing.city && listing.state ? `${listing.city}, ${listing.state}` : "Not specified"}
+                                                                            </p>
+                                                                        </div>
+
+                                                                        <div className="flex gap-2 pt-4">
+                                                                            <Button
+                                                                                onClick={handleContinueDraft}
+                                                                                className="flex-1 bg-teal-600 hover:bg-teal-700 cursor-pointer"
+                                                                            >
+                                                                                <Edit className="h-4 w-4 mr-2" />
+                                                                                Continue Editing
+                                                                            </Button>
+                                                                            <Button
+                                                                                onClick={handleDeleteDraft}
+                                                                                variant="outline"
+                                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </CardContent>
+                                                                </>
+                                                            ) : (
+                                                                // Published Card Design (existing code)
+                                                                <>
+                                                                    <div
+                                                                        className="relative h-62 mt-[-1.8rem] overflow-hidden"
+                                                                        onClick={() => handleCardClick(listing.id)}
+                                                                    >
+                                                                        <img
+                                                                            src={listing?.image_files[0]?.file}
+                                                                            alt={listing.title}
+                                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                                        />
+                                                                        <Badge
+                                                                            className={`absolute top-4 right-4 ${getStatusColor(listing.property_type)} text-white px-3 py-1 text-sm font-medium`}
+                                                                        >
+                                                                            {listing.property_type}
+                                                                        </Badge>
+                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                                                     </div>
-                                                                    <p className="text-lg font-semibold text-gray-900">{listing.inquiries}</p>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <div className="flex items-center justify-center text-gray-500 mb-1">
-                                                                        <Heart className="h-4 w-4 mr-1" />
-                                                                        <p className="text-sm">Favorites</p>
-                                                                    </div>
-                                                                    <p className="text-lg font-semibold text-gray-900">{listing.bookmarked}</p>
-                                                                </div>
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        )}
+
+                                                                    <CardHeader className="pb-3 relative">
+                                                                        <div className="absolute right-4 top-4">
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger asChild>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    >
+                                                                                        <MoreVertical className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end" className="w-48 shadow-lg">
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleUpdateFeatures(listing.id);
+                                                                                        }}
+                                                                                        className="cursor-pointer"
+                                                                                    >
+                                                                                        <Settings className="h-4 w-4 mr-2" />
+                                                                                        Update Features
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleManageCoordinates(listing.id);
+                                                                                        }}
+                                                                                        className="cursor-pointer"
+                                                                                    >
+                                                                                        <MapPin className="h-4 w-4 mr-2" />
+                                                                                        Manage Coordinates
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuSeparator />
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleAddFiles(listing.id);
+                                                                                        }}
+                                                                                        className="cursor-pointer"
+                                                                                    >
+                                                                                        <ImagePlus className="h-4 w-4 mr-2" />
+                                                                                        Update Files/Images
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuSeparator />
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleDeleteClick(e, listing.id);
+                                                                                        }}
+                                                                                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                                                    >
+                                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                                        Delete Listing
+                                                                                    </DropdownMenuItem>
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                        </div>
+
+                                                                        <div className="pr-10">
+                                                                            <CardTitle className="text-base font-bold text-gray-900 mb-2">{listing.title}</CardTitle>
+                                                                            <CardDescription className="flex items-center text-gray-600 mb-3">
+                                                                                <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+                                                                                <span>{listing.address}</span>
+                                                                            </CardDescription>
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-xl font-bold text-gray-900">{listing.currency} {parseFloat(listing.price).toLocaleString()}</p>
+                                                                                <p className="text-sm text-gray-500">Listed on {formatDate(listing.listed_date)}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </CardHeader>
+
+                                                                    <CardContent className="pt-0 space-y-4">
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                                {listing.bedrooms} {listing.bedrooms === 1 ? 'Bed' : 'Beds'}
+                                                                            </Badge>
+                                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                                {listing.bathrooms} {listing.bathrooms === 1 ? 'Bath' : 'Baths'}
+                                                                            </Badge>
+                                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                                {listing.area} sqm
+                                                                            </Badge>
+                                                                            <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                                                                                {listing.type}
+                                                                            </Badge>
+                                                                        </div>
+
+                                                                        <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+                                                                            <div className="text-center">
+                                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                                    <Eye className="h-4 w-4 mr-1" />
+                                                                                    <p className="text-sm">Views</p>
+                                                                                </div>
+                                                                                <p className="text-lg font-semibold text-gray-900">{listing.views}</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                                    <MessageSquare className="h-4 w-4 mr-1" />
+                                                                                    <p className="text-sm">Inquiries</p>
+                                                                                </div>
+                                                                                <p className="text-lg font-semibold text-gray-900">{listing.inquiries}</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <div className="flex items-center justify-center text-gray-500 mb-1">
+                                                                                    <Heart className="h-4 w-4 mr-1" />
+                                                                                    <p className="text-sm">Favorites</p>
+                                                                                </div>
+                                                                                <p className="text-lg font-semibold text-gray-900">{listing.bookmarked}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </CardContent>
+                                                                </>
+                                                            )}
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
 
                                     </TabsContent>
                                 )

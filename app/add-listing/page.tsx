@@ -29,6 +29,8 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import api from '@/config/apiClient';
 
+const STORAGE_KEY = 'property_listing_draft';
+
 const VideoPreview = ({ file, className }: any) => {
     const [videoUrl, setVideoUrl] = useState(null);
 
@@ -60,12 +62,11 @@ const VideoPreview = ({ file, className }: any) => {
 };
 
 const ListingManagement = () => {
-
     const [currentStep, setCurrentStep] = useState(1);
     const [completedSteps, setCompletedSteps] = useState<any>([]);
     const [loading, setLoading] = useState(false);
+    const [draftLoaded, setDraftLoaded] = useState(false);
     const [errors, setErrors] = useState<any>({});
-    const [propertyId, setPropertyId] = useState(null);
     const router = useRouter();
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -116,12 +117,64 @@ const ListingManagement = () => {
         longitude: ''
     });
 
+    useEffect(() => {
+        const loadDraft = () => {
+            const savedDraft = localStorage.getItem(STORAGE_KEY);
+            if (savedDraft) {
+                try {
+                    const parsed = JSON.parse(savedDraft);
+
+                    // Only load if there's actual data (not just empty initial state)
+                    if (parsed.propertyDetails && parsed.propertyDetails.title) {
+                        setPropertyDetails(parsed.propertyDetails);
+                        setFeaturesData(parsed.featuresData || featuresData);
+                        setCoordinates(parsed.coordinates || []);
+                        setCurrentStep(parsed.currentStep || 1);
+                        setCompletedSteps(parsed.completedSteps || []);
+                        setDraftLoaded(true);
+
+                        // Note: Files cannot be restored from localStorage
+                        if (parsed.fileCount > 0) {
+                            toast.info(`Draft loaded! Please re-upload ${parsed.fileCount} file(s) from Step 2.`, {
+                                duration: 5000
+                            });
+                        } else {
+                            toast.success('Draft loaded successfully!');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading draft:', error);
+                    toast.error('Failed to load draft');
+                }
+            }
+        };
+
+        loadDraft();
+    }, []);
+
+    useEffect(() => {
+        // Only save if there's meaningful data (avoid saving empty initial state on first render)
+        if (propertyDetails.title || featuresData.additional_features || coordinates.length > 0 || selectedFiles.length > 0) {
+            const draftData = {
+                propertyDetails,
+                featuresData,
+                coordinates,
+                currentStep,
+                completedSteps,
+                fileCount: selectedFiles.length,
+                lastSaved: new Date().toISOString()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData));
+        }
+    }, [propertyDetails, featuresData, coordinates, currentStep, completedSteps, selectedFiles.length]);
+
+
     const steps = [
         { number: 1, title: "Property Details", icon: Home, description: "Basic information" },
         { number: 2, title: "Upload Files", icon: ImagePlus, description: "Photos & documents" },
         { number: 3, title: "Features", icon: Settings, description: "Amenities & features" },
         { number: 4, title: "Location", icon: MapPin, description: "Add coordinates" },
-        { number: 5, title: "Review & Publish", icon: MapPin, description: "Review details & pulish" }
+        { number: 5, title: "Review & Publish", icon: CheckCircle, description: "Review details & publish" }
     ];
 
     const validateStep1 = () => {
@@ -138,12 +191,63 @@ const ListingManagement = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleStep1Submit = async () => {
+    const handleStep1Submit = () => {
         if (!validateStep1()) return;
 
+        toast.success("Property details saved to draft!");
+        setCompletedSteps([...completedSteps, 1]);
+        setCurrentStep(2);
+    };
+
+    const handleStep2Submit = () => {
+        if (selectedFiles.length === 0) {
+            toast.error("Please add at least one file before proceeding");
+            return;
+        }
+
+        const allowedTypes = ['pdf', 'png', 'jpg', 'jpeg', 'mp3', 'mp4'];
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+        // Validate files
+        for (const file of selectedFiles as any) {
+            const name = file?.name || `file_${Date.now()}`;
+            const extension = name.split('.').pop().toLowerCase();
+
+            if (!allowedTypes.includes(extension)) {
+                toast.error(`File "${name}" is not allowed. Only PDF, JPG, JPEG, MP3, and MP4 files are supported.`);
+                return;
+            }
+
+            if (file.size > maxFileSize) {
+                toast.error(`File "${name}" exceeds the 10MB size limit.`);
+                return;
+            }
+        }
+
+        toast.success("Files validated and saved to draft!");
+        setCompletedSteps([...completedSteps, 2]);
+        setCurrentStep(3);
+    };
+
+    const handleStep3Submit = () => {
+        toast.success("Property features saved to draft!");
+        setCompletedSteps([...completedSteps, 3]);
+        setCurrentStep(4);
+    };
+
+    const handleStep4Submit = () => {
+        if (coordinates.length > 0) {
+            toast.success("Coordinates saved to draft!");
+        }
+        setCompletedSteps([...completedSteps, 4]);
+        setCurrentStep(5);
+    };
+
+    const handleFinalPublish = async () => {
         setLoading(true);
         try {
-            const payload: any = {
+            // Step 1: Create property
+            const propertyPayload: any = {
                 title: propertyDetails.title,
                 description: propertyDetails.description,
                 property_type: propertyDetails.property_type,
@@ -162,116 +266,53 @@ const ListingManagement = () => {
                 availability: propertyDetails.availability || null,
             };
 
-            // Only add availability_date if availability is "date"
             if (propertyDetails.availability === "date" && propertyDetails.availability_date) {
-                payload.availability_date = propertyDetails.availability_date;
+                propertyPayload.availability_date = propertyDetails.availability_date;
             }
 
-            const response = await api.post("/market/list-property/", payload, {
+            const propertyResponse = await api.post("/market/list-property/", propertyPayload, {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Token ${token}`
                 }
             });
 
-            if (response.data) {
-                // Store the property ID from response
-                setPropertyId(response.data.data.id);
-                toast.success("Property details saved successfully!");
-                setCompletedSteps([...completedSteps, 1]);
-                setCurrentStep(2);
-            }
-        } catch (error) {
-            console.error("Error creating property:", error);
-            toast.error("Failed to create property. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
+            const propertyId = propertyResponse.data.data.id;
 
-    console.log("propertyId", propertyId)
+            // Step 2: Upload files
+            if (selectedFiles.length > 0) {
+                const formData = new FormData();
+                formData.append('property', propertyId);
 
-    const handleStep2Submit = async () => {
-        if (selectedFiles.length === 0) {
-            toast.error("Please add at least one file before proceeding");
-            return;
-        }
+                for (const file of selectedFiles as any) {
+                    const name = file?.name || `file_${Date.now()}`;
+                    const extension = name.split('.').pop().toLowerCase();
 
-        if (!propertyId) {
-            toast.error("Property ID not found. Please go back to step 1.");
-            return;
-        }
+                    let type = 'application/octet-stream';
+                    if (['jpg', 'jpeg', 'png'].includes(extension)) {
+                        type = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+                    } else if (extension === 'pdf') {
+                        type = 'application/pdf';
+                    } else if (extension === 'mp3') {
+                        type = 'audio/mpeg';
+                    } else if (extension === 'mp4') {
+                        type = 'video/mp4';
+                    }
 
-        const allowedTypes = ['pdf', 'png', 'jpg', 'jpeg', 'mp3', 'mp4'];
-        const maxFileSize = 10 * 1024 * 1024; // 10MB
-
-        setLoading(true);
-        try {
-            const formData = new FormData();
-            formData.append('property', propertyId);
-
-            // Validate and append files
-            for (const file of selectedFiles as any) {
-                const name = file?.name || `file_${Date.now()}`;
-                const extension = name.split('.').pop().toLowerCase();
-
-                if (!allowedTypes.includes(extension)) {
-                    toast.error(`File "${name}" is not allowed. Only PDF, JPG, JPEG, MP3, and MP4 files are supported.`);
-                    setLoading(false);
-                    return;
+                    const fileObj = new File([file], name, { type });
+                    formData.append('file', fileObj);
                 }
 
-                if (file.size > maxFileSize) {
-                    toast.error(`File "${name}" exceeds the 10MB size limit.`);
-                    setLoading(false);
-                    return;
-                }
-
-                // Determine MIME type
-                let type = 'application/octet-stream';
-                if (['jpg', 'jpeg', 'png'].includes(extension)) {
-                    type = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-                } else if (extension === 'pdf') {
-                    type = 'application/pdf';
-                } else if (extension === 'mp3') {
-                    type = 'audio/mpeg';
-                } else if (extension === 'mp4') {
-                    type = 'video/mp4';
-                }
-
-                const fileObj = new File([file], name, { type });
-                formData.append('file', fileObj);
+                await api.post(`/market/upload-file-market/`, formData, {
+                    headers: {
+                        Authorization: `Token ${token}`,
+                        'Content-Type': 'multipart/form-data',
+                    }
+                });
             }
 
-            const response = await api.post(`/market/upload-file-market/`, formData, {
-                headers: {
-                    Authorization: `Token ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                }
-            });
-
-            if (response.data) {
-                toast.success("Files uploaded successfully!");
-                setCompletedSteps([...completedSteps, 2]);
-                setCurrentStep(3);
-            }
-        } catch (error) {
-            console.error("Error uploading files:", error);
-            toast.error("Failed to upload files. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleStep3Submit = async () => {
-        if (!propertyId) {
-            toast.error("Property ID not found. Please go back to step 1.");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const payload = {
+            // Step 3: Add features
+            const featuresPayload = {
                 negotiable: featuresData.negotiable,
                 furnished: featuresData.furnished,
                 pet_friendly: featuresData.pet_friendly,
@@ -286,68 +327,39 @@ const ListingManagement = () => {
                 additional_features: featuresData.additional_features
             };
 
-            const response = await api.post(`/market/property/${propertyId}/features/`, payload, {
+            await api.post(`/market/property/${propertyId}/features/`, featuresPayload, {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Token ${token}`
                 }
             });
 
-            if (response.data) {
-                toast.success("Property features updated successfully!");
-                setCompletedSteps([...completedSteps, 3]);
-                setCurrentStep(4);
-            }
-        } catch (error) {
-            console.error("Error updating features:", error);
-            toast.error("Failed to update features. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
+            // Step 4: Add coordinates (if any)
+            if (coordinates.length > 0) {
+                const coordinateData = {
+                    property: propertyId,
+                    coordinates: coordinates.map((coord: any) => ({
+                        latitude: parseFloat(coord.latitude),
+                        longitude: parseFloat(coord.longitude)
+                    }))
+                };
 
-    const handleStep4Submit = async () => {
-        if (!propertyId) {
-            toast.error("Property ID not found. Please go back to step 1.");
-            return;
-        }
-
-        if (coordinates.length === 0) {
-            // If no coordinates, just move to review step
-            setCompletedSteps([...completedSteps, 4]);
-            setCurrentStep(5);
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const coordinateData = {
-                property: propertyId,
-                coordinates: coordinates.map((coord: any) => ({
-                    latitude: parseFloat(coord.latitude),
-                    longitude: parseFloat(coord.longitude)
-                }))
-            };
-
-            const response = await api.post(
-                `/market/property/coordinates/`,
-                coordinateData,
-                {
+                await api.post(`/market/property/coordinates/`, coordinateData, {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Token ${token}`,
                     }
-                }
-            );
-
-            if (response.data) {
-                setCompletedSteps([...completedSteps, 4]);
-                toast.success("Coordinates saved successfully!");
-                setCurrentStep(5);
+                });
             }
+
+            // Clear localStorage after successful publish
+            localStorage.removeItem(STORAGE_KEY);
+
+            toast.success("Property published successfully!");
+            router.push("/profile");
         } catch (error) {
-            console.error("Error adding coordinates:", error);
-            toast.error("Failed to add coordinates. Please try again.");
+            console.error("Error publishing property:", error);
+            toast.error("Failed to publish property. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -401,21 +413,6 @@ const ListingManagement = () => {
         return completedSteps.includes(stepNumber - 1);
     };
 
-    // const handleDragOver = (e) => {
-    //     e.preventDefault();
-    //     e.stopPropagation();
-    // };
-
-    // const handleDrop = (e) => {
-    //     e.preventDefault();
-    //     e.stopPropagation();
-
-    //     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-    //         const files = Array.from(e.dataTransfer.files);
-    //         setSelectedFiles([...selectedFiles, ...files]);
-    //     }
-    // };
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50/30 py-8 px-4">
             <div className="max-w-6xl mx-auto">
@@ -465,9 +462,8 @@ const ListingManagement = () => {
                             const isCurrent = currentStep === step.number;
                             const canNavigate = canNavigateToStep(step.number);
 
-                            // Determine connector state for the segment going from this step to the next
                             const hasNext = index < steps.length - 1;
-                            const segmentCompleted = index < (currentStep - 1); // full teal up to the previous step
+                            const segmentCompleted = index < (currentStep - 1);
 
                             return (
                                 <div
@@ -475,7 +471,6 @@ const ListingManagement = () => {
                                     className={`relative flex flex-col items-center flex-1 ${canNavigate ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                     onClick={() => canNavigate && setCurrentStep(step.number)}
                                 >
-                                    {/* Connector from this step to the next (center-to-center) */}
                                     {hasNext && (
                                         <div className="absolute top-6 left-1/2 w-full h-0.5 -z-10">
                                             <div className="absolute inset-0 bg-gray-300" />
@@ -507,7 +502,6 @@ const ListingManagement = () => {
                         })}
                     </div>
                 </div>
-
 
                 {/* Step Content */}
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
@@ -552,9 +546,12 @@ const ListingManagement = () => {
                                                 <SelectContent>
                                                     <SelectItem value="apartment">Apartment</SelectItem>
                                                     <SelectItem value="house">House</SelectItem>
-                                                    <SelectItem value="villa">Villa</SelectItem>
                                                     <SelectItem value="commercial">Commercial</SelectItem>
                                                     <SelectItem value="land">Land</SelectItem>
+                                                    <SelectItem value="duplex">Duplex</SelectItem>
+                                                    <SelectItem value="warehouse">Warehouse</SelectItem>
+                                                    <SelectItem value="bungalow">Bungalow</SelectItem>
+                                                    <SelectItem value="terrace">Terrace</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             {errors.property_type && <p className="text-sm text-red-500">{errors.property_type}</p>}
@@ -740,17 +737,16 @@ const ListingManagement = () => {
                                 <div className="flex justify-end pt-6 border-t">
                                     <Button
                                         onClick={handleStep1Submit}
-                                        disabled={loading}
                                         className="bg-teal-600 cursor-pointer hover:bg-teal-700 px-8"
                                     >
-                                        {loading ? 'Saving...' : 'Continue'}
+                                        Continue
                                         <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Step 2: Upload Files */}
+
                         {currentStep === 2 && (
                             <div className="space-y-6">
                                 <div>
@@ -758,67 +754,79 @@ const ListingManagement = () => {
                                     <p className="text-gray-600">Add photos, videos, and documents for your property</p>
                                 </div>
 
-                                <div
-                                    className="border-2 border-dashed border-teal-200 rounded-lg p-12 text-center cursor-pointer hover:bg-teal-50/50 transition-colors"
-                                    onClick={() => document.getElementById('file-input')?.click()}
-                                >
-                                    <Upload className="h-12 w-12 mx-auto text-teal-600 mb-4" />
-                                    <p className="text-lg font-medium text-gray-900 mb-2">
-                                        Drop files here or click to browse
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        Supported: Images (JPG, PNG), Videos (MP4), Audio (MP3), Documents (PDF)
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">Maximum file size: 10MB</p>
+                                <Alert>
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertDescription>
+                                        Supported formats: PDF, PNG, JPG, JPEG, MP3, MP4. Max file size: 10MB per file.
+                                    </AlertDescription>
+                                </Alert>
+
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-teal-400 transition-colors">
                                     <input
-                                        id="file-input"
                                         type="file"
                                         multiple
-                                        accept="image/*,video/mp4,audio/mp3,.pdf"
-                                        className="hidden"
+                                        accept=".pdf,.png,.jpg,.jpeg,.mp3,.mp4"
                                         onChange={handleFileSelect}
+                                        className="hidden"
+                                        id="file-upload"
                                     />
+                                    <label htmlFor="file-upload" className="cursor-pointer">
+                                        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                        <p className="text-lg font-medium text-gray-700 mb-2">
+                                            Click to upload or drag and drop
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            PDF, PNG, JPG, JPEG, MP3, MP4 (max 10MB each)
+                                        </p>
+                                    </label>
                                 </div>
 
                                 {selectedFiles.length > 0 && (
                                     <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-lg font-semibold">
-                                                Selected Files ({selectedFiles.length})
-                                            </Label>
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                            {selectedFiles.map((file: any, index: number) => (
-                                                <div key={index} className="relative group">
-                                                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                                                        {file.type.startsWith('image/') ? (
-                                                            <img
-                                                                src={URL.createObjectURL(file)}
-                                                                alt={file.name}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : file.type.startsWith('video/') ? (
-                                                            <VideoPreview file={file} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <div className="h-full w-full flex items-center justify-center bg-gray-50">
-                                                                <div className="text-center p-4">
-                                                                    <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                                                                    <p className="text-xs text-gray-500 truncate">
-                                                                        {file.name}
-                                                                    </p>
+                                        <h3 className="font-semibold text-gray-900">Uploaded Files ({selectedFiles.length})</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {selectedFiles.map((file: any, index: number) => {
+                                                const isImage = file.type.startsWith('image/');
+                                                const isVideo = file.type.startsWith('video/');
+                                                const isAudio = file.type.startsWith('audio/');
+                                                const isPdf = file.type === 'application/pdf';
+
+                                                return (
+                                                    <div key={index} className="relative group">
+                                                        <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                                            {isImage && (
+                                                                <img
+                                                                    src={URL.createObjectURL(file)}
+                                                                    alt={file.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                            {isVideo && (
+                                                                <VideoPreview file={file} className="w-full h-full object-cover" />
+                                                            )}
+                                                            {isAudio && (
+                                                                <div className="flex items-center justify-center h-full">
+                                                                    <Music className="h-12 w-12 text-gray-400" />
                                                                 </div>
-                                                            </div>
-                                                        )}
+                                                            )}
+                                                            {isPdf && (
+                                                                <div className="flex items-center justify-center h-full">
+                                                                    <FileText className="h-12 w-12 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => removeFile(index)}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                        <p className="text-xs text-gray-600 mt-2 truncate">{file.name}</p>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFile(index)}
-                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -833,10 +841,9 @@ const ListingManagement = () => {
                                     </Button>
                                     <Button
                                         onClick={handleStep2Submit}
-                                        disabled={loading || selectedFiles.length === 0}
-                                        className="bg-teal-600 cursor-pointer hover:bg-teal-700 px-8"
+                                        className="bg-teal-600 hover:bg-teal-700 px-8"
                                     >
-                                        {loading ? 'Uploading...' : 'Continue'}
+                                        Continue
                                         <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
@@ -848,106 +855,159 @@ const ListingManagement = () => {
                             <div className="space-y-6">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Property Features</h2>
-                                    <p className="text-gray-600">Specify the amenities and features of your property</p>
+                                    <p className="text-gray-600">Select amenities and features available</p>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="grid gap-6">
                                     <div className="space-y-2">
-                                        <Label>Price Negotiable</Label>
+                                        <Label>Negotiable</Label>
                                         <Select
                                             onValueChange={(value) => setFeaturesData({ ...featuresData, negotiable: value })}
                                             value={featuresData.negotiable}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="yes">Yes</SelectItem>
                                                 <SelectItem value="no">No</SelectItem>
-                                                <SelectItem value="partially">Partially</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <Label className="text-lg font-semibold">Amenities</Label>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            {[
-                                                { key: 'furnished', label: 'Furnished' },
-                                                { key: 'pet_friendly', label: 'Pet Friendly' },
-                                                { key: 'parking_available', label: 'Parking' },
-                                                { key: 'swimming_pool', label: 'Swimming Pool' },
-                                                { key: 'garden', label: 'Garden' },
-                                                { key: 'water_supply', label: 'Water Supply' },
-                                                { key: 'security', label: 'Security' }
-                                            ].map(({ key, label }) => (
-                                                <div key={key} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-teal-50/50 transition-colors">
-                                                    <Checkbox
-                                                        id={key}
-                                                        checked={featuresData[key]}
-                                                        onCheckedChange={(checked) => setFeaturesData({ ...featuresData, [key]: checked })}
-                                                    />
-                                                    <Label htmlFor={key} className="cursor-pointer">{label}</Label>
-                                                </div>
-                                            ))}
+                                        <Label className="text-base font-semibold">Amenities</Label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="furnished"
+                                                    checked={featuresData.furnished}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, furnished: checked })}
+                                                />
+                                                <label htmlFor="furnished" className="text-sm font-medium cursor-pointer">
+                                                    Furnished
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pet_friendly"
+                                                    checked={featuresData.pet_friendly}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, pet_friendly: checked })}
+                                                />
+                                                <label htmlFor="pet_friendly" className="text-sm font-medium cursor-pointer">
+                                                    Pet Friendly
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="parking"
+                                                    checked={featuresData.parking_available}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, parking_available: checked })}
+                                                />
+                                                <label htmlFor="parking" className="text-sm font-medium cursor-pointer">
+                                                    Parking Available
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pool"
+                                                    checked={featuresData.swimming_pool}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, swimming_pool: checked })}
+                                                />
+                                                <label htmlFor="pool" className="text-sm font-medium cursor-pointer">
+                                                    Swimming Pool
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="garden"
+                                                    checked={featuresData.garden}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, garden: checked })}
+                                                />
+                                                <label htmlFor="garden" className="text-sm font-medium cursor-pointer">
+                                                    Garden
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="water"
+                                                    checked={featuresData.water_supply}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, water_supply: checked })}
+                                                />
+                                                <label htmlFor="water" className="text-sm font-medium cursor-pointer">
+                                                    Water Supply
+                                                </label>
+                                            </div>
+
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="security"
+                                                    checked={featuresData.security}
+                                                    onCheckedChange={(checked) => setFeaturesData({ ...featuresData, security: checked })}
+                                                />
+                                                <label htmlFor="security" className="text-sm font-medium cursor-pointer">
+                                                    Security
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <Label className="text-lg font-semibold">Location & Infrastructure</Label>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="electricity_proximity">Electricity Proximity</Label>
-                                                <Select
-                                                    onValueChange={(value) => setFeaturesData({ ...featuresData, electricity_proximity: value })}
-                                                    value={featuresData.electricity_proximity}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="close">Close</SelectItem>
-                                                        <SelectItem value="moderate">Moderate</SelectItem>
-                                                        <SelectItem value="far">Far</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <Label>Electricity Proximity</Label>
+                                            <Select
+                                                onValueChange={(value) => setFeaturesData({ ...featuresData, electricity_proximity: value })}
+                                                value={featuresData.electricity_proximity}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="close">Close</SelectItem>
+                                                    <SelectItem value="moderate">Moderate</SelectItem>
+                                                    <SelectItem value="far">Far</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
 
-                                            <div className="space-y-2">
-                                                <Label htmlFor="road_network">Road Network</Label>
-                                                <Select
-                                                    onValueChange={(value) => setFeaturesData({ ...featuresData, road_network: value })}
-                                                    value={featuresData.road_network}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="excellent">Excellent</SelectItem>
-                                                        <SelectItem value="good">Good</SelectItem>
-                                                        <SelectItem value="fair">Fair</SelectItem>
-                                                        <SelectItem value="poor">Poor</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label>Road Network</Label>
+                                            <Select
+                                                onValueChange={(value) => setFeaturesData({ ...featuresData, road_network: value })}
+                                                value={featuresData.road_network}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="excellent">Excellent</SelectItem>
+                                                    <SelectItem value="good">Good</SelectItem>
+                                                    <SelectItem value="fair">Fair</SelectItem>
+                                                    <SelectItem value="poor">Poor</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
 
-                                            <div className="space-y-2">
-                                                <Label htmlFor="development_level">Development Level</Label>
-                                                <Select
-                                                    onValueChange={(value) => setFeaturesData({ ...featuresData, development_level: value })}
-                                                    value={featuresData.development_level}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="highly_developed">Highly Developed</SelectItem>
-                                                        <SelectItem value="moderate">Moderate</SelectItem>
-                                                        <SelectItem value="developing">Developing</SelectItem>
-                                                        <SelectItem value="undeveloped">Undeveloped</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label>Development Level</Label>
+                                            <Select
+                                                onValueChange={(value) => setFeaturesData({ ...featuresData, development_level: value })}
+                                                value={featuresData.development_level}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="high">High</SelectItem>
+                                                    <SelectItem value="moderate">Moderate</SelectItem>
+                                                    <SelectItem value="low">Low</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </div>
 
@@ -958,7 +1018,7 @@ const ListingManagement = () => {
                                             rows={4}
                                             value={featuresData.additional_features}
                                             onChange={(e) => setFeaturesData({ ...featuresData, additional_features: e.target.value })}
-                                            placeholder="Add any other features or amenities not listed above..."
+                                            placeholder="List any additional features or amenities..."
                                         />
                                     </div>
                                 </div>
@@ -973,10 +1033,9 @@ const ListingManagement = () => {
                                     </Button>
                                     <Button
                                         onClick={handleStep3Submit}
-                                        disabled={loading}
-                                        className="bg-teal-600 cursor-pointer hover:bg-teal-700 px-8"
+                                        className="bg-teal-600 hover:bg-teal-700 px-8"
                                     >
-                                        {loading ? 'Saving...' : 'Continue'}
+                                        Continue
                                         <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
@@ -987,100 +1046,76 @@ const ListingManagement = () => {
                         {currentStep === 4 && (
                             <div className="space-y-6">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Property Location</h2>
-                                    <p className="text-gray-600">Add GPS coordinates for precise location mapping</p>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Location Coordinates</h2>
+                                    <p className="text-gray-600">Add GPS coordinates for precise location (Optional)</p>
                                 </div>
 
                                 <Alert>
-                                    <AlertCircle className="h-4 w-4" />
+                                    <MapPin className="h-4 w-4" />
                                     <AlertDescription>
-                                        Add multiple coordinates to define the boundary of your property. At least one coordinate is recommended.
+                                        You can add multiple coordinates to mark property boundaries or key locations.
                                     </AlertDescription>
                                 </Alert>
 
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="latitude">Latitude</Label>
-                                            <Input
-                                                id="latitude"
-                                                type="number"
-                                                step="any"
-                                                value={newCoordinate.latitude}
-                                                onChange={(e) => setNewCoordinate({ ...newCoordinate, latitude: e.target.value })}
-                                                placeholder="e.g. 6.5244"
-                                            />
-                                            <p className="text-xs text-gray-500">Range: -90 to 90</p>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="longitude">Longitude</Label>
-                                            <Input
-                                                id="longitude"
-                                                type="number"
-                                                step="any"
-                                                value={newCoordinate.longitude}
-                                                onChange={(e) => setNewCoordinate({ ...newCoordinate, longitude: e.target.value })}
-                                                placeholder="e.g. 3.3792"
-                                            />
-                                            <p className="text-xs text-gray-500">Range: -180 to 180</p>
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="latitude">Latitude</Label>
+                                        <Input
+                                            id="latitude"
+                                            type="number"
+                                            step="any"
+                                            value={newCoordinate.latitude}
+                                            onChange={(e) => setNewCoordinate({ ...newCoordinate, latitude: e.target.value })}
+                                            placeholder="e.g. 6.5244"
+                                        />
                                     </div>
-
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleAddCoordinate}
-                                        className="w-full border-teal-200 text-teal-600 hover:bg-teal-50"
-                                    >
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        Add Coordinate
-                                    </Button>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="longitude">Longitude</Label>
+                                        <Input
+                                            id="longitude"
+                                            type="number"
+                                            step="any"
+                                            value={newCoordinate.longitude}
+                                            onChange={(e) => setNewCoordinate({ ...newCoordinate, longitude: e.target.value })}
+                                            placeholder="e.g. 3.3792"
+                                        />
+                                    </div>
                                 </div>
 
+                                <Button
+                                    onClick={handleAddCoordinate}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    Add Coordinate
+                                </Button>
+
                                 {coordinates.length > 0 && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-lg font-semibold">
-                                                Added Coordinates ({coordinates.length})
-                                            </Label>
-                                        </div>
+                                    <div className="space-y-3">
+                                        <h3 className="font-semibold text-gray-900">Added Coordinates ({coordinates.length})</h3>
                                         <div className="space-y-2">
-                                            {coordinates.map((coord: any, index: number) => (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center justify-between p-4 bg-teal-50/50 border border-teal-100 rounded-lg"
-                                                >
-                                                    <div className="flex items-center space-x-4">
-                                                        <div className="bg-teal-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-semibold">
-                                                            {index + 1}
-                                                        </div>
+                                            {coordinates.map((coord: any, index: any) => (
+                                                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                    <div className="flex items-center space-x-3">
+                                                        <MapPin className="h-4 w-4 text-teal-600" />
                                                         <div>
-                                                            <p className="text-sm font-medium text-gray-900">
-                                                                Lat: {coord?.latitude}, Lng: {coord?.longitude}
+                                                            <p className="text-sm font-medium">Coordinate {index + 1}</p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Lat: {coord.latitude}, Lng: {coord.longitude}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <Button
-                                                        type="button"
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => removeCoordinate(index)}
-                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
                                                     </Button>
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-                                )}
-
-                                {coordinates.length === 0 && (
-                                    <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                                        <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                                        <p className="text-gray-600">No coordinates added yet</p>
-                                        <p className="text-sm text-gray-500 mt-1">Add at least one coordinate point above</p>
                                     </div>
                                 )}
 
@@ -1094,163 +1129,86 @@ const ListingManagement = () => {
                                     </Button>
                                     <Button
                                         onClick={handleStep4Submit}
-                                        disabled={loading}
-                                        className="bg-teal-600 cursor-pointer hover:bg-teal-700 px-8"
+                                        className="bg-teal-600 hover:bg-teal-700 px-8"
                                     >
-                                        {loading ? 'Saving...' : 'Continue'}
-                                        <CheckCircle className="h-4 w-4 ml-2" />
+                                        Continue
+                                        <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
                             </div>
                         )}
+
+                        {/* Step 5: Review & Publish */}
                         {currentStep === 5 && (
                             <div className="space-y-6">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Review & Publish</h2>
-                                    <p className="text-gray-600">Review all details before publishing your listing</p>
+                                    <p className="text-gray-600">Review your listing before publishing</p>
                                 </div>
 
-                                <Alert className="bg-green-50 border-green-200">
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                    <AlertDescription className="text-green-800">
-                                        Great job! You've completed all the required steps. Review your listing details below.
-                                    </AlertDescription>
-                                </Alert>
-
-                                {/* Property Details Summary */}
                                 <div className="space-y-4">
-                                    <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-100">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                            <Home className="h-5 w-5 mr-2 text-teal-600" />
-                                            Property Details
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="font-semibold text-lg mb-4">Property Details</h3>
+                                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                             <div>
-                                                <p className="text-sm text-gray-600">Title</p>
-                                                <p className="font-medium text-gray-900">{propertyDetails.title}</p>
+                                                <dt className="text-gray-600">Title</dt>
+                                                <dd className="font-medium">{propertyDetails.title}</dd>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-600">Type</p>
-                                                <p className="font-medium text-gray-900 capitalize">{propertyDetails.property_type}</p>
+                                                <dt className="text-gray-600">Type</dt>
+                                                <dd className="font-medium capitalize">{propertyDetails.property_type}</dd>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-600">Price</p>
-                                                <p className="font-medium text-gray-900">
-                                                    {propertyDetails.currency} {parseFloat(propertyDetails.price).toLocaleString()}
-                                                </p>
+                                                <dt className="text-gray-600">Price</dt>
+                                                <dd className="font-medium">{propertyDetails.currency} {propertyDetails.price}</dd>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-600">Purpose</p>
-                                                <p className="font-medium text-gray-900 capitalize">For {propertyDetails.listing_purpose}</p>
+                                                <dt className="text-gray-600">Purpose</dt>
+                                                <dd className="font-medium capitalize">{propertyDetails.listing_purpose}</dd>
                                             </div>
-                                            <div className="md:col-span-2">
-                                                <p className="text-sm text-gray-600">Location</p>
-                                                <p className="font-medium text-gray-900">
-                                                    {propertyDetails.address}, {propertyDetails.city}, {propertyDetails.state}
-                                                </p>
+                                            <div>
+                                                <dt className="text-gray-600">Location</dt>
+                                                <dd className="font-medium">{propertyDetails.city}, {propertyDetails.state}</dd>
                                             </div>
                                             {propertyDetails.bedrooms && (
                                                 <div>
-                                                    <p className="text-sm text-gray-600">Bedrooms</p>
-                                                    <p className="font-medium text-gray-900">{propertyDetails.bedrooms}</p>
+                                                    <dt className="text-gray-600">Bedrooms/Bathrooms</dt>
+                                                    <dd className="font-medium">{propertyDetails.bedrooms} / {propertyDetails.bathrooms}</dd>
                                                 </div>
                                             )}
-                                            {propertyDetails.bathrooms && (
-                                                <div>
-                                                    <p className="text-sm text-gray-600">Bathrooms</p>
-                                                    <p className="font-medium text-gray-900">{propertyDetails.bathrooms}</p>
-                                                </div>
-                                            )}
+                                        </dl>
+                                    </div>
+
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="font-semibold text-lg mb-4">Files</h3>
+                                        <p className="text-sm text-gray-600">{selectedFiles.length} file(s) uploaded</p>
+                                    </div>
+
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="font-semibold text-lg mb-4">Features</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                                            {featuresData.furnished && <span className="text-green-600">✓ Furnished</span>}
+                                            {featuresData.pet_friendly && <span className="text-green-600">✓ Pet Friendly</span>}
+                                            {featuresData.parking_available && <span className="text-green-600">✓ Parking</span>}
+                                            {featuresData.swimming_pool && <span className="text-green-600">✓ Pool</span>}
+                                            {featuresData.garden && <span className="text-green-600">✓ Garden</span>}
+                                            {featuresData.water_supply && <span className="text-green-600">✓ Water Supply</span>}
+                                            {featuresData.security && <span className="text-green-600">✓ Security</span>}
                                         </div>
                                     </div>
 
-                                    {/* Files Summary */}
-                                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                            <ImagePlus className="h-5 w-5 mr-2 text-purple-600" />
-                                            Uploaded Files
-                                        </h3>
-                                        <div className="flex items-center space-x-2">
-                                            <CheckCircle className="h-5 w-5 text-green-600" />
-                                            <p className="text-gray-700">
-                                                <span className="font-semibold">{selectedFiles.length}</span> file(s) uploaded successfully
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Features Summary */}
-                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-6 border border-amber-100">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                            <Settings className="h-5 w-5 mr-2 text-amber-600" />
-                                            Features & Amenities
-                                        </h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                            {featuresData.furnished && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Furnished</span>
-                                                </div>
-                                            )}
-                                            {featuresData.parking_available && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Parking</span>
-                                                </div>
-                                            )}
-                                            {featuresData.swimming_pool && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Swimming Pool</span>
-                                                </div>
-                                            )}
-                                            {featuresData.garden && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Garden</span>
-                                                </div>
-                                            )}
-                                            {featuresData.security && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Security</span>
-                                                </div>
-                                            )}
-                                            {featuresData.water_supply && (
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span>Water Supply</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="mt-4">
-                                            <p className="text-sm text-gray-600">Price Negotiable</p>
-                                            <p className="font-medium text-gray-900 capitalize">{featuresData.negotiable}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Coordinates Summary */}
-                                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-100">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                                            <MapPin className="h-5 w-5 mr-2 text-green-600" />
-                                            Location Coordinates
-                                        </h3>
-                                        {coordinates.length > 0 ? (
-                                            <div className="flex items-center space-x-2">
-                                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                                <p className="text-gray-700">
-                                                    <span className="font-semibold">{coordinates.length}</span> coordinate point(s) added
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-600 text-sm">No coordinates added</p>
-                                        )}
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="font-semibold text-lg mb-4">Coordinates</h3>
+                                        <p className="text-sm text-gray-600">
+                                            {coordinates.length > 0 ? `${coordinates.length} coordinate(s) added` : 'No coordinates added'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <Alert className="bg-blue-50 border-blue-200">
-                                    <AlertCircle className="h-4 w-4 text-blue-600" />
-                                    <AlertDescription className="text-blue-800">
-                                        Once published, your listing will be visible to potential buyers/renters. You can edit it later from your profile.
+                                <Alert className="bg-amber-50 border-amber-200">
+                                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                                    <AlertDescription className="text-amber-800">
+                                        Once published, your listing will be visible to potential buyers/renters. Make sure all information is accurate.
                                     </AlertDescription>
                                 </Alert>
 
@@ -1258,18 +1216,17 @@ const ListingManagement = () => {
                                     <Button
                                         variant="outline"
                                         onClick={() => setCurrentStep(4)}
+                                        disabled={loading}
                                     >
                                         <ArrowLeft className="h-4 w-4 mr-2" />
                                         Back
                                     </Button>
                                     <Button
-                                        onClick={() => {
-                                            toast.success("Property published successfully!");
-                                            router.push("/profile");
-                                        }}
-                                        className="bg-gradient-to-r from-teal-600 to-green-600 hover:from-teal-700 hover:to-green-700 cursor-pointer px-8"
+                                        onClick={handleFinalPublish}
+                                        className="bg-teal-600 cursor-pointer hover:bg-teal-700 px-8"
+                                        disabled={loading}
                                     >
-                                        Publish Listing
+                                        {loading ? 'Publishing...' : 'Publish Listing'}
                                         <CheckCircle className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
