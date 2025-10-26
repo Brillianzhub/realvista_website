@@ -2435,6 +2435,16 @@ const Profile = () => {
                                                                                     <DropdownMenuItem
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
+                                                                                            handleUpdateDetails(listing.id);
+                                                                                        }}
+                                                                                        className="cursor-pointer"
+                                                                                    >
+                                                                                        <FileEdit className="h-4 w-4 mr-2" />
+                                                                                        Update Details
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
                                                                                             handleUpdateFeatures(listing.id);
                                                                                         }}
                                                                                         className="cursor-pointer"
@@ -3123,6 +3133,284 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+            <Dialog open={isListingDialogOpen} onOpenChange={(open) => {
+                setIsListingDialogOpen(open);
+                if (!open) resetListingFormState();
+            }}>
+                <DialogContent className="sm:max-w-[625px] max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{isUpdatingListing ? "Update Property Details" : "Add New Property"}</DialogTitle>
+                        <DialogDescription>
+                            {isUpdatingListing ? "Update the details for your property listing." : "Add a new property to your listings."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        {/* Title */}
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Property Title *</Label>
+                            <Input
+                                id="title"
+                                value={newListing.title}
+                                onChange={(e) => handleInputChange('title', e.target.value)}
+                                placeholder="e.g., Beautiful 3-bedroom apartment"
+                                className={errors.title ? "border-red-300" : ""}
+                            />
+                            {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                        </div>
+
+                        {/* Property Type */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="property_type">Property Type *</Label>
+                                <Select
+                                    onValueChange={(value) => handleInputChange('property_type', value)}
+                                    value={newListing.property_type}
+                                >
+                                    <SelectTrigger id="property_type" className={`w-full ${errors.property_type ? "border-red-300" : ""}`}>
+                                        <SelectValue placeholder="Select property type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="apartment">Apartment</SelectItem>
+                                        <SelectItem value="house">House</SelectItem>
+                                        <SelectItem value="duplex">Duplex</SelectItem>
+                                        <SelectItem value="land">Land</SelectItem>
+                                        <SelectItem value="shop">Shop</SelectItem>
+                                        <SelectItem value="office">Office</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.property_type && <p className="text-sm text-red-500">{errors.property_type}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="listing_purpose">Listing Purpose</Label>
+                                <Select
+                                    onValueChange={(value) => handleInputChange('listing_purpose', value)}
+                                    value={newListing.listing_purpose}
+                                >
+                                    <SelectTrigger id="listing_purpose" className='w-full'>
+                                        <SelectValue placeholder="Select purpose" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="sale">For Sale</SelectItem>
+                                        <SelectItem value="rent">For Rent</SelectItem>
+                                        <SelectItem value="lease">For Lease</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Price and Currency */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Price *</Label>
+                                <Input
+                                    id="price"
+                                    type="number"
+                                    value={newListing.price}
+                                    onChange={(e) => handleInputChange('price', e.target.value)}
+                                    placeholder="Enter price"
+                                    className={errors.price ? "border-red-300" : ""}
+                                />
+                                {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="currency">Currency</Label>
+                                <Select
+                                    onValueChange={(value) => handleInputChange('currency', value)}
+                                    value={newListing.currency}
+                                >
+                                    <SelectTrigger id="currency" className='w-full'>
+                                        <SelectValue placeholder="Select currency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="USD">USD</SelectItem>
+                                        <SelectItem value="NGN">NGN</SelectItem>
+                                        <SelectItem value="EUR">EUR</SelectItem>
+                                        <SelectItem value="GBP">GBP</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="space-y-2">
+                            <Label htmlFor="description">Description *</Label>
+                            <Textarea
+                                id="description"
+                                rows={3}
+                                value={newListing.description}
+                                onChange={(e) => handleInputChange('description', e.target.value)}
+                                placeholder="Describe your property..."
+                                className={errors.description ? "border-red-300" : ""}
+                            />
+                            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                        </div>
+
+                        {/* Address */}
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Street Address *</Label>
+                            <Input
+                                id="address"
+                                value={newListing.address}
+                                onChange={(e) => handleInputChange('address', e.target.value)}
+                                placeholder="Enter street address"
+                                className={errors.address ? "border-red-300" : ""}
+                            />
+                            {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
+                        </div>
+
+                        {/* City, State, Zip */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="city">City *</Label>
+                                <Input
+                                    id="city"
+                                    value={newListing.city}
+                                    onChange={(e) => handleInputChange('city', e.target.value)}
+                                    placeholder="City"
+                                    className={errors.city ? "border-red-300" : ""}
+                                />
+                                {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="state">State *</Label>
+                                <Input
+                                    id="state"
+                                    value={newListing.state}
+                                    onChange={(e) => handleInputChange('state', e.target.value)}
+                                    placeholder="State"
+                                    className={errors.state ? "border-red-300" : ""}
+                                />
+                                {errors.state && <p className="text-sm text-red-500">{errors.state}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="zip_code">Zip Code</Label>
+                                <Input
+                                    id="zip_code"
+                                    value={newListing.zip_code}
+                                    onChange={(e) => handleInputChange('zip_code', e.target.value)}
+                                    placeholder="Zip code"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Bedrooms, Bathrooms, Square Feet */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="bedrooms">Bedrooms</Label>
+                                <Input
+                                    id="bedrooms"
+                                    type="number"
+                                    value={newListing.bedrooms}
+                                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bathrooms">Bathrooms</Label>
+                                <Input
+                                    id="bathrooms"
+                                    type="number"
+                                    value={newListing.bathrooms}
+                                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="square_feet">Square Feet</Label>
+                                <Input
+                                    id="square_feet"
+                                    type="number"
+                                    value={newListing.square_feet}
+                                    onChange={(e) => handleInputChange('square_feet', e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Lot Size and Year Built */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="lot_size">Plot Size (sqft)</Label>
+                                <Input
+                                    id="lot_size"
+                                    type="number"
+                                    value={newListing.lot_size}
+                                    onChange={(e) => handleInputChange('lot_size', e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="year_built">Year Built</Label>
+                                <Input
+                                    id="year_built"
+                                    type="number"
+                                    value={newListing.year_built}
+                                    onChange={(e) => handleInputChange('year_built', e.target.value)}
+                                    placeholder="e.g., 2020"
+                                />
+                            </div>
+                        </div>
+
+
+                        {/* Availability */}
+                        <div className="space-y-2">
+                            <Label htmlFor="availability">Availability</Label>
+                            <Select
+                                onValueChange={(value) => handleInputChange('availability', value)}
+                                value={newListing.availability}
+                            >
+                                <SelectTrigger id="availability">
+                                    <SelectValue placeholder="Select availability" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="now">Available Now</SelectItem>
+                                    <SelectItem value="date">Available from Date</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Availability Date (conditional) */}
+                        {newListing.availability === 'date' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="availability_date">Availability Date</Label>
+                                <Input
+                                    id="availability_date"
+                                    type="date"
+                                    value={newListing.availability_date}
+                                    onChange={(e) => handleInputChange('availability_date', e.target.value)}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsListingDialogOpen(false);
+                                resetListingFormState();
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleAddListing}
+                            disabled={loading}
+                            className="cursor-pointer bg-teal-600 hover:bg-teal-700"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    {isUpdatingListing ? "Updating..." : "Adding..."}
+                                </>
+                            ) : (
+                                isUpdatingListing ? "Update Property" : "Add Property"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>

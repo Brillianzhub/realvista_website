@@ -1008,7 +1008,7 @@ const PropertyDetailsPage = () => {
 
                             <button
                                 onClick={() => router.push(`/agents/${listing.owner?.id}`)}
-                                className="w-full cursor-pointer mt-4 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                                className="w-full cursor-pointer mt-4 bg-gray-300 text-teal-700 font-medium py-2 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 View Agent Profile
                             </button>
