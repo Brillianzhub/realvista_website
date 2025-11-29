@@ -8,9 +8,6 @@ import {
   LayoutDashboard,
   Bell,
   Users,
-  Settings,
-  HelpCircle,
-  LogOut,
   Menu,
   X,
   ChevronDown,
@@ -18,7 +15,7 @@ import {
   RefreshCw,
   DollarSign,
   TrendingUp,
-  Coins
+  Coins,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +46,7 @@ import {
 } from "@/components/ui/form";
 import api from "@/config/apiClient";
 import { useRouter } from "next/navigation";
+import EmailNewsletterPage from "./email-notification/page";
 
 // Define the form schema with Zod
 const notificationFormSchema = z.object({
@@ -72,26 +70,38 @@ const defaultValues: Partial<NotificationFormValues> = {
 // Define navigation items
 const navigationItems = [
   {
-    name: "Email Notifications",
-    href: "/dashboard",
+    name: "Email Campaign",
+    href: "/dashboard/email-notification",
     icon: Bell,
-    exact: true, // This will match exactly /dashboard
+    exact: true,
   },
+  // {
+  //   name: "Campaign Analytics",
+  //   href: "/dashboard/campaign-analytics",
+  //   icon: ChartArea,
+  //   exact: true,
+  // },
   {
-    name: "Push Notifications", 
+    name: "Push Notifications",
     href: "/dashboard/push-notifications",
     icon: LayoutDashboard,
     exact: false,
   },
   {
+    name: "Manage Leads",
+    href: "/dashboard/manage-leads",
+    icon: Users,
+    exact: false,
+  },
+  {
     name: "Currency Rates",
-    href: "/dashboard/currency-management", 
+    href: "/dashboard/currency-management",
     icon: DollarSign,
     exact: false,
   },
   {
     name: "Trends",
-    href: "/dashboard/trends", 
+    href: "/dashboard/trends",
     icon: TrendingUp,
     exact: false,
   },
@@ -100,13 +110,13 @@ const navigationItems = [
     href: "/dashboard/payout",
     icon: Coins,
     exact: false,
-},
+  },
 ];
 
 export default function DashboardWithNotifications() {
   // Get current pathname for active state
   const pathname = usePathname();
-  
+
   // Layout state
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -301,16 +311,15 @@ export default function DashboardWithNotifications() {
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile sidebar */}
-      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-300 ${
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
-      }`}>
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}>
         <div className="flex flex-col h-full">
           {/* Mobile logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b">
@@ -325,17 +334,16 @@ export default function DashboardWithNotifications() {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
-              
+
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-                    active 
-                      ? "bg-blue-50 text-teal-700 border-r-2 border-teal-700" 
+                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${active
+                      ? "bg-blue-50 text-teal-700 border-r-2 border-teal-700"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <Icon className="mr-3 h-5 w-5" />
                   <span>{item.name}</span>
@@ -390,70 +398,9 @@ export default function DashboardWithNotifications() {
         </DropdownMenu>
       </div>
 
-      {/* Desktop sidebar */}
-      <div className={`hidden lg:flex lg:flex-col fixed inset-y-0 z-10 ${sidebarOpen ? "lg:w-64" : "lg:w-20"
-        } transition-all duration-300`}>
-        <div className="flex flex-col h-full bg-white border-r">
-          {/* Logo */}
-          <div className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} h-16 px-4 border-b`}>
-            {sidebarOpen && <span className="text-xl font-bold">Realvista</span>}
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <ChevronDown className={`h-5 w-5 transform transition-transform ${sidebarOpen ? "rotate-0" : "rotate-180"}`} />
-            </Button>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item);
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center ${
-                    sidebarOpen ? "px-4 justify-start" : "justify-center"
-                  } py-3 rounded-lg transition-colors ${
-                    active 
-                      ? "bg-teal-50 text-teal-700 border-r-2 border-teal-700" 
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                  title={!sidebarOpen ? item.name : undefined}
-                >
-                  <Icon className={`${sidebarOpen ? "mr-3" : ""} h-5 w-5`} />
-                  {sidebarOpen && <span>{item.name}</span>}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Profile */}
-          <div className="border-t p-4">
-            <div className={`flex ${sidebarOpen ? "items-center" : "flex-col items-center justify-center"}`}>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/avatar.png" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-
-              {sidebarOpen && (
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{userData?.name}</p>
-                  <p className="text-xs text-gray-500">{userData?.email}</p>
-                  <button onClick={handleLogout} className="text-xs text-red-500 cursor-pointer hover:text-red-700">
-                    Log Out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main content */}
-      <div className={`${sidebarOpen ? "lg:pl-64" : "lg:pl-20"
-        } transition-all duration-300 pt-0 lg:pt-0`}>
-        <div className="lg:hidden h-16">
+      <div className={`transition-all duration-300 `}>
+        <div className="lg:hidden h-16 md:h-0">
           {/* Spacer for mobile header */}
         </div>
 
@@ -465,8 +412,9 @@ export default function DashboardWithNotifications() {
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
-          <NotificationsContent />
+        <main className="">
+          {/* <NotificationsContent /> */}
+          <EmailNewsletterPage />
         </main>
       </div>
     </div>

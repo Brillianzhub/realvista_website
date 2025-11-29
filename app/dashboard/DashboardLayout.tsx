@@ -11,7 +11,8 @@ import {
     DollarSign,
     LucideIcon,
     TrendingUp,
-    Coins
+    Coins,
+    Users
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,15 +39,27 @@ interface NavigationItem {
 // Define navigation items
 const navigationItems: NavigationItem[] = [
     {
-        name: "Email Notifications",
+        name: "Email Campaign",
         href: "/dashboard/email-notification",
         icon: Bell,
         exact: true,
     },
+    // {
+    //     name: "Campaign Analytics",
+    //     href: "/dashboard/campaign-analytics",
+    //     icon: ChartArea,
+    //     exact: true,
+    // },
     {
         name: "Push Notifications",
         href: "/dashboard/push-notifications",
         icon: LayoutDashboard,
+        exact: false,
+    },
+    {
+        name: "Manage Leads",
+        href: "/dashboard/manage-leads",
+        icon: Users,
         exact: false,
     },
     {
