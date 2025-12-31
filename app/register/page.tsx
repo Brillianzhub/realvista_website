@@ -170,7 +170,7 @@ const SignUpPage = () => {
                 router.push(`verify-email?id=${response.data.id}`)
             } catch (error: any) {
                 console.error('Registration error:', error);
-                setApiError(error.response?.data?.message || 'An error occurred during registration. Please try again.');
+                setApiError(error.response?.data?.error || 'An error occurred during registration. Please try again.');
             } finally {
                 setIsSubmitting(false);
             }
