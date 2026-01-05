@@ -47,11 +47,16 @@ export default function LoginPage() {
       // Dispatch a custom event to notify navbar about login
       window.dispatchEvent(new Event('userLogin'));
 
-      // Redirect to homepage or dashboard
-      router.push('/');
+      if (response.data.is_email_verified === false) {
+        router.push(`verify-email?id=${response.data.id}`)
+      } else {
+        router.push('/');
+      }
+
 
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials and try again.');
+      console.log(err.response)
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }
