@@ -49,7 +49,6 @@ export default function LoginPage() {
 
       if (response.data.is_email_verified === false) {
         const response = await api.post('/accounts/resend_token/', { email });
-        // console.log("response---->", userData.id)
         router.push(`verify-email?id=${userData.id}&email=${email}`)
       } else {
         router.push('/');

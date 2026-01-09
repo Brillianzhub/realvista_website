@@ -21,14 +21,11 @@ function EmailVerificationContent() {
 
     const userId = searchParams.get('id');
     const email = searchParams.get("email")
-    console.log("email--->", email)
 
-    // Auto-verify if both userId and code are provided in the URL
     useEffect(() => {
         const codeFromURL = searchParams.get('code');
 
         if (userId && codeFromURL) {
-            // If both parameters are in the URL, auto-verify
             setVerificationCode(codeFromURL);
             handleVerification(codeFromURL);
         }
