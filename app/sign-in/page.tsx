@@ -39,7 +39,7 @@ export default function LoginPage() {
       // Store user data in localStorage
       localStorage.setItem('userData', JSON.stringify(userData));
 
-      console.log("token--->", response.data.token)
+      console.log("token--->", response.data)
 
       localStorage.setItem('token', response.data.token);
 
@@ -48,7 +48,9 @@ export default function LoginPage() {
       window.dispatchEvent(new Event('userLogin'));
 
       if (response.data.is_email_verified === false) {
-        router.push(`verify-email?id=${response.data.id}`)
+        const response = await api.post('/accounts/resend_token/', { email });
+        // console.log("response---->", userData.id)
+        router.push(`verify-email?id=${userData.id}&email=${email}`)
       } else {
         router.push('/');
       }

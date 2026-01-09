@@ -20,6 +20,8 @@ function EmailVerificationContent() {
     const router = useRouter()
 
     const userId = searchParams.get('id');
+    const email = searchParams.get("email")
+    console.log("email--->", email)
 
     // Auto-verify if both userId and code are provided in the URL
     useEffect(() => {
@@ -32,7 +34,7 @@ function EmailVerificationContent() {
         }
     }, [searchParams]);
 
-    const handleVerification = async (code:any) => {
+    const handleVerification = async (code: any) => {
         setIsLoading(true);
         setVerificationStatus('pending');
         setMessage('Verifying your email...');
@@ -72,7 +74,7 @@ function EmailVerificationContent() {
         }
     };
 
-    const handleSubmit = (e:any) => {
+    const handleSubmit = (e: any) => {
         e.preventDefault();
         handleVerification(verificationCode);
     };
@@ -93,7 +95,7 @@ function EmailVerificationContent() {
 
         setIsLoading(true);
         try {
-            const response = await api.post('/accounts/resend_token/');
+            const response = await api.post('/accounts/resend_token/', { email });
 
             if (response.data) {
                 setMessage('A new verification code has been sent to your email.');
@@ -152,7 +154,7 @@ function EmailVerificationContent() {
 
                             <div className="text-center mt-4">
                                 <h3 className={`font-medium text-lg ${verificationStatus === 'success' ? 'text-green-700' :
-                                        verificationStatus === 'error' ? 'text-red-700' : 'text-teal-700'
+                                    verificationStatus === 'error' ? 'text-red-700' : 'text-teal-700'
                                     }`}>
                                     {verificationStatus === 'success' ? 'Verification Successful' :
                                         verificationStatus === 'error' ? 'Verification Failed' :
