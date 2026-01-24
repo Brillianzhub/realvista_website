@@ -39,8 +39,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import api from '@/config/apiClient';
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
@@ -54,7 +52,7 @@ declare global {
 const PropertyDetailsPage = () => {
     const router = useRouter();
     const params = useParams()
-    const id = params.id;
+    const slug = params.id;
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [listing, setListing] = useState<any>(null);
@@ -63,6 +61,8 @@ const PropertyDetailsPage = () => {
     const [shareUrl, setShareUrl] = useState('');
     const [bookmarks, setBookmarks] = useState<Record<number, number>>({});
     const [token, setToken] = useState('');
+
+    console.log("params--->", params)
 
     // Media Lightbox State
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -76,14 +76,15 @@ const PropertyDetailsPage = () => {
         }
     }, []);
 
-    // Fetch property details
+    console.log("params--->", params)
+
     useEffect(() => {
         const fetchPropertyDetails = async () => {
-            if (!id) return;
+            if (!slug) return; // Changed from id to slug
 
             try {
                 setLoading(true);
-                const response = await api.get(`/market/properties/${id}/`);
+                const response = await api.get(`/market/properties/${slug}/`); // Using slug
 
                 if (response.status === 200) {
                     setListing(response.data);
@@ -98,7 +99,26 @@ const PropertyDetailsPage = () => {
         };
 
         fetchPropertyDetails();
-    }, [id]);
+    }, [slug]); // Changed dependency
+
+    // Update vendor listings fetch
+    useEffect(() => {
+        const fetchVendorListings = async () => {
+            if (!listing?.owner?.email) return;
+
+            try {
+                const response = await api.get(`/market/properties/owner/${listing.owner.email}`);
+                if (response.status === 200) {
+                    // Filter out current property using slug
+                    setVendorListings(response.data.filter((prop: any) => prop.slug !== slug));
+                }
+            } catch (error) {
+                console.error("Error fetching vendor listings:", error);
+            }
+        };
+
+        fetchVendorListings();
+    }, [listing, slug]);
 
     // Fetch user bookmarks
     useEffect(() => {
@@ -128,23 +148,6 @@ const PropertyDetailsPage = () => {
         fetchUserBookmarks();
     }, [token]);
 
-    // Fetch vendor listings
-    useEffect(() => {
-        const fetchVendorListings = async () => {
-            if (!listing?.owner?.email) return;
-
-            try {
-                const response = await api.get(`/market/properties/owner/${listing.owner.email}`);
-                if (response.status === 200) {
-                    setVendorListings(response.data.filter((prop: any) => prop.id !== parseInt(id as string)));
-                }
-            } catch (error) {
-                console.error("Error fetching vendor listings:", error);
-            }
-        };
-
-        fetchVendorListings();
-    }, [listing, id]);
 
     // Update shareUrl when the component mounts and when listing changes
     useEffect(() => {
@@ -384,23 +387,24 @@ const PropertyDetailsPage = () => {
     }
 
     // Component to render media (image or video)
+    // Component to render media (image or video)
     const MediaComponent = ({ media, className = "", onClick = null, showPlayIcon = true }: any) => {
         if (media.type === 'video') {
             return (
                 <div className={`relative ${className}`} onClick={onClick}>
                     <video
                         className="w-full h-full object-cover"
-                        poster={media.image_url || undefined}
-                        preload="metadata"
+                        preload="metadata"  // Add this to load thumbnail
+                        playsInline
                         muted
                     >
-                        <source src={media.file} type="video/mp4" />
+                        <source src={`${media.file}#t=0.1`} type="video/mp4" />  {/* Add #t=0.1 to show frame */}
                         Your browser does not support the video tag.
                     </video>
                     {showPlayIcon && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-40 transition-all">
-                            <div className="bg-white bg-opacity-90 rounded-full p-3">
-                                <svg className="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="bg-black bg-opacity-50 rounded-full p-4">
+                                <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z" />
                                 </svg>
                             </div>
@@ -412,14 +416,13 @@ const PropertyDetailsPage = () => {
             return (
                 <img
                     src={media.file}
-                    alt={media.name}
+                    alt={media.name || 'Property media'}
                     className={className}
                     onClick={onClick}
                 />
             );
         }
     };
-
     // Loading state
     if (loading) {
         return (

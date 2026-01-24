@@ -34,6 +34,7 @@ interface PropertyCardProps {
 interface Property {
   id: string;
   title: string;
+  slug: string;
   price: number;
   address: string;
   city: string;
@@ -43,6 +44,7 @@ interface Property {
   featured: boolean;
   currency: string;
   image_files: PropertyImage[];
+  videos: PropertyImage[]
 }
 
 interface FavoritesState {
@@ -301,11 +303,27 @@ const FeaturedProperties = () => {
                   <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 group h-full">
                     <div className="relative">
                       <div className="relative h-48 sm:h-60 w-full overflow-hidden">
-                        <img
-                          src={property.image_files?.[0]?.file || '/placeholder-property.jpg'}
-                          alt={property.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
+                        {property.image_files?.[0]?.file ? (
+                          <img
+                            src={property.image_files[0].file}
+                            alt={property.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        ) : property.videos?.[0]?.file ? (
+                          <video
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            preload="metadata"
+                            muted
+                            playsInline
+                          >
+                            <source src={`${property.videos[0].file}#t=0.1`} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-400">No media available</span>
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => toggleFavorite(property.id)}
@@ -351,7 +369,7 @@ const FeaturedProperties = () => {
                           <span className="text-xs font-medium">{property.area || 0} Sq Ft</span>
                         </div>
                       </div>
-                      <Link href={`/listings/${property.id}`} className="block cursor-pointer">
+                      <Link href={`/listings/${property.slug}`} className="block cursor-pointer">
                         <button className="w-full mt-6 bg-[#348b8b] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#297b7b] transition-colors shadow-sm">
                           View Details
                         </button>

@@ -842,9 +842,8 @@ const Profile = () => {
                 email: userData.email || "",
                 photo: userData.profile?.avatar || "/api/placeholder/150/150",
                 phone: userData.agent?.phone_number || userData.profile?.phone_number || "",
-                location: userData.profile?.city ?
-                    `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}` :
-                    "Uyo, Nigeria",
+                location: userData.profile?.city &&
+                    `${userData.profile.city}${userData.profile.state ? ', ' + userData.profile.state : ''}`,
                 bio: userData.agent?.bio,
                 verified: userData.is_active || false,
                 agency_name: userData.agent?.agency_name,

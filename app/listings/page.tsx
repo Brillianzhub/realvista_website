@@ -41,6 +41,7 @@ interface Property {
   id: number;
   title: string;
   description?: string;
+  slug:string;
   price: string;
   currency: string;
   bedrooms: number | null;
@@ -195,19 +196,19 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
     return "/default-property.jpg";
   };
 
-  const handleViewListing = async (id: number) => {
+  const handleViewListing = async (slug:string) => {
     try {
-      await api.post(`/market/view-property/${id}`, {}, {
+      await api.post(`/market/view-property/${slug}`, {}, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`
         }
       });
 
-      router.push(`/listings/${id}`);
+      router.push(`/listings/${slug}`);
     } catch (error) {
       console.error('Error tracking property view:', error);
-      router.push(`/listings/${id}`);
+      router.push(`/listings/${slug}`);
     }
   }
 
@@ -255,7 +256,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
         </div>
       </div>
 
-      <div onClick={() => handleViewListing(property.id)} className="p-5 cursor-pointer">
+      <div onClick={() => handleViewListing(property.slug)} className="p-5 cursor-pointer">
         <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">{property.title}</h3>
         <div className="flex items-center mb-3">
           <MapPin className="mr-2 text-[#348b8b] w-4 h-4" />
