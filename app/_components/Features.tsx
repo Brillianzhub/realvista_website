@@ -102,7 +102,11 @@ const RealvistaFeatures = () => {
                                     </div>
                                 </a>
 
-                                <button className="flex items-center justify-center gap-3 bg-black hover:bg-gray-800 text-white font-medium py-2 px-6 rounded-full cursor-pointer transition-colors shadow-md flex-1">
+                                <a
+                                  href="https://apps.apple.com/app/6745751743"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-3 bg-black hover:bg-gray-800 text-white font-medium py-2 px-6 rounded-full cursor-pointer transition-colors shadow-md flex-1">
                                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M19.0781 24H4.92188C2.20795 24 0 21.7881 0 19.0781V4.92188C0 2.20795 2.20795 0 4.92188 0H19.0781C21.7881 0 24 2.20795 24 4.92188V19.0781C24 21.7881 21.7881 24 19.0781 24Z" fill="black" />
                                         <path d="M19.0781 0.5625H4.92188C2.52147 0.5625 0.5625 2.52147 0.5625 4.92188V19.0781C0.5625 21.4785 2.52147 23.4375 4.92188 23.4375H19.0781C21.4785 23.4375 23.4375 21.4785 23.4375 19.0781V4.92188C23.4375 2.52147 21.4785 0.5625 19.0781 0.5625Z" stroke="white" strokeOpacity="0.2" />
@@ -113,7 +117,7 @@ const RealvistaFeatures = () => {
                                         <span className="text-xs">Download on</span>
                                         <span className="text-sm font-semibold">App Store</span>
                                     </div>
-                                </button>
+                                </a>
                             </div>
                         </div>
 

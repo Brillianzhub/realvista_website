@@ -153,7 +153,6 @@ const ListingManagement = () => {
     }, []);
 
     useEffect(() => {
-        // Only save if there's meaningful data (avoid saving empty initial state on first render)
         if (propertyDetails.title || featuresData.additional_features || coordinates.length > 0 || selectedFiles.length > 0) {
             const draftData = {
                 propertyDetails,
