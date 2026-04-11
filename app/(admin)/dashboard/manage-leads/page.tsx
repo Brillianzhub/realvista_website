@@ -485,8 +485,6 @@ const LeadsManagementPage = () => {
                     </Form>
                 </DialogContent>
             </Dialog>
-
-            {/* ── Delete Confirmation Dialog ── */}
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <DialogContent className="max-w-md rounded-2xl">
                     <DialogHeader>
