@@ -20,13 +20,11 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Make the API request
       const response = await api.post('/accounts/signin/', {
         email,
         password
       });
 
-      // Assuming the response contains user details
       const userData = {
         id: response.data.id || 'user-id',
         email: response.data.email,
@@ -36,15 +34,12 @@ export default function LoginPage() {
         isLoggedIn: true
       };
 
-      // Store user data in localStorage
       localStorage.setItem('userData', JSON.stringify(userData));
 
       console.log("token--->", response.data)
 
       localStorage.setItem('token', response.data.token);
 
-
-      // Dispatch a custom event to notify navbar about login
       window.dispatchEvent(new Event('userLogin'));
 
       if (response.data.is_email_verified === false) {
@@ -53,7 +48,6 @@ export default function LoginPage() {
       } else {
         router.push('/');
       }
-
 
     } catch (err: any) {
       console.log(err.response)
@@ -65,12 +59,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* Left panel with image - hidden on mobile */}
-      <div className="hidden md:flex md:w-1/2 bg-teal-700" style={{ backgroundColor: '#348b8b' }}>
-        <div className="flex flex-col justify-center items-center w-full p-12 text-white">
-          <Home size={64} className="mb-6" />
-          <h1 className="text-4xl font-bold mb-4">Welcome Back</h1>
-          <p className="text-lg text-center max-w-md">
+      {/* Left panel with background image - hidden on mobile */}
+      <div
+        className="hidden md:flex md:w-1/2 relative overflow-hidden"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Teal overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(52, 139, 139, 0.70)' }}
+        />
+
+        <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-white">
+          <Home size={64} className="mb-6 drop-shadow-lg" />
+          <h1 className="text-4xl font-bold mb-4 drop-shadow-md">Welcome Back</h1>
+          <p className="text-lg text-center max-w-md drop-shadow">
             Access your real estate portfolio and discover new property opportunities in just a few clicks.
           </p>
         </div>
@@ -167,8 +174,8 @@ export default function LoginPage() {
           <div className="mt-8 text-center">
             <p className="text-gray-600">
               Don't have an account yet?{' '}
-              <a
-                href="/register"
+
+              <a href="/register"
                 className="font-medium hover:underline"
                 style={{ color: '#348b8b' }}
               >

@@ -179,83 +179,72 @@ const SignUpPage = () => {
 
     const renderTypeSelection = () => (
         <div className="text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#348b8b] to-[#FB902D] bg-clip-text text-transparent mb-3">
-                Welcome to Realvista
-            </h1>
-            <p className="text-gray-600 mb-8 text-lg">Join thousands of users finding their perfect property match</p>
+            <div className="mb-8">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-[#348b8b] to-[#FB902D] bg-clip-text text-transparent mb-3">
+                    Welcome to Realvista
+                </h1>
+                <p className="text-gray-500 text-base max-w-sm mx-auto">
+                    Join thousands of users finding their perfect property match
+                </p>
+            </div>
 
-            <h2 className="text-2xl font-semibold text-gray-800 mb-8">
-                Choose Your Account Type
-            </h2>
+            <div className="flex items-center gap-3 mb-8">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-sm font-medium text-gray-400 uppercase tracking-widest">Choose Account Type</span>
+                <div className="flex-1 h-px bg-gray-200" />
+            </div>
 
-            <div className="flex flex-col md:flex-row justify-center space-y-6 md:space-y-0 md:space-x-8">
+            <div className="flex flex-col md:flex-row justify-center gap-5">
+                {/* Customer Card */}
                 <button
                     onClick={() => handleUserTypeSelect('customer')}
-                    className="
-                        bg-white 
-                        rounded-2xl 
-                        p-6 md:p-8
-                        shadow-lg 
-                        hover:shadow-xl 
-                        cursor-pointer
-                        transition-all 
-                        duration-300
-                        transform 
-                        hover:scale-105
-                        flex 
-                        flex-col 
-                        items-center
-                        border-2 border-transparent
-                        hover:border-[#348b8b]/20
-                        w-full md:w-64
-                        group
-                    "
+                    className="group relative bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl cursor-pointer transition-all duration-300 border border-gray-100 hover:border-[#348b8b]/30 w-full md:w-64 overflow-hidden text-left"
                 >
-                    <div className="w-20 h-20 rounded-full bg-[#348b8b]/10 flex items-center justify-center mb-4 group-hover:bg-[#348b8b]/20 transition-colors">
-                        <User className="w-10 h-10 text-[#348b8b] group-hover:text-[#348b8b]" />
+                    {/* Subtle background accent on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#348b8b]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#348b8b]/10 flex items-center justify-center mb-5 group-hover:bg-[#348b8b]/20 group-hover:scale-110 transition-all duration-300">
+                            <User className="w-8 h-8 text-[#348b8b]" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Customer</h3>
+                        <p className="text-gray-500 text-sm text-center leading-relaxed">
+                            Looking to buy or rent your dream property
+                        </p>
+                        <div className="mt-5 flex items-center gap-1 text-[#348b8b] text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Get started <span className="text-base">→</span>
+                        </div>
                     </div>
-                    <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-                        Customer
-                    </h3>
-                    <p className="text-gray-600 text-center">
-                        Looking to buy or rent your dream property
-                    </p>
                 </button>
 
+                {/* Agent Card */}
                 <button
                     onClick={() => handleUserTypeSelect('agent')}
-                    className="
-                        bg-white 
-                        rounded-2xl 
-                        p-6 md:p-8
-                        shadow-lg 
-                        cursor-pointer
-                        hover:shadow-xl 
-                        transition-all 
-                        duration-300
-                        transform 
-                        hover:scale-105
-                        flex 
-                        flex-col 
-                        items-center
-                        border-2 border-transparent
-                        hover:border-[#FB902D]/20
-                        w-full md:w-64
-                        group
-                    "
+                    className="group relative bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl cursor-pointer transition-all duration-300 border border-gray-100 hover:border-[#FB902D]/30 w-full md:w-64 overflow-hidden text-left"
                 >
-                    <div className="w-20 h-20 rounded-full bg-[#FB902D]/10 flex items-center justify-center mb-4 group-hover:bg-[#FB902D]/20 transition-colors">
-                        <Briefcase className="w-10 h-10 text-[#FB902D] group-hover:text-[#FB902D]" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#FB902D]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#FB902D]/10 flex items-center justify-center mb-5 group-hover:bg-[#FB902D]/20 group-hover:scale-110 transition-all duration-300">
+                            <Briefcase className="w-8 h-8 text-[#FB902D]" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Agent</h3>
+                        <p className="text-gray-500 text-sm text-center leading-relaxed">
+                            List properties and connect with clients
+                        </p>
+                        <div className="mt-5 flex items-center gap-1 text-[#FB902D] text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Get started <span className="text-base">→</span>
+                        </div>
                     </div>
-                    <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-                        Agent
-                    </h3>
-                    <p className="text-gray-600 text-center">
-                        List properties and connect with clients
-                    </p>
                 </button>
             </div>
-            <p className='mt-8'>Already have an account? <Link href="/sign-in" className='text-blue-500 font-semibold underline'>Sign in</Link></p>
+
+            <p className="mt-8 text-gray-500 text-sm">
+                Already have an account?{' '}
+                <Link href="/sign-in" className="text-[#348b8b] font-semibold hover:underline">
+                    Sign in
+                </Link>
+            </p>
         </div>
     );
 
@@ -717,8 +706,8 @@ const SignUpPage = () => {
                         hover:from-[#2d7a7a] hover:to-[#e5821f]
                         transition-all
                         duration-300
-                        shadow-md
-                        hover:shadow-lg
+                        shadow-sm
+                        hover:shadow-md
                         flex
                         items-center
                         justify-center
@@ -785,8 +774,8 @@ const SignUpPage = () => {
                     hover:from-[#2d7a7a] hover:to-[#e5821f]
                     transition-all
                     duration-300
-                    shadow-md
-                    hover:shadow-lg
+                    shadow-sm
+                    hover:shadow-md
                     w-full md:w-auto
                 "
             >
@@ -798,8 +787,21 @@ const SignUpPage = () => {
     return (
         <div className="bg-gradient-to-br from-[#348b8b]/5 via-white to-[#FB902D]/5 min-h-screen flex flex-col md:flex-row">
             {/* Left side illustration for desktop */}
-            <div className="hidden lg:flex lg:w-1/2 bg-[#348b8b] items-center justify-center p-12">
-                <div className="max-w-md text-white">
+            <div
+                className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center p-12"
+                style={{
+                    backgroundImage: `url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }}
+            >
+                {/* Teal overlay */}
+                <div
+                    className="absolute inset-0"
+                    style={{ backgroundColor: 'rgba(52, 139, 139, 0.70)' }}
+                />
+
+                <div className="relative z-10 max-w-md text-white">
                     <h2 className="text-4xl font-bold mb-6">Find Your Dream Property</h2>
                     <p className="text-lg mb-8">Join thousands of satisfied customers who have found their perfect home using Realvista.</p>
 
@@ -828,7 +830,7 @@ const SignUpPage = () => {
 
             {/* Right side form */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-4 md:p-8 lg:p-12">
-                <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10 w-full max-w-2xl">
+                <div className="bg-white rounded-3xl shadow-md p-6 md:p-10 w-full max-w-2xl">
                     {formStage !== "type-selection" && (
                         <button
                             onClick={handleBack}
