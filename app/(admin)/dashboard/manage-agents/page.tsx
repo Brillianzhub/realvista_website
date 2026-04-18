@@ -53,6 +53,9 @@ const AgentsManagementPage = () => {
     };
 
 
+    console.log("agentToDelete--->", agentToDelete)
+
+
     useEffect(() => { fetchAgents(); }, []);
     useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
@@ -107,6 +110,7 @@ const AgentsManagementPage = () => {
             setAgents((prev) =>
                 prev.map((a) => (a.id === editingAgent.user_id ? updatedAgent : a))
             );
+            await fetchAgents()
             toast.success("Agent updated successfully!");
             setShowFormModal(false);
             setEditingAgent(null);
@@ -136,8 +140,8 @@ const AgentsManagementPage = () => {
         if (!agentToDelete) return;
         setActionLoading(true);
         try {
-            await api.put(
-                `/accounts/agents/${agentToDelete.id}/toggle-status`,
+            await api.post(
+                `/accounts/agents/${agentToDelete.user_id}/toggle-status`,
                 { headers: { Authorization: `Token ${token}` } }
             );
             setAgents((prev) => prev.filter((a) => a.id !== agentToDelete.id));
@@ -145,6 +149,7 @@ const AgentsManagementPage = () => {
                 `${agentToDelete.first_name} ${agentToDelete.last_name} was deactivated.`
             );
             setShowDeleteModal(false);
+            await fetchAgents()
             setAgentToDelete(null);
         } catch (error: any) {
             const message =

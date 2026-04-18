@@ -88,6 +88,7 @@ export interface PropertyListing {
   coordinate_url?: string;
   status: "draft" | "pending" | "published" | "rejected";
   images?: string[];
+  coordinates?: { id: number; latitude: number; longitude: number }[]; // ← add this
   created_at: string;
   updated_at?: string;
   listed_date: string

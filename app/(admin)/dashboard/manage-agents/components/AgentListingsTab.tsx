@@ -32,33 +32,13 @@ const purposeBadge = (p: string) => {
     );
 };
 
-const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-        published: "bg-emerald-50 text-emerald-700 border-emerald-100",
-        pending: "bg-amber-50 text-amber-700 border-amber-100",
-        draft: "bg-slate-100 text-slate-500 border-slate-200",
-        rejected: "bg-rose-50 text-rose-600 border-rose-100",
-    };
-    const dot: Record<string, string> = {
-        published: "bg-emerald-500",
-        pending: "bg-amber-400",
-        draft: "bg-slate-400",
-        rejected: "bg-rose-500",
-    };
-    return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${map[s] ?? "bg-slate-100 text-slate-500 border-slate-200"}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${dot[s] ?? "bg-slate-400"}`} />
-            {s ?? "draft"}
-        </span>
-    );
-};
-
 interface AgentListingsTabProps {
     agentId: number;
     initialListings: PropertyListing[];
+    onRefresh?: () => Promise<void>;
 }
 
-export const AgentListingsTab = ({ agentId, initialListings }: AgentListingsTabProps) => {
+export const AgentListingsTab = ({ agentId, initialListings, onRefresh }: AgentListingsTabProps) => {
     const [listings, setListings] = useState<PropertyListing[]>(initialListings);
     const [actionLoading, setActionLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -76,40 +56,14 @@ export const AgentListingsTab = ({ agentId, initialListings }: AgentListingsTabP
         currentPage * ITEMS_PER_PAGE
     );
 
-    const handleStatusChange = async (listing: PropertyListing, newStatus: string) => {
-        try {
-            await api.put(
-                `/market/admin-update-property/`,
-                { property_id: listing.id, agent_id: agentId, status: newStatus },
-                { headers: authHeader }
-            );
-            setListings((prev) =>
-                prev.map((l) =>
-                    l.id === listing.id
-                        ? { ...l, status: newStatus as PropertyListing["status"] }
-                        : l
-                )
-            );
-            toast.success(`Listing ${newStatus === "published" ? "published" : `moved to ${newStatus}`}.`);
-        } catch (error: any) {
-            toast.error(
-                error.response?.data?.detail ??
-                error.response?.data?.message ??
-                "Failed to update status."
-            );
-        }
-    };
-    // ── Delete ────────────────────────────────────────────────
+    // ── Delete → DELETE /market/admin-delete-property/<pk>/ ──────
     const handleDeleteConfirm = async () => {
         if (!listingToDelete) return;
         setActionLoading(true);
         try {
             await api.delete(
-                `/market/admin-update-property/`,
-                {
-                    headers: authHeader,
-                    data: { property_id: listingToDelete.id },
-                }
+                `/market/admin-delete-property/${listingToDelete.id}/`,
+                { headers: authHeader }
             );
             setListings((prev) => prev.filter((l) => l.id !== listingToDelete.id));
             toast.success("Listing deleted.");
@@ -201,11 +155,6 @@ export const AgentListingsTab = ({ agentId, initialListings }: AgentListingsTabP
                                         </div>
                                     )}
 
-                                    {/* Status badge */}
-                                    <div className="absolute top-2.5 left-2.5">
-                                        {statusBadge(listing.status ?? "draft")}
-                                    </div>
-
                                     {/* Three-dot menu */}
                                     <div className="absolute top-2 right-2">
                                         <DropdownMenu>
@@ -268,35 +217,7 @@ export const AgentListingsTab = ({ agentId, initialListings }: AgentListingsTabP
                                         )}
                                     </div>
 
-                                    {/* ── Status actions ── */}
-                                    {(listing.status === "draft" || !listing.status) && (
-                                        <button
-                                            onClick={() => handleStatusChange(listing, "published")}
-                                            className="w-full mt-auto rounded-xl py-2 text-xs font-semibold transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        >
-                                            Publish Listing
-                                        </button>
-                                    )}
-
-                                    {listing.status === "pending" && (
-                                        <div className="mt-auto px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-600 font-medium text-center">
-                                            ⏳ Pending Review
-                                        </div>
-                                    )}
-
-                                    {listing.status === "rejected" && (
-                                        <div className="mt-auto px-3 py-2 rounded-xl bg-rose-50 border border-rose-100 text-xs text-rose-600 font-medium text-center">
-                                            Rejected — Edit to resubmit
-                                        </div>
-                                    )}
-
-                                    {listing.status === "published" && (
-                                        <div className="mt-auto px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-600 font-medium text-center">
-                                            ✓ Live on platform
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center gap-1 text-xs text-slate-400 pt-2 border-t border-slate-50">
+                                    <div className="flex items-center gap-1 text-xs text-slate-400 pt-2 border-t border-slate-50 mt-auto">
                                         <CalendarDays className="w-3 h-3" />
                                         {new Date(listing.listed_date ?? listing.created_at).toLocaleDateString("en-GB", {
                                             day: "numeric", month: "short", year: "numeric",
@@ -366,6 +287,7 @@ export const AgentListingsTab = ({ agentId, initialListings }: AgentListingsTabP
                             : [result, ...prev]
                     );
                 }}
+                onRefresh={onRefresh}
                 editingListing={editingListing}
                 agentId={agentId}
                 loading={actionLoading}

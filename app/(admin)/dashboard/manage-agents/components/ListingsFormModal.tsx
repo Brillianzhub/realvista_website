@@ -31,6 +31,7 @@ interface ListingFormModalProps {
     open: boolean;
     onClose: () => void;
     onSubmit: (listing: PropertyListing) => void;
+    onRefresh?: () => Promise<void>;
     editingListing: PropertyListing | null;
     agentId: number;
     loading?: boolean;
@@ -52,7 +53,7 @@ const defaultFeatures = {
 };
 
 export const ListingFormModal = ({
-    open, onClose, onSubmit, editingListing, agentId,
+    open, onClose, onSubmit, onRefresh, editingListing, agentId,
 }: ListingFormModalProps) => {
     const [step, setStep] = useState(1);
     const [completed, setCompleted] = useState<number[]>([]);
@@ -60,6 +61,7 @@ export const ListingFormModal = ({
     const [form, setForm] = useState<ListingFormValues>(defaultListingFormValues);
     const [propertyId, setPropertyId] = useState<number | null>(null);
     const [stepLoading, setStepLoading] = useState(false);
+    const [existingCoordinateIds, setExistingCoordinateIds] = useState<number[]>([]);
 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [features, setFeatures] = useState(defaultFeatures);
@@ -93,6 +95,9 @@ export const ListingFormModal = ({
                 coordinate_url: editingListing.coordinate_url ?? "",
             });
             setPropertyId(editingListing.id);
+            setExistingCoordinateIds(
+                editingListing.coordinates?.map((c: any) => c.id) ?? []
+            );
             setCompleted([1, 2, 3, 4]);
             setStep(1);
         } else {
@@ -110,7 +115,7 @@ export const ListingFormModal = ({
     const setF = <K extends keyof ListingFormValues>(key: K, val: ListingFormValues[K]) =>
         setForm((p) => ({ ...p, [key]: val }));
 
-    // ── Validation ────────────────────────────────────────────
+    // ── Validation ────────────────────────────────────────────────
     const validateStep1 = () => {
         const e: Record<string, string> = {};
         if (!form.title.trim()) e.title = "Title is required";
@@ -125,7 +130,7 @@ export const ListingFormModal = ({
         return Object.keys(e).length === 0;
     };
 
-    // ── Step 1: POST (create) or PUT (edit) ───────────────────
+    // ── Step 1: POST /market/admin-list-property/ or PUT /market/admin-update-property/ ──
     const submitStep1 = async () => {
         if (!validateStep1()) return;
         setStepLoading(true);
@@ -182,7 +187,7 @@ export const ListingFormModal = ({
         }
     };
 
-    // ── Step 2: Upload files ──────────────────────────────────
+    // ── Step 2: POST /market/admin-property-files/upload/ ────────
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? []);
         const valid = files.filter((f) => f.size <= 10 * 1024 * 1024);
@@ -206,9 +211,11 @@ export const ListingFormModal = ({
             const formData = new FormData();
             formData.append("property_id", String(propertyId));
             selectedFiles.forEach((file) => formData.append("files", file));
-            await api.post("/market/admin-upload-files/", formData, {
+
+            await api.post("/market/admin-property-files/upload/", formData, {
                 headers: { ...authHeader, "Content-Type": "multipart/form-data" },
             });
+
             setCompleted((p) => [...new Set([...p, 2])]);
             setStep(3);
         } catch (error: any) {
@@ -222,17 +229,14 @@ export const ListingFormModal = ({
         }
     };
 
-    // ── Step 3: Features ──────────────────────────────────────
+    // ── Step 3: POST /market/property/<property_id>/features/ ─────
     const submitStep3 = async () => {
         if (!propertyId) { toast.error("Property ID missing."); return; }
         setStepLoading(true);
         try {
-            await api.put(
-                "/market/admin-update-property/",
+            await api.post(
+                `/market/property/${propertyId}/features/`,
                 {
-                    property_id: propertyId,
-                    agent_id: agentId,
-                    status: "draft",
                     negotiable: features.negotiable,
                     furnished: features.furnished,
                     pet_friendly: features.pet_friendly,
@@ -244,7 +248,9 @@ export const ListingFormModal = ({
                     electricity_proximity: features.electricity_proximity,
                     road_network: features.road_network,
                     development_level: features.development_level,
-                    additional_features: features.additional_features || undefined,
+                    ...(features.additional_features
+                        ? { additional_features: features.additional_features }
+                        : {}),
                 },
                 { headers: authHeader }
             );
@@ -261,7 +267,7 @@ export const ListingFormModal = ({
         }
     };
 
-    // ── Step 4: Coordinates ───────────────────────────────────
+    // ── Step 4: POST /market/property/coordinates/ ────────────────
     const handleAddCoordinate = () => {
         if (!newCoordinate.latitude || !newCoordinate.longitude) {
             toast.error("Please enter both latitude and longitude.");
@@ -277,21 +283,49 @@ export const ListingFormModal = ({
 
     const submitStep4 = async () => {
         if (!propertyId) { toast.error("Property ID missing."); return; }
+    
+        // Non-edit with no coordinates → just skip
+        if (coordinates.length === 0 && !editingListing) {
+            setCompleted((p) => [...new Set([...p, 4])]);
+            setStep(5);
+            return;
+        }
+    
+        // Edit with no coordinates → still call update to clear existing ones
+        if (coordinates.length === 0 && editingListing && existingCoordinateIds.length === 0) {
+            setCompleted((p) => [...new Set([...p, 4])]);
+            setStep(5);
+            return;
+        }
+    
         setStepLoading(true);
         try {
-            await api.put(
-                "/market/admin-update-property/",
-                {
-                    property_id: propertyId,
-                    agent_id: agentId,
-                    status: "draft",
-                    coordinates: coordinates.map((c) => ({
-                        latitude: Number(c.latitude),
-                        longitude: Number(c.longitude),
-                    })),
-                },
-                { headers: authHeader }
-            );
+            if (editingListing && existingCoordinateIds.length > 0) {
+                await api.put(
+                    `/market/coordinates/update/`,
+                    {
+                        property: propertyId,
+                        coordinates: coordinates.map((c, i) => ({
+                            id: existingCoordinateIds[i] ?? undefined,
+                            latitude: Number(c.latitude),
+                            longitude: Number(c.longitude),
+                        })),
+                    },
+                    { headers: authHeader }
+                );
+            } else {
+                await api.post(
+                    `/market/property/coordinates/`,
+                    {
+                        property: propertyId,
+                        coordinates: coordinates.map((c) => ({
+                            latitude: Number(c.latitude),
+                            longitude: Number(c.longitude),
+                        })),
+                    },
+                    { headers: authHeader }
+                );
+            }
             setCompleted((p) => [...new Set([...p, 4])]);
             setStep(5);
         } catch (error: any) {
@@ -305,18 +339,24 @@ export const ListingFormModal = ({
         }
     };
 
-    // ── Step 5: Publish ───────────────────────────────────────
+    // ── Step 5: Submit final → call onRefresh to sync latest data ─
     const submitFinal = async () => {
         if (!propertyId) { toast.error("Property ID missing."); return; }
         setStepLoading(true);
         try {
-            const response = await api.put(
-                "/market/admin-update-property/",
-                { property_id: propertyId, agent_id: agentId, status: "published" },
+            const response = await api.post(
+                "/market/properties/change-status/",
+                { id: propertyId, status: "published" },
                 { headers: authHeader }
             );
             toast.success(editingListing ? "Listing updated!" : "Listing published successfully!");
             onSubmit(response.data.data ?? response.data);
+
+            // Refresh agent data so listings list reflects the latest state
+            if (onRefresh) {
+                await onRefresh();
+            }
+
             handleClose();
         } catch (error: any) {
             toast.error(
@@ -337,10 +377,11 @@ export const ListingFormModal = ({
         setSelectedFiles([]);
         setFeatures(defaultFeatures);
         setCoordinates([]);
+        setExistingCoordinateIds([]); // ← missing
         onClose();
     };
 
-    // ── Shared UI ─────────────────────────────────────────────
+    // ── Shared UI helpers ─────────────────────────────────────────
     const StepBar = () => (
         <div className="flex items-center justify-between mb-5">
             {STEPS.map((s, idx) => {
@@ -354,11 +395,10 @@ export const ListingFormModal = ({
                                 {idx < step - 1 && <div className="absolute inset-0 bg-teal-500" />}
                             </div>
                         )}
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 transition-all ${
-                            done ? "bg-teal-600 text-white" :
-                            cur  ? "bg-white border-2 border-teal-600 text-teal-600" :
-                                   "bg-white border-2 border-slate-200 text-slate-400"
-                        }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 transition-all ${done ? "bg-teal-600 text-white" :
+                            cur ? "bg-white border-2 border-teal-600 text-teal-600" :
+                                "bg-white border-2 border-slate-200 text-slate-400"
+                            }`}>
                             {done ? <Check className="w-5 h-5" /> : <s.icon className="w-5 h-5" />}
                         </div>
                         <p className={`text-xs font-medium hidden sm:block ${cur ? "text-teal-600" : "text-slate-400"}`}>
@@ -380,7 +420,7 @@ export const ListingFormModal = ({
                 ? <Button variant="outline" onClick={onBack} disabled={stepLoading}
                     className="rounded-xl h-9 text-sm border-slate-200 gap-1.5 cursor-pointer">
                     <ArrowLeft className="w-4 h-4" /> Back
-                  </Button>
+                </Button>
                 : <div />
             }
             <Button onClick={onNext} disabled={stepLoading}
@@ -427,7 +467,7 @@ export const ListingFormModal = ({
 
                 <StepBar />
 
-                {/* ── STEP 1 — All Property Details ────────────────── */}
+                {/* ── STEP 1 — Property Details ─────────────────────── */}
                 {step === 1 && (
                     <div className="space-y-4">
                         <div className="space-y-1">
@@ -496,32 +536,6 @@ export const ListingFormModal = ({
                                 </Select>
                             </div>
                         </div>
-
-                        {/* <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <SL>Category</SL>
-                                <Select value={form.category} onValueChange={(v) => setF("category", v)}>
-                                    <SelectTrigger className="w-full"><SelectValue placeholder="Select category" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="corporate">Corporate</SelectItem>
-                                        <SelectItem value="residential">Residential</SelectItem>
-                                        <SelectItem value="industrial">Industrial</SelectItem>
-                                        <SelectItem value="mixed use">Mixed Use</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-1">
-                                <SL>Availability</SL>
-                                <Select value={form.availability} onValueChange={(v) => setF("availability", v)}>
-                                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="now">Available Now</SelectItem>
-                                        <SelectItem value="soon">Coming Soon</SelectItem>
-                                        <SelectItem value="unavailable">Unavailable</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div> */}
 
                         <div className="space-y-1">
                             <SL req>Street Address</SL>
@@ -673,7 +687,7 @@ export const ListingFormModal = ({
                                 <Select value={features.electricity_proximity} onValueChange={(v) => setFeatures({ ...features, electricity_proximity: v })}>
                                     <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="close">Close</SelectItem>
+                                        <SelectItem value="near">Near</SelectItem>
                                         <SelectItem value="moderate">Moderate</SelectItem>
                                         <SelectItem value="far">Far</SelectItem>
                                     </SelectContent>

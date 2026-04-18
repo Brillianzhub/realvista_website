@@ -173,6 +173,7 @@ const AgentDetailPage = () => {
                         <AgentListingsTab
                             agentId={agent.id}
                             initialListings={agent.properties ?? []}
+                            onRefresh={fetchAgent}
                         />
                     </TabsContent>
                 </Tabs>

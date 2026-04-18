@@ -325,14 +325,14 @@ export const AgentProfileTab = ({
           {/* Verified Status */}
           <div className="flex items-center justify-between py-4">
             <div className="flex items-start gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${agent.verified ? "bg-emerald-50" : "bg-slate-100"
+              {/* <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${agent.verified ? "bg-emerald-50" : "bg-slate-100"
                 }`}>
                 {agent.verified
                   ? <CheckCircle className="w-4 h-4 text-emerald-500" />
                   : <XCircle className="w-4 h-4 text-slate-400" />
                 }
-              </div>
-              <div>
+              </div> */}
+              {/* <div>
                 <p className="text-sm font-medium text-slate-800">Verification Status</p>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Currently{" "}
@@ -340,9 +340,9 @@ export const AgentProfileTab = ({
                     {agent.verified ? "Verified" : "Unverified"}
                   </span>
                 </p>
-              </div>
+              </div> */}
             </div>
-            <Button
+            {/* <Button
               variant="outline" size="sm"
               onClick={() => setShowStatusModal(true)}
               className={`rounded-xl h-9 text-sm cursor-pointer border-slate-200 ${agent.verified
@@ -351,7 +351,7 @@ export const AgentProfileTab = ({
                 }`}
             >
               {agent.verified ? "Unverify" : "Verify"}
-            </Button>
+            </Button> */}
           </div>
 
           {/* ID Card Verification */}
