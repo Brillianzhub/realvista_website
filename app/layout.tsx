@@ -17,9 +17,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Realvista Properties",
-  description: "Make smarter investment decisions.",
-};
+  metadataBase: new URL('https://realvistaproperties.com'),
+  title: {
+    default: 'Realvista Properties | Buy & Sell Property in Nigeria',
+    template: '%s | Realvista Properties',
+  },
+  description:
+    'Realvista Properties is your one-stop real estate platform to buy, sell, rent, and track property investments across Nigeria.',
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
 
 export default function RootLayout({
   children,

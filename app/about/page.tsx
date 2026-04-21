@@ -6,35 +6,49 @@ import { Building2, HomeIcon, Users, BookOpen, PieChart, BadgeCheck } from "luci
 import Link from 'next/link';
 import { Metadata } from 'next';
 
+
 export const metadata: Metadata = {
-    title: 'About | Realvista Properties',
+  title: 'About Us | Realvista Properties',
+  description:
+    'Learn how Realvista Properties helps you buy, sell, and invest in real estate with expert guidance, portfolio management, and personalized support.',
+  keywords: [
+    'about Realvista Properties',
+    'real estate company Nigeria',
+    'property buying and selling',
+    'real estate portfolio management',
+    'mutual property investment',
+    'real estate agents Nigeria',
+  ],
+  alternates: {
+    canonical: 'https://realvistaproperties.com/about',
+  },
+  openGraph: {
+    title: 'About Realvista Properties — Our Story & Mission',
     description:
-        'Realvista Properties is your one-stop real estate app—buy and sell property, discover top agents, and track profits in real time. Turn your property goals into reality.',
-    keywords: [
-        'Realvista Properties real estate app',
-        'property listings',
-        'buy and sell property',
-        'real-time profit tracking',
-        'real estate marketplace',
-        'featured properties',
-        'top agents',
-        'property analytics',
+      'Meet the team behind Realvista. We help you buy, sell, and invest in property with integrity, trust, and real-time portfolio insights.',
+    url: 'https://realvistaproperties.com/about',
+    siteName: 'Realvista Properties',
+    type: 'profile',
+    images: [
+      {
+        url: '/og/about.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Realvista Properties team and mission',
+      },
     ],
-    openGraph: {
-        title: 'Realvista Propeties — One-Stop Real Estate App',
-        description:
-            'From buying and selling to real-time profit tracking, Realvista is your one-stop real estate solution.',
-        url: 'https://realvistaproperties.com/',
-        siteName: 'Realvista Properties',
-        type: 'website',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Realvista Properties — Buy & Sell Property, Track Profits',
-        description:
-            'Your one-stop real estate solution with listings, agents, and real-time profit tracking.',
-        images: ['https://realvistaproperties.com/og/realvista-hero.jpg'],
-    },
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About Realvista Properties',
+    description:
+      'Learn how Realvista helps you manage property, track profits, and invest smarter.',
+    images: ['/og/about.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function AboutUs() {
