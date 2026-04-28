@@ -123,40 +123,41 @@ export const AgentProfileTab = ({
 
   const handleVerificationSubmit = async () => {
     if (!files.id_card || !files.photo) {
-      setSubmitStatus("error");
-      setStatusMessage("ID card and photo are required.");
-      return;
+        setSubmitStatus("error");
+        setStatusMessage("ID card and photo are required.");
+        return;
     }
     setIsSubmitting(true);
     setSubmitStatus(null);
     try {
-      const formData = new FormData();
-      formData.append("id_card", files.id_card);
-      formData.append("photo", files.photo);
-      if (files.business_registration) {
-        formData.append("business_registration", files.business_registration);
-      }
-      await api.post(
-        "/agents/verifications/",
-        formData,
-        { headers: { ...authHeader, "Content-Type": "multipart/form-data" } }
-      );
-      toast.success("ID verification submitted successfully.");
-      setIsIdVerified(true);
-      setSubmitStatus("success");
-      setStatusMessage("Verification submitted successfully!");
-      setTimeout(() => setShowVerifyModal(false), 1500);
+        const formData = new FormData();
+        formData.append("agent_id", String(agent.id));  // ← add this
+        formData.append("id_card", files.id_card);
+        formData.append("photo", files.photo);
+        if (files.business_registration) {
+            formData.append("business_registration", files.business_registration);
+        }
+        await api.post(
+            "/agents/admin-verification/upload/",  // ← fix endpoint
+            formData,
+            { headers: { ...authHeader, "Content-Type": "multipart/form-data" } }
+        );
+        toast.success("ID verification submitted successfully.");
+        setIsIdVerified(true);
+        setSubmitStatus("success");
+        setStatusMessage("Verification submitted successfully!");
+        setTimeout(() => setShowVerifyModal(false), 1500);
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ??
-        error.message ??
-        "Something went wrong. Please try again.";
-      setSubmitStatus("error");
-      setStatusMessage(errorMessage);
+        const errorMessage =
+            error.response?.data?.message ??
+            error.message ??
+            "Something went wrong. Please try again.";
+        setSubmitStatus("error");
+        setStatusMessage(errorMessage);
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
-  };
+};
 
   // ── Edit profile ──────────────────────────────────────────
   const handleProfileUpdate = async (values: AgentFormValues) => {

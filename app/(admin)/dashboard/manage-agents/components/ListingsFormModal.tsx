@@ -209,8 +209,8 @@ export const ListingFormModal = ({
         setStepLoading(true);
         try {
             const formData = new FormData();
-            formData.append("property_id", String(propertyId));
-            selectedFiles.forEach((file) => formData.append("files", file));
+            formData.append("property", String(propertyId));
+            selectedFiles.forEach((file) => formData.append("file", file));
 
             await api.post("/market/admin-property-files/upload/", formData, {
                 headers: { ...authHeader, "Content-Type": "multipart/form-data" },
@@ -283,21 +283,21 @@ export const ListingFormModal = ({
 
     const submitStep4 = async () => {
         if (!propertyId) { toast.error("Property ID missing."); return; }
-    
+
         // Non-edit with no coordinates → just skip
         if (coordinates.length === 0 && !editingListing) {
             setCompleted((p) => [...new Set([...p, 4])]);
             setStep(5);
             return;
         }
-    
+
         // Edit with no coordinates → still call update to clear existing ones
         if (coordinates.length === 0 && editingListing && existingCoordinateIds.length === 0) {
             setCompleted((p) => [...new Set([...p, 4])]);
             setStep(5);
             return;
         }
-    
+
         setStepLoading(true);
         try {
             if (editingListing && existingCoordinateIds.length > 0) {
@@ -517,11 +517,18 @@ export const ListingFormModal = ({
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <SL req>Price</SL>
-                                <Input type="number" value={form.price}
-                                    onChange={(e) => { setF("price", e.target.value); if (errors.price) setErrors({ ...errors, price: "" }); }}
-                                    placeholder="e.g. 5000000"
-                                    className={errors.price ? "border-rose-300" : ""} />
-                                <Err k="price" />
+                                <Input
+                                    value={form.price ? Number(form.price).toLocaleString() : ""}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/,/g, "");
+                                        if (!isNaN(Number(raw))) {
+                                            setF("price", raw);
+                                            if (errors.price) setErrors({ ...errors, price: "" });
+                                        }
+                                    }}
+                                    placeholder="e.g. 5,000,000"
+                                    className={errors.price ? "border-rose-300" : ""}
+                                />
                             </div>
                             <div className="space-y-1">
                                 <SL>Currency</SL>

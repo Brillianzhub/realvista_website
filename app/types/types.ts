@@ -17,6 +17,7 @@ export interface Agent {
   experience_years?: number;
   preferred_contact_mode?: ContactMethod;
   verified: boolean;
+  is_active: boolean;
   featured: boolean;
   bio?: string;
   created_at: string;

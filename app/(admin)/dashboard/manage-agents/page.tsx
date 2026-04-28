@@ -98,6 +98,7 @@ const AgentsManagementPage = () => {
     // ── Edit agent ────────────────────────────────────────────────
     const handleEditAgent = async (values: AgentFormValues) => {
         if (!editingAgent) return;
+        console.log("Values being sent:", JSON.stringify(values, null, 2));
         setActionLoading(true);
         setStatus(null);
         try {
@@ -108,7 +109,7 @@ const AgentsManagementPage = () => {
             );
             const updatedAgent: Agent = response.data;
             setAgents((prev) =>
-                prev.map((a) => (a.id === editingAgent.user_id ? updatedAgent : a))
+                prev.map((a) => (a.user_id === editingAgent.user_id ? updatedAgent : a))
             );
             await fetchAgents()
             toast.success("Agent updated successfully!");
@@ -141,12 +142,12 @@ const AgentsManagementPage = () => {
         setActionLoading(true);
         try {
             await api.post(
-                `/accounts/agents/${agentToDelete.user_id}/toggle-status`,
+                `/accounts/agents/${agentToDelete.id}/toggle-status/`, null,
                 { headers: { Authorization: `Token ${token}` } }
             );
             setAgents((prev) => prev.filter((a) => a.id !== agentToDelete.id));
             toast.success(
-                `${agentToDelete.first_name} ${agentToDelete.last_name} was deactivated.`
+                `${agentToDelete.first_name} ${agentToDelete.last_name} was ${agentToDelete.is_active ? "deactivated" : "activated"}.`
             );
             setShowDeleteModal(false);
             await fetchAgents()
@@ -232,7 +233,7 @@ const AgentsManagementPage = () => {
                     onCreateClick={() => setShowFormModal(true)}
                     onView={handleViewAgent}
                     onEdit={handleEditClick}
-                    onDelete={async (agent) => {
+                    onToggle={async (agent) => {
                         await new Promise((resolve) => setTimeout(resolve, 300));
                         setAgentToDelete(agent);
                         setShowDeleteModal(true);
